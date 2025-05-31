@@ -3,7 +3,8 @@
 // API 엔드포인트 설정 (배포 시 실제 URL로 변경)
 const API_BASE_URL = window.location.hostname === 'localhost' 
     ? 'http://localhost:5000' 
-    : 'https://your-app-name.onrender.com';  // Render.com 배포 URL
+    : if (typeof API_BASE_URL === 'undefined') {
+        var API_BASE_URL = 'https://lawgg-backend.onrender.com';}
 
 // 디바운스 함수 (과도한 API 호출 방지)
 function debounce(func, wait) {
