@@ -1,11 +1,11 @@
 // 자동완성 기능을 위한 JavaScript
 
 // API 엔드포인트 설정 (배포 시 실제 URL로 변경)
-const API_BASE_URL = window.location.hostname === 'localhost' 
-    ? 'http://localhost:5000' 
-    : if (typeof API_BASE_URL === 'undefined') {
-        var API_BASE_URL = 'https://lawgg-backend.onrender.com';}
-
+if (typeof API_BASE_URL === 'undefined') {
+  var API_BASE_URL = window.location.hostname === 'localhost'
+    ? 'http://localhost:5000'
+    : 'https://lawgg-backend.onrender.com';
+}
 // 디바운스 함수 (과도한 API 호출 방지)
 function debounce(func, wait) {
     let timeout;
