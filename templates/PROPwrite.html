@@ -396,7 +396,7 @@
         {% endif %}
 
         <div class="form-container">
-            <form id="proposal-form" method="POST" action="{{ form_action }}">
+            <form id="proposal-form" method="POST" action="https://lawgg-backend.onrender.com/proposals/new">
                 {% if csrf_token %}
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 {% endif %}
