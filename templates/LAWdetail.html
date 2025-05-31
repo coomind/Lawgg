@@ -935,28 +935,52 @@
 
             // 답글 작성 버튼 이벤트
             document.querySelectorAll('.reply-submit').forEach(btn => {
-                btn.addEventListener('click', function() {
+                btn.addEventListener('click', async function () {
                     if (!userVote) {
                         alert('먼저 찬성 또는 반대를 선택해주세요.');
                         return;
                     }
-                    
+
                     const parentId = this.getAttribute('data-parent-id');
                     const replyForm = this.closest('.reply-form');
                     const replyInput = replyForm.querySelector('.reply-input');
                     const content = replyInput.value.trim();
-                    
+
                     if (!content) {
                         alert('답글 내용을 입력해주세요.');
                         return;
                     }
-                    
-                    addReply(parentId, content, userVote);
-                    replyInput.value = '';
-                    replyForm.classList.remove('show');
+
+                    try {
+                        // 서버로 답글 전송
+                        const response = await fetch(`${API_BASE_URL}/api/comments/${parentId}/reply`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                content: content,
+                                stance: userVote
+                            })
+                        });
+
+                        if (!response.ok) {
+                        throw new Error('서버 저장 실패');
+                        }
+
+                        const data = await response.json();
+
+                        // UI에 반영 (실제 저장된 내용 기준)
+                        addReply(data.parent_id, data.content, data.stance);
+                        replyInput.value = '';
+                        replyForm.classList.remove('show');
+
+                    } catch (error) {
+                        console.error('답글 오류:', error);
+                        alert('답글 저장에 실패했습니다.');
+                    }
                 });
             });
-
             // 답글 취소 버튼 이벤트
             document.querySelectorAll('.reply-cancel').forEach(btn => {
                 btn.addEventListener('click', function() {
