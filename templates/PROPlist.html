@@ -459,6 +459,10 @@
         function viewMemberDetail(memberId, memberName) {
             window.location.href = `${API_BASE_URL}/members/${memberId}`;
         }
+
+        function viewProposalDetail(proposalId){
+             window.location.href = `${API_BASE_URL}/proposals/${proposalId}`;
+        }
         // 서버에서 전달받은 설정
         const PAGE_CONFIG = {
             currentPage: {{ pagination.current_page if pagination else 1 }},
