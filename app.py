@@ -83,6 +83,7 @@ class Comment(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     replies = db.relationship('Comment', backref=db.backref('parent', remote_side=[id]))
+    likes = db.relationship('CommentLike', backref='comment', lazy='dynamic')
 
 class Proposal(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -114,6 +115,15 @@ class Report(db.Model):
     proposal_id = db.Column(db.Integer, db.ForeignKey('proposal.id'), nullable=True)
     reporter_ip = db.Column(db.String(50))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+class CommentLike(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    comment_id = db.Column(db.Integer, db.ForeignKey('comment.id'))
+    ip_address = db.Column(db.String(50))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+     __table_args__ = (db.UniqueConstraint('comment_id', 'ip_address'),)
+
 
 # 유틸리티 함수들
 def get_client_ip():
@@ -1073,6 +1083,76 @@ def search():
                          query=query,
                          search_type=search_type,
                          current_page=page)
+
+# 좋아요 API 엔드포인트
+@app.route('/api/comments/<int:comment_id>/like', methods=['POST'])
+def toggle_comment_like(comment_id):
+    ip_address = get_client_ip()
+    
+    # 기존 좋아요 확인
+    existing_like = CommentLike.query.filter_by(
+        comment_id=comment_id,
+        ip_address=ip_address
+    ).first()
+    
+    if existing_like:
+        # 좋아요 취소
+        db.session.delete(existing_like)
+        liked = False
+    else:
+        # 좋아요 추가
+        new_like = CommentLike(
+            comment_id=comment_id,
+            ip_address=ip_address
+        )
+        db.session.add(new_like)
+        liked = True
+    
+    db.session.commit()
+    
+    # 총 좋아요 수 계산
+    like_count = CommentLike.query.filter_by(comment_id=comment_id).count()
+    
+    return jsonify({
+        'liked': liked,
+        'like_count': like_count
+    })
+
+@app.route('/api/comments/<int:parent_id>/reply', methods=['POST'])
+def add_reply(parent_id):
+    data = request.get_json()
+    content = data.get('content', '').strip()
+    stance = data.get('stance')
+    ip_address = get_client_ip()
+    
+    if not content:
+        return jsonify({'error': 'Content required'}), 400
+    
+    # 부모 댓글 확인
+    parent_comment = Comment.query.get_or_404(parent_id)
+    
+    # 답글 생성
+    reply = Comment(
+        bill_id=parent_comment.bill_id,
+        proposal_id=parent_comment.proposal_id,
+        parent_id=parent_id,
+        content=content,
+        stance=stance,
+        ip_address=ip_address,
+        author=f'익명{Comment.query.count() + 1}'
+    )
+    
+    db.session.add(reply)
+    db.session.commit()
+    
+    return jsonify({
+        'id': reply.id,
+        'author': reply.author,
+        'content': reply.content,
+        'stance': reply.stance,
+        'time_ago': '방금 전',
+        'parent_id': reply.parent_id
+    })
     
 # 오류 핸들러
 @app.errorhandler(404)
