@@ -1,3 +1,4 @@
+import os
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
@@ -5,7 +6,6 @@ from datetime import datetime, timedelta
 import requests
 import json
 import csv
-import os
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 import re
@@ -13,7 +13,17 @@ from bs4 import BeautifulSoup
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'  # 실제 배포시 변경 필요
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///lawgg.db'
+# PostgreSQL 데이터베이스 설정
+DATABASE_URL = os.environ.get('DATABASE_URL')
+if DATABASE_URL:
+    # Render.com PostgreSQL URL 수정 (postgres:// -> postgresql://)
+    if DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
+else:
+    # 로컬 개발용 SQLite
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///lawgg.db'
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # API 키 설정
@@ -21,7 +31,6 @@ ASSEMBLY_API_KEY = '79deed587e6043f291a36420cfd972de'
 
 db = SQLAlchemy(app)
 CORS(app)
-
 # 데이터베이스 모델들
 class Member(db.Model):
     id = db.Column(db.Integer, primary_key=True)
