@@ -1010,5 +1010,4 @@ if __name__ == '__main__':
         db.create_all()
         # init_sample_data()  # 샘플 데이터 초기화
         load_election_csv()  # CSV 데이터 로드
-    port = int(os.environ.get("PORT", 5000))
-    app.run(debug=True, host='0.0.0.0', port=port)
+    app.run(debug=True, host='0.0.0.0', port==5000)
