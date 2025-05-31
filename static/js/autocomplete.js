@@ -3,7 +3,7 @@
 // API 엔드포인트 설정 (배포 시 실제 URL로 변경)
 const API_BASE_URL = window.location.hostname === 'localhost' 
     ? 'http://localhost:5000' 
-    : 'https://your-app-name.onrender.com';  // Render.com 배포 URL
+    : 'https://lawgg-backend.onrender.com';  // Render.com 배포 URL
 
 // 디바운스 함수 (과도한 API 호출 방지)
 function debounce(func, wait) {
@@ -32,19 +32,20 @@ function initAutocomplete(inputId, type = 'all') {
         left: 0;
         right: 0;
         background: white;
-        border: 1px solid #ddd;
-        border-top: none;
-        border-radius: 0 0 8px 8px;
-        max-height: 300px;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        max-height: 400px;
         overflow-y: auto;
         display: none;
         z-index: 1000;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        margin-top: 4px;
     `;
 
     // input 요소를 relative 컨테이너로 감싸기
     const wrapper = document.createElement('div');
     wrapper.style.position = 'relative';
+    wrapper.style.flex = '1';  // 검색창이 컨테이너 내에서 확장되도록
     input.parentNode.insertBefore(wrapper, input);
     wrapper.appendChild(input);
     wrapper.appendChild(autocompleteContainer);
@@ -99,56 +100,141 @@ function initAutocomplete(inputId, type = 'all') {
             return;
         }
 
-        results.forEach((result, index) => {
-            const item = document.createElement('div');
-            item.className = 'autocomplete-item';
-            item.style.cssText = `
-                padding: 10px 15px;
-                cursor: pointer;
-                border-bottom: 1px solid #f0f0f0;
-                display: flex;
-                align-items: center;
-                gap: 10px;
-            `;
+        // 타입별로 그룹화
+        const groupedResults = {
+            member: results.filter(r => r.type === 'member'),
+            bill: results.filter(r => r.type === 'bill')
+        };
 
-            // 아이콘 추가
-            const icon = document.createElement('span');
-            icon.style.cssText = 'font-size: 14px;';
-            icon.textContent = result.type === 'member' ? '👤' : '📋';
+        // 국회의원 섹션
+        if (groupedResults.member.length > 0) {
+            const memberSection = document.createElement('div');
+            memberSection.style.cssText = 'padding: 8px 0;';
             
-            const text = document.createElement('span');
-            text.textContent = result.display;
-            text.style.cssText = 'flex: 1;';
+            const memberTitle = document.createElement('div');
+            memberTitle.style.cssText = `
+                padding: 8px 16px;
+                font-size: 12px;
+                color: #6c757d;
+                font-weight: 600;
+                text-transform: uppercase;
+            `;
+            memberTitle.textContent = '국회의원';
+            memberSection.appendChild(memberTitle);
 
-            const typeLabel = document.createElement('span');
-            typeLabel.textContent = result.type === 'member' ? '국회의원' : '법률안';
-            typeLabel.style.cssText = 'font-size: 12px; color: #666;';
-
-            item.appendChild(icon);
-            item.appendChild(text);
-            item.appendChild(typeLabel);
-
-            // 마우스 이벤트
-            item.addEventListener('mouseenter', () => {
-                removeActive();
-                currentFocus = index;
-                item.classList.add('active');
-                item.style.backgroundColor = '#f5f5f5';
+            groupedResults.member.forEach((result, index) => {
+                const item = createResultItem(result, index);
+                memberSection.appendChild(item);
             });
+            
+            autocompleteContainer.appendChild(memberSection);
+        }
 
-            item.addEventListener('mouseleave', () => {
-                item.classList.remove('active');
-                item.style.backgroundColor = '';
+        // 법률안 섹션
+        if (groupedResults.bill.length > 0) {
+            const billSection = document.createElement('div');
+            billSection.style.cssText = 'padding: 8px 0; border-top: 1px solid #e9ecef;';
+            
+            const billTitle = document.createElement('div');
+            billTitle.style.cssText = `
+                padding: 8px 16px;
+                font-size: 12px;
+                color: #6c757d;
+                font-weight: 600;
+                text-transform: uppercase;
+            `;
+            billTitle.textContent = '법률안';
+            billSection.appendChild(billTitle);
+
+            groupedResults.bill.forEach((result, index) => {
+                const item = createResultItem(result, index + groupedResults.member.length);
+                billSection.appendChild(item);
             });
-
-            item.addEventListener('click', () => {
-                selectItem(result);
-            });
-
-            autocompleteContainer.appendChild(item);
-        });
+            
+            autocompleteContainer.appendChild(billSection);
+        }
 
         autocompleteContainer.style.display = 'block';
+    }
+
+    // 결과 아이템 생성 함수
+    function createResultItem(result, index) {
+        const item = document.createElement('div');
+        item.className = 'autocomplete-item';
+        item.setAttribute('data-index', index);
+        item.style.cssText = `
+            padding: 12px 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: background-color 0.2s;
+        `;
+
+        // 프로필 이미지 또는 아이콘
+        const avatar = document.createElement('div');
+        avatar.style.cssText = `
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: ${result.type === 'member' ? '#e3f2fd' : '#f3e5f5'};
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+        `;
+        avatar.textContent = result.type === 'member' ? '👤' : '📋';
+
+        // 텍스트 정보
+        const textContainer = document.createElement('div');
+        textContainer.style.cssText = 'flex: 1; min-width: 0;';
+        
+        const mainText = document.createElement('div');
+        mainText.style.cssText = `
+            font-size: 14px;
+            font-weight: 500;
+            color: #212529;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        `;
+        mainText.textContent = result.name;
+        
+        const subText = document.createElement('div');
+        subText.style.cssText = `
+            font-size: 12px;
+            color: #6c757d;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        `;
+        subText.textContent = result.type === 'member' ? (result.party || '무소속') : '법률안';
+        
+        textContainer.appendChild(mainText);
+        textContainer.appendChild(subText);
+
+        item.appendChild(avatar);
+        item.appendChild(textContainer);
+
+        // 마우스 이벤트
+        item.addEventListener('mouseenter', () => {
+            removeActive();
+            currentFocus = index;
+            item.classList.add('active');
+            item.style.backgroundColor = '#f8f9fa';
+        });
+
+        item.addEventListener('mouseleave', () => {
+            item.classList.remove('active');
+            item.style.backgroundColor = '';
+        });
+
+        item.addEventListener('click', () => {
+            selectItem(result);
+        });
+
+        return item;
     }
 
     // 항목 선택 함수
@@ -192,7 +278,8 @@ function initAutocomplete(inputId, type = 'all') {
             removeActive();
             if (items[currentFocus]) {
                 items[currentFocus].classList.add('active');
-                items[currentFocus].style.backgroundColor = '#f5f5f5';
+                items[currentFocus].style.backgroundColor = '#f8f9fa';
+                items[currentFocus].scrollIntoView({ block: 'nearest' });
             }
         } else if (e.key === 'ArrowUp') {
             e.preventDefault();
@@ -201,7 +288,8 @@ function initAutocomplete(inputId, type = 'all') {
             removeActive();
             if (items[currentFocus]) {
                 items[currentFocus].classList.add('active');
-                items[currentFocus].style.backgroundColor = '#f5f5f5';
+                items[currentFocus].style.backgroundColor = '#f8f9fa';
+                items[currentFocus].scrollIntoView({ block: 'nearest' });
             }
         } else if (e.key === 'Enter') {
             e.preventDefault();
