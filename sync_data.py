@@ -6,8 +6,187 @@ import os
 from app import app, db, Member, Bill
 
 # 국회 OpenAPI 설정
-API_KEY = os.environ.get('ASSEMBLY_API_KEY', 'YOUR_API_KEY_HERE')  # 실제 API 키로 교체 필요
+API_KEY = '79deed587e6043f291a36420cfd972de'
 BASE_URL = 'https://open.assembly.go.kr/portal/openapi'
+
+def sync_members():
+    """국회의원 정보 동기화"""
+    print("국회의원 정보 동기화 시작...")
+    
+    # 20, 21, 22대 국회의원 정보 가져오기
+    for term in [20, 21, 22]:
+        url = f"{BASE_URL}/ALLNAMEMBER"
+        params = {
+            'KEY': API_KEY,
+            'Type': 'xml',
+            'pIndex': 1,
+            'pSize': 300,
+            'UNIT_CD': f'{term:02d}'  # 20, 21, 22
+        }
+        
+        try:
+            response = requests.get(url, params=params, timeout=30)
+            response.raise_for_status()
+            
+            # XML 파싱
+            root = ET.fromstring(response.content)
+            
+            # 헤더 정보 확인
+            result_code = root.findtext('.//RESULT_CODE')
+            if result_code != 'INFO-000':
+                print(f"API 오류 ({term}대): {root.findtext('.//RESULT_MESSAGE')}")
+                continue
+            
+            # 데이터 파싱
+            for row in root.findall('.//row'):
+                # XML 필드 파싱
+                name = row.findtext('HG_NM', '')
+                party = row.findtext('POLY_NM', '')
+                district = row.findtext('ORIG_NM', '')
+                committee = row.findtext('CMIT_NM', '')
+                birth_date = row.findtext('BTH_DATE', '')
+                dept_cd = row.findtext('DEPT_CD', '')
+                
+                # 나이 계산
+                age = None
+                if birth_date:
+                    try:
+                        birth_year = int(birth_date[:4])
+                        age = datetime.now().year - birth_year + 1
+                    except:
+                        pass
+                
+                # 성별
+                gender = row.findtext('SEX_GBN_NM', '')
+                
+                # 연락처
+                phone = row.findtext('TEL_NO', '')
+                email = row.findtext('E_MAIL', '')
+                homepage = row.findtext('HOMEPAGE', '')
+                
+                # 학력/경력
+                mem_title = row.findtext('MEM_TITLE', '')
+                
+                # 사진 URL
+                jpg_link = row.findtext('jpgLink', '')
+                
+                # DB에 저장 또는 업데이트
+                member = Member.query.filter_by(name=name, session_num=term).first()
+                
+                if not member:
+                    member = Member(
+                        name=name,
+                        session_num=term
+                    )
+                    db.session.add(member)
+                
+                # 정보 업데이트
+                member.party = party
+                member.district = district
+                member.age = age
+                member.gender = gender
+                member.phone = phone
+                member.email = email
+                member.homepage = homepage
+                member.career = mem_title
+                member.photo_url = jpg_link
+                
+                print(f"처리 중: {term}대 {name} ({party})")
+            
+            db.session.commit()
+            time.sleep(1)  # API 호출 간격
+            
+        except Exception as e:
+            print(f"오류 발생 ({term}대): {e}")
+            db.session.rollback()
+            continue
+    
+    print("국회의원 정보 동기화 완료!")
+
+def sync_bills():
+    """법률안 정보 동기화"""
+    print("법률안 정보 동기화 시작...")
+    
+    url = f"{BASE_URL}/nzmimeepazxkubdpn"
+    
+    # 최근 법률안 가져오기
+    for page in range(1, 6):  # 500개 (100개씩 5페이지)
+        params = {
+            'KEY': API_KEY,
+            'Type': 'xml',
+            'pIndex': page,
+            'pSize': 100,
+            'AGE': '22'  # 22대 국회
+        }
+        
+        try:
+            response = requests.get(url, params=params, timeout=30)
+            response.raise_for_status()
+            
+            root = ET.fromstring(response.content)
+            
+            # 헤더 정보 확인
+            result_code = root.findtext('.//RESULT_CODE')
+            if result_code != 'INFO-000':
+                print(f"API 오류: {root.findtext('.//RESULT_MESSAGE')}")
+                continue
+            
+            for row in root.findall('.//row'):
+                # XML 파싱
+                bill_no = row.findtext('BILL_NO', '')
+                bill_name = row.findtext('BILL_NAME', '')
+                proposer = row.findtext('PROPOSER', '')
+                committee = row.findtext('COMMITTEE', '')
+                propose_dt = row.findtext('PROPOSE_DT', '')
+                proc_result = row.findtext('PROC_RESULT', '')
+                detail_link = row.findtext('DETAIL_LINK', '')
+                
+                # 날짜 형식 변환
+                if propose_dt and len(propose_dt) == 8:
+                    propose_dt = f"{propose_dt[:4]}-{propose_dt[4:6]}-{propose_dt[6:8]}"
+                
+                # DB에 저장 또는 업데이트
+                bill = Bill.query.filter_by(number=bill_no).first()
+                
+                if not bill:
+                    bill = Bill(
+                        number=bill_no,
+                        name=bill_name
+                    )
+                    db.session.add(bill)
+                
+                # 정보 업데이트
+                bill.proposer = proposer
+                bill.committee = committee
+                bill.propose_date = propose_dt
+                bill.detail_link = detail_link
+                
+                print(f"처리 중: {bill_name[:30]}...")
+            
+            db.session.commit()
+            time.sleep(1)  # API 호출 간격
+            
+        except Exception as e:
+            print(f"오류 발생 (페이지 {page}): {e}")
+            db.session.rollback()
+            continue
+    
+    print("법률안 정보 동기화 완료!")
+
+if __name__ == '__main__':
+    with app.app_context():
+        # 데이터베이스 테이블 생성
+        db.create_all()
+        
+        # 데이터 동기화 실행
+        sync_members()
+        sync_bills()
+        
+        # CSV 데이터도 로드
+        from app import load_election_csv
+        load_election_csv()
+        
+        print("\n모든 동기화 작업 완료!")
 
 def sync_members():
     """국회의원 정보 동기화"""
