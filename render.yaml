@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: lawgg-backend
+    env: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn app:app"
+    envVars:
+      - key: ASSEMBLY_API_KEY
+        value: 79deed587e6043f291a36420cfd972de
+      - key: PYTHON_VERSION
+        value: 3.9.16
