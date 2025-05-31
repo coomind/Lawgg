@@ -448,30 +448,30 @@
     
     <script>
         // API 베이스 URL 설정 (배포 시 변경)
-        const API_BASE_URL = window.location.origin;
+        const API_BASE_URL = 'https://lawgg-backend.onrender.com';
 
         function goToHome() {
-            window.location.href = '/';
+            window.location.href = `${API_BASE_URL}/`;
         }
 
         function goToMembersPage() {
-            window.location.href = '/members';
+            window.location.href = '${API_BASE_URL}/members';
         }
 
         function geToBillsPage() {
-            window.location.href = '/bills';
+            window.location.href = ${API_BASE_URL}'/bills';
         }
 
         function goToProposalsPage() {
-           window.location.href = '/proposals';
+           window.location.href = '${API_BASE_URL}/proposals';
         }
 
         function viewBillDetail(billId, billTitle) {
-            window.location.href = `/bills/${billId}`;
+            window.location.href = `${API_BASE_URL}/bills/${billId}`;
         }
 
         function viewMemberDetail(memberId, memberName) {
-            window.location.href = `/members/${memberId}`;
+            window.location.href = `${API_BASE_URL}/members/${memberId}`;
         }
 
         function performSearch() {
