@@ -463,6 +463,10 @@
         function viewProposalDetail(proposalId){
              window.location.href = `${API_BASE_URL}/proposals/${proposalId}`;
         }
+
+        function goToProposalWrite(){
+            window.location.href = `${API_BASE_URL}/proposals/new`
+        }
         // 서버에서 전달받은 설정
         const PAGE_CONFIG = {
             currentPage: {{ pagination.current_page if pagination else 1 }},
