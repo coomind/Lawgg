@@ -122,7 +122,7 @@ class CommentLike(db.Model):
     ip_address = db.Column(db.String(50))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-     __table_args__ = (db.UniqueConstraint('comment_id', 'ip_address'),)
+    __table_args__ = (db.UniqueConstraint('comment_id', 'ip_address'),)
 
 
 class BlockedIP(db.Model):
