@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Law.GG - {{ page_title }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+            line-height: 1.4;
+        }
+
+        /* 헤더 - 다른 페이지와 동일한 스타일로 업데이트 */
+        .header {
+            background: white;
+            border-bottom: 1px solid #e9ecef;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 20px;
+            font-weight: 700;
+            color: #2c3e50;
+            cursor: pointer;
+            transition: opacity 0.2s ease;
+        }
+
+        .logo:hover {
+            opacity: 0.8;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: #3498db;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .nav {
+            display: flex;
+            gap: 24px;
+        }
+
+        .nav-item {
+            color: #666;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+        .nav-item:hover {
+            color: #3498db;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .edit-icon {
+            font-size: 20px;
+        }
+
+        .form-container {
+            background-color: #e9ecef;
+            padding: 30px;
+            border-radius: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+            background-color: white;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #666;
+        }
+
+        .form-input.error {
+            border-color: #dc3545;
+            background-color: #fff5f5;
+        }
+
+        .form-textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+            background-color: white;
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .form-textarea:focus {
+            outline: none;
+            border-color: #666;
+        }
+
+        .form-textarea.error {
+            border-color: #dc3545;
+            background-color: #fff5f5;
+        }
+
+        .error-message {
+            color: #dc3545;
+            font-size: 12px;
+            margin-top: 5px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .toggle-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 24px;
+            background-color: #333;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .toggle-switch.off {
+            background-color: #ccc;
+        }
+
+        .toggle-knob {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background-color: white;
+            border-radius: 50%;
+            transition: transform 0.3s;
+        }
+
+        .toggle-switch.off .toggle-knob {
+            transform: translateX(26px);
+        }
+
+        .content-notice {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #6c757d;
+            margin-bottom: 20px;
+        }
+
+        .content-notice p {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .content-notice p:last-child {
+            margin-bottom: 0;
+        }
+
+        .button-container {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 30px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-cancel {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .btn-cancel:hover:not(:disabled) {
+            background-color: #545b62;
+        }
+
+        .btn-submit {
+            background-color: #333;
+            color: white;
+        }
+
+        .btn-submit:hover:not(:disabled) {
+            background-color: #000;
+        }
+
+        .checkbox-group {
+            margin-top: 15px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .checkbox-item input[type="radio"] {
+            margin-top: 3px;
+        }
+
+        .checkbox-item label {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.4;
+        }
+
+        .character-count {
+            font-size: 12px;
+            color: #666;
+            text-align: right;
+            margin-top: 5px;
+        }
+
+        .character-count.over-limit {
+            color: #dc3545;
+            font-weight: 600;
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px 15px;
+            }
+
+            .form-container {
+                padding: 20px;
+            }
+
+            .page-title {
+                font-size: 20px;
+            }
+
+            .button-container {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+
+            .nav {
+                gap: 16px;
+            }
+
+            .header {
+                padding: 16px 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 헤더 -->
+    <header class="header">
+        <div class="logo" onclick="goToHome()">
+            <div class="logo-icon">⚖️</div>
+            <span>LAW.GG</span>
+        </div>
+        <nav class="nav">
+            <div class="nav-item" onclick="goToMembersPage()">국회의원</div>
+            <div class="nav-item" onclick="geToBillsPage()">법률안</div>
+            <div class="nav-item" onclick="goToProposalsPage()">입법제안</div>
+        </nav>
+    </header>
+
+    <main class="container">
+        <h1 class="page-title">
+            <span class="edit-icon">✏️</span>
+            {{ page_title }}
+        </h1>
+
+        <!-- 알림 메시지 -->
+        {% if success_message %}
+        <div class="alert alert-success">
+            {{ success_message }}
+        </div>
+        {% endif %}
+
+        {% if error_message %}
+        <div class="alert alert-error">
+            {{ error_message }}
+        </div>
+        {% endif %}
+
+        {% if draft_restored %}
+        <div class="alert alert-info">
+            임시저장된 내용을 불러왔습니다.
+        </div>
+        {% endif %}
+
+        <div class="form-container">
+            <form id="proposal-form" method="POST" action="{{ form_action }}">
+                {% if csrf_token %}
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                {% endif %}
+                
+                {% if is_edit_mode %}
+                <input type="hidden" name="proposal_id" value="{{ proposal.id }}">
+                {% endif %}
+
+                <div class="form-group">
+                    <div class="toggle-container">
+                        <label class="form-label">제목</label>
+                        <div class="toggle-wrapper">
+                            <span style="font-size: 12px; color: #666;">공개 여부</span>
+                            <div class="toggle-switch {% if not form_data.is_public %}off{% endif %}" id="publicToggle">
+                                <div class="toggle-knob"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="text" 
+                           class="form-input" 
+                           id="title" 
+                           name="title"
+                           value="{{ form_data.title or '' }}"
+                           placeholder="제목을 입력하세요"
+                           maxlength="200"
+                           required>
+                    <div class="error-message" id="title-error"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="target_law" class="form-label">대상법안</label>
+                    <input type="text" 
+                           class="form-input" 
+                           id="target_law" 
+                           name="target_law"
+                           value="{{ form_data.target_law or '' }}"
+                           placeholder="대상법안을 입력하세요"
+                           maxlength="100">
+                    <div class="error-message" id="target_law-error"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="draft_number" class="form-label">초안번호</label>
+                    <input type="text" 
+                           class="form-input" 
+                           id="draft_number" 
+                           name="draft_number"
+                           value="{{ form_data.draft_number or '' }}"
+                           placeholder="예시) 제1조, 제2조부터 제10조 등"
+                           maxlength="100">
+                    <div class="error-message" id="draft_number-error"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="current_situation" class="form-label">현황</label>
+                    <textarea class="form-textarea" 
+                              id="current_situation" 
+                              name="current_situation"
+                              placeholder="- 현황 법령 ∙ 제도의 구체적 내용"
+                              maxlength="2000"
+                              required>{{ form_data.current_situation or '' }}</textarea>
+                    <div class="character-count" id="current_situation-count">
+                        <span id="current_situation-length">{{ (form_data.current_situation or '')|length }}</span>/2000자
+                    </div>
+                    <div class="error-message" id="current_situation-error"></div>
+                    
+                    <div class="content-notice">
+                        <p>※ 게시판의 성격에 맞지 않는 게시글, 욕설, 비방, 광고, 반복게시물을 올릴 경우 임의 삭제될 수 있습니다.</p>
+                        <p>※ 법안 정보는 정확하고 구체적으로 작성해주세요.</p>
+                        <p>(최대 2000자)</p>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="problems" class="form-label">문제점</label>
+                    <textarea class="form-textarea" 
+                              id="problems" 
+                              name="problems"
+                              placeholder="- 법령 운영의 문제점 또는 한계"
+                              maxlength="2000">{{ form_data.problems or '' }}</textarea>
+                    <div class="character-count" id="problems-count">
+                        <span id="problems-length">{{ (form_data.problems or '')|length }}</span>/2000자
+                    </div>
+                    <div class="error-message" id="problems-error"></div>
+                    <p style="font-size: 12px; color: #666; margin-top: 5px;">
+                        - 현재 법령의 문제점이나 비효율적인 부분, 그 사례 등<br>(최대 2000자)
+                    </p>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">제안사유</label>
+                    <textarea class="form-textarea" 
+                              id="proposal_reasons" 
+                              name="proposal_reasons"
+                              placeholder="- 구체적 개선 방안"
+                              maxlength="2000"
+                              required>{{ form_data.proposal_reasons or '' }}</textarea>
+                    <div class="character-count" id="proposal_reasons-count">
+                        <span id="proposal_reasons-length">{{ (form_data.proposal_reasons or '')|length }}</span>/2000자
+                    </div>
+                    <div class="error-message" id="proposal_reasons-error"></div>
+                    <p style="font-size: 12px; color: #666; margin-top: 5px;">
+                        - 개선방안의 구체적인 법령 개선안을 제시해주세요
+                    </p>
+                    
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="radio" 
+                                   id="improve_existing" 
+                                   name="improvement_type" 
+                                   value="improve"
+                                   {% if form_data.improvement_type == 'improve' %}checked{% endif %}>
+                            <label for="improve_existing">○ 기존 법령 개정<br>제00조로 개정안 제시</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="radio" 
+                                   id="enact_new" 
+                                   name="improvement_type" 
+                                   value="enact"
+                                   {% if form_data.improvement_type == 'enact' %}checked{% endif %}>
+                            <label for="enact_new">○ 신규 법령 제정<br>새로운 법령 제정안 제시<br>(최대 2000자)</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 숨겨진 필드들 -->
+                <input type="hidden" id="is_public" name="is_public" value="{{ form_data.is_public|tojson }}">
+                <input type="hidden" id="is_draft" name="is_draft" value="false">
+            </form>
+
+            <div class="button-container">
+                {% if allow_draft_save %}
+                <button type="button" class="btn btn-cancel" id="draft-save-btn">
+                    {% if has_draft %}임시저장 업데이트{% else %}임시저장{% endif %}
+                </button>
+                {% endif %}
+                
+                <button type="submit" class="btn btn-submit" form="proposal-form" id="submit-btn">
+                    {% if is_edit_mode %}수정완료{% else %}등록{% endif %}
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // 페이지 이동 함수들
+        function goToHome() {
+            window.location.href = '/';
+        }
+
+        function goToMembersPage() {
+            window.location.href = '/members';
+        }
+
+        function geToBillsPage() {
+            window.location.href = '/bills';
+        }
+
+        function goToProposalsPage() {
+           window.location.href = '/proposals';
+        }
+
+        // 서버에서 전달받은 설정
+        const FORM_CONFIG = {
+            isEditMode: {{ is_edit_mode|tojson }},
+            allowDraftSave: {{ allow_draft_save|tojson }},
+            hasDraft: {{ has_draft|tojson }},
+            maxLength: {
+                title: 200,
+                targetLaw: 100,
+                draftNumber: 100,
+                currentSituation: 2000,
+                problems: 2000,
+                proposalReasons: 2000
+            }
+        };
+
+        // 전역 변수
+        let isPublic = {{ form_data.is_public|tojson }};
+        let isSubmitting = false;
+
+        // DOM 요소들
+        const toggle = document.getElementById('publicToggle');
+        const form = document.getElementById('proposal-form');
+        const submitBtn = document.getElementById('submit-btn');
+        const draftSaveBtn = document.getElementById('draft-save-btn');
+
+        // 토글 스위치 기능
+        toggle.addEventListener('click', function() {
+            isPublic = !isPublic;
+            if (isPublic) {
+                toggle.classList.remove('off');
+            } else {
+                toggle.classList.add('off');
+            }
+            document.getElementById('is_public').value = isPublic;
+            console.log('공개 여부:', isPublic ? '공개' : '비공개');
+        });
+
+        // 글자 수 카운터 기능
+        function setupCharacterCounter(fieldId, maxLength) {
+            const field = document.getElementById(fieldId);
+            const counter = document.getElementById(`${fieldId}-count`);
+            const lengthSpan = document.getElementById(`${fieldId}-length`);
+            
+            if (!field || !counter || !lengthSpan) return;
+            
+            field.addEventListener('input', function() {
+                const currentLength = this.value.length;
+                lengthSpan.textContent = currentLength;
+                
+                if (currentLength > maxLength) {
+                    counter.classList.add('over-limit');
+                    this.classList.add('error');
+                } else {
+                    counter.classList.remove('over-limit');
+                    this.classList.remove('error');
+                }
+            });
+        }
+
+        // 입력 검증 함수
+        function validateField(fieldId, fieldName, required = false) {
+            const field = document.getElementById(fieldId);
+            const errorDiv = document.getElementById(`${fieldId}-error`);
+            const value = field.value.trim();
+            
+            // 초기화
+            field.classList.remove('error');
+            errorDiv.classList.remove('show');
+            
+            // 필수 필드 검증
+            if (required && !value) {
+                field.classList.add('error');
+                errorDiv.textContent = `${fieldName}을(를) 입력해주세요.`;
+                errorDiv.classList.add('show');
+                return false;
+            }
+            
+            // 글자 수 검증
+            const maxLength = FORM_CONFIG.maxLength[fieldId.replace(/_([a-z])/g, (g) => g[1].toUpperCase())];
+            if (maxLength && value.length > maxLength) {
+                field.classList.add('error');
+                errorDiv.textContent = `최대 ${maxLength}자까지 입력 가능합니다.`;
+                errorDiv.classList.add('show');
+                return false;
+            }
+            
+            return true;
+        }
+
+        // 폼 전체 검증
+        function validateForm() {
+            let isValid = true;
+            
+            isValid &= validateField('title', '제목', true);
+            isValid &= validateField('current_situation', '현황', true);
+            isValid &= validateField('proposal_reasons', '제안사유', true);
+            isValid &= validateField('target_law', '대상법안');
+            isValid &= validateField('draft_number', '초안번호');
+            isValid &= validateField('problems', '문제점');
+            
+            return Boolean(isValid);
+        }
+
+        // 폼 제출 처리
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (isSubmitting) return;
+            
+            if (!validateForm()) {
+                alert('입력 정보를 확인해주세요.');
+                return;
+            }
+            
+            isSubmitting = true;
+            submitBtn.disabled = true;
+            submitBtn.textContent = '등록 중...';
+            
+            // 실제 폼 제출
+            this.submit();
+        });
+
+        // 임시저장 기능
+        if (draftSaveBtn) {
+            draftSaveBtn.addEventListener('click', function() {
+                if (isSubmitting) return;
+                
+                // 최소한의 검증 (제목만)
+                if (!document.getElementById('title').value.trim()) {
+                    alert('제목을 입력해주세요.');
+                    return;
+                }
+                
+                // 임시저장 플래그 설정
+                document.getElementById('is_draft').value = 'true';
+                
+                isSubmitting = true;
+                this.disabled = true;
+                this.textContent = '저장 중...';
+                
+                // 폼 제출
+                form.submit();
+            });
+        }
+
+        // 실시간 입력 검증
+        function setupRealTimeValidation() {
+            const fields = ['title', 'current_situation', 'proposal_reasons', 'target_law', 'draft_number', 'problems'];
+            
+            fields.forEach(fieldId => {
+                const field = document.getElementById(fieldId);
+                if (field) {
+                    field.addEventListener('blur', function() {
+                        const isRequired = fieldId === 'title' || fieldId === 'current_situation' || fieldId === 'proposal_reasons';
+                        validateField(fieldId, this.placeholder || fieldId, isRequired);
+                    });
+                }
+            });
+        }
+
+        // 자동저장 기능 (선택사항)
+        function setupAutoSave() {
+            if (!FORM_CONFIG.allowDraftSave) return;
+            
+            let autoSaveTimer;
+            const autoSaveInterval = 30000; // 30초마다 자동저장
+            
+            function autoSave() {
+                const title = document.getElementById('title').value.trim();
+                if (!title) return; // 제목이 없으면 자동저장 안함
+                
+                const formData = new FormData(form);
+                formData.set('is_draft', 'true');
+                formData.set('auto_save', 'true');
+                
+                fetch(form.action, {
+                    method: 'POST',
+                    body: formData
+                }).then(response => {
+                    if (response.ok) {
+                        console.log('자동저장 완료');
+                    }
+                }).catch(error => {
+                    console.error('자동저장 실패:', error);
+                });
+            }
+            
+            // 입력이 있을 때마다 타이머 리셋
+            form.addEventListener('input', function() {
+                clearTimeout(autoSaveTimer);
+                autoSaveTimer = setTimeout(autoSave, autoSaveInterval);
+            });
+        }
+
+        // 페이지 떠나기 확인
+        function setupBeforeUnload() {
+            let formChanged = false;
+            
+            form.addEventListener('input', function() {
+                formChanged = true;
+            });
+            
+            window.addEventListener('beforeunload', function(e) {
+                if (formChanged && !isSubmitting) {
+                    e.preventDefault();
+                    e.returnValue = '';
+                    return '작성 중인 내용이 있습니다. 페이지를 떠나시겠습니까?';
+                }
+            });
+            
+            // 폼 제출 시 경고 해제
+            form.addEventListener('submit', function() {
+                formChanged = false;
+            });
+        }
+
+        // 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            // 글자 수 카운터 설정
+            setupCharacterCounter('current_situation', FORM_CONFIG.maxLength.currentSituation);
+            setupCharacterCounter('problems', FORM_CONFIG.maxLength.problems);
+            setupCharacterCounter('proposal_reasons', FORM_CONFIG.maxLength.proposalReasons);
+            
+            // 실시간 검증 설정
+            setupRealTimeValidation();
+            
+            // 자동저장 설정
+            setupAutoSave();
+            
+            // 페이지 떠나기 확인 설정
+            setupBeforeUnload();
+            
+            console.log('입법제안 글쓰기 페이지 로드 완료');
+            console.log('편집 모드:', FORM_CONFIG.isEditMode);
+        });
+    </script>
+</body>
+</html>

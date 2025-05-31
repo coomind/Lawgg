@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Law.GG - {{ bill.name }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+            line-height: 1.4;
+        }
+
+        /* 헤더 - 다른 페이지와 동일한 스타일로 수정 */
+        .header {
+            background: white;
+            border-bottom: 1px solid #e9ecef;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 20px;
+            font-weight: 700;
+            color: #2c3e50;
+            cursor: pointer;
+            transition: opacity 0.2s ease;
+        }
+
+        .logo:hover {
+            opacity: 0.8;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: #3498db;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .nav {
+            display: flex;
+            gap: 24px;
+        }
+
+        .nav-item {
+            color: #666;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+        .nav-item:hover {
+            color: #3498db;
+        }
+
+        /* 메인 컨테이너 */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+
+        /* 통합 콘텐츠 */
+        .unified-content {
+            background-color: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            margin-bottom: 40px;
+        }
+
+        .vote-section-centered {
+            grid-column: 1 / -1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 40px 0;
+            padding: 30px 0;
+            border-top: 1px solid #e9ecef;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .full-width-section {
+            grid-column: 1 / -1;
+            border-top: 1px solid #e9ecef;
+            padding-top: 30px;
+        }
+
+        /* 왼쪽 메인 콘텐츠 */
+        .main-content {
+            /* 배경과 그림자 제거 - 통합 콘텐츠에서 처리 */
+        }
+
+        .bill-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .bill-info {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 6px;
+            margin-bottom: 30px;
+        }
+
+        .info-row {
+            display: flex;
+            margin-bottom: 10px;
+        }
+
+        .info-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #495057;
+            width: 120px;
+            flex-shrink: 0;
+        }
+
+        .info-value {
+            color: #333;
+        }
+
+        .view-detail-btn {
+            background-color: #495057;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 30px;
+            transition: background-color 0.2s;
+        }
+
+        .view-detail-btn:hover {
+            background-color: #343a40;
+        }
+
+        /* 찬성/반대 버튼 */
+        .vote-section {
+            margin-bottom: 30px;
+        }
+
+        .vote-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .vote-btn {
+            padding: 15px 40px;
+            border: 2px solid;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-width: 120px;
+        }
+
+        .vote-btn.agree {
+            border-color: #28a745;
+            color: #28a745;
+            background-color: white;
+        }
+
+        .vote-btn.agree:hover,
+        .vote-btn.agree.active {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .vote-btn.disagree {
+            border-color: #dc3545;
+            color: #dc3545;
+            background-color: white;
+        }
+
+        .vote-btn.disagree:hover,
+        .vote-btn.disagree.active {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .vote-counts {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .vote-count {
+            text-align: center;
+            padding: 15px 20px;
+            border: 2px solid;
+            border-radius: 8px;
+            min-width: 100px;
+        }
+
+        .vote-count.agree {
+            border-color: #28a745;
+        }
+
+        .vote-count.disagree {
+            border-color: #dc3545;
+        }
+
+        .vote-count-label {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .vote-count-number {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .vote-count.agree .vote-count-label,
+        .vote-count.agree .vote-count-number {
+            color: #28a745;
+        }
+
+        .vote-count.disagree .vote-count-label,
+        .vote-count.disagree .vote-count-number {
+            color: #dc3545;
+        }
+
+        /* 댓글 섹션 */
+        .comments-section {
+            /* 기존 border-top과 padding-top 제거 */
+        }
+
+        .comments-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .comment-form {
+            margin-bottom: 30px;
+        }
+
+        .comment-input {
+            width: 100%;
+            min-height: 100px;
+            padding: 15px;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 14px;
+            resize: vertical;
+            margin-bottom: 10px;
+        }
+
+        .comment-input:focus {
+            outline: none;
+            border-color: #495057;
+            box-shadow: 0 0 0 3px rgba(73, 80, 87, 0.1);
+        }
+
+        .comment-submit {
+            background-color: #495057;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            float: right;
+            transition: background-color 0.2s;
+        }
+
+        .comment-submit:hover {
+            background-color: #343a40;
+        }
+
+        .comment-submit:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .comments-list {
+            clear: both;
+        }
+
+        .comment-item {
+            padding: 15px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .comment-item:last-child {
+            border-bottom: none;
+        }
+
+        .comment-item.reply {
+            margin-left: 40px;
+            padding-left: 20px;
+            border-left: 3px solid #e9ecef;
+            background-color: #f8f9fa;
+        }
+
+        .comment-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .comment-author {
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .comment-stance {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .comment-stance.agree {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .comment-stance.disagree {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .comment-time {
+            color: #6c757d;
+            font-size: 12px;
+        }
+
+        .comment-content {
+            color: #333;
+            line-height: 1.5;
+            margin-bottom: 10px;
+        }
+
+        .comment-actions {
+            display: flex;
+            gap: 15px;
+        }
+
+        .comment-action-btn {
+            background: none;
+            border: none;
+            color: #6c757d;
+            font-size: 12px;
+            cursor: pointer;
+            padding: 0;
+            transition: color 0.2s;
+        }
+
+        .comment-action-btn:hover {
+            color: #495057;
+        }
+
+        .comment-action-btn.report-btn {
+            color: #dc3545;
+        }
+
+        .comment-action-btn.report-btn:hover {
+            color: #bd2130;
+        }
+
+        .comment-action-btn.report-btn.reported {
+            color: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .comment-under-review {
+            background-color: #fff3cd !important;
+            border-left: 4px solid #ffc107 !important;
+        }
+
+        .under-review-badge {
+            background-color: #ffc107;
+            color: #856404;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+            margin-left: 5px;
+        }
+
+        .reply-form {
+            margin-top: 15px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            display: none;
+        }
+
+        .reply-form.show {
+            display: block;
+        }
+
+        .reply-input {
+            width: 100%;
+            min-height: 60px;
+            padding: 10px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            font-size: 13px;
+            resize: vertical;
+            margin-bottom: 10px;
+        }
+
+        .reply-input:focus {
+            outline: none;
+            border-color: #495057;
+            box-shadow: 0 0 0 2px rgba(73, 80, 87, 0.1);
+        }
+
+        .reply-submit {
+            background-color: #495057;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+            margin-right: 10px;
+            transition: background-color 0.2s;
+        }
+
+        .reply-submit:hover {
+            background-color: #343a40;
+        }
+
+        .reply-submit:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .reply-cancel {
+            background: none;
+            border: none;
+            color: #6c757d;
+            font-size: 13px;
+            cursor: pointer;
+            padding: 8px 16px;
+        }
+
+        .reply-cancel:hover {
+            color: #495057;
+        }
+
+        .vote-required-message {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        /* 오른쪽 사이드바 */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .bill-summary {
+            /* 배경과 그림자 제거 - 통합 콘텐츠에서 처리 */
+            padding: 25px;
+            margin-bottom: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+
+        .summary-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .summary-subtitle {
+            font-size: 13px;
+            color: #6c757d;
+            margin-bottom: 20px;
+        }
+
+        .summary-section {
+            margin-bottom: 20px;
+        }
+
+        .summary-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .summary-section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .summary-section-title::after {
+            content: "▼";
+            font-size: 10px;
+            color: #6c757d;
+            margin-left: auto;
+        }
+
+        .summary-list {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .summary-list li {
+            font-size: 13px;
+            color: #495057;
+            margin-bottom: 6px;
+            padding-left: 8px;
+            position: relative;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .summary-list li:hover {
+            color: #3498db;
+        }
+
+        .summary-list li::before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: #6c757d;
+        }
+
+        .related-bills {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+
+        .related-bill-item {
+            padding: 12px 0;
+            border-bottom: 1px solid #f1f3f4;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .related-bill-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .related-bill-item:last-child {
+            border-bottom: none;
+        }
+
+        .related-bill-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 4px;
+            line-height: 1.3;
+        }
+
+        .related-bill-meta {
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        .sidebar-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .related-bill-item {
+            padding: 12px 0;
+            border-bottom: 1px solid #f1f3f4;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .related-bill-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .related-bill-item:last-child {
+            border-bottom: none;
+        }
+
+        .related-bill-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 4px;
+            line-height: 1.3;
+        }
+
+        .related-bill-meta {
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        /* 반응형 디자인 */
+        @media (max-width: 1024px) {
+            .header {
+                padding: 16px 20px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .unified-content {
+                padding: 20px;
+            }
+
+            .vote-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .vote-counts {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .bill-title {
+                font-size: 20px;
+            }
+
+            .nav {
+                gap: 16px;
+            }
+
+            .nav-item {
+                font-size: 14px;
+            }
+
+            .header {
+                padding: 16px 15px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .nav {
+                gap: 20px;
+            }
+            
+            .nav-item {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 헤더 -->
+    <header class="header">
+        <div class="logo" onclick="goToHome()">
+            <div class="logo-icon">⚖️</div>
+            <span>LAW.GG</span>
+        </div>
+        <nav class="nav">
+            <div class="nav-item" onclick="goToMembersPage()">국회의원</div>
+            <div class="nav-item" onclick="geToBillsPage()">법률안</div>
+            <div class="nav-item" onclick="goToProposalsPage()">입법제안</div>
+        </nav>
+    </header>
+
+    <!-- 메인 컨테이너 -->
+    <main class="container">
+        <!-- 통합 콘텐츠 -->
+        <div class="unified-content">
+            <div class="content-grid">
+                <!-- 왼쪽 메인 콘텐츠 -->
+                <div class="main-content">
+                    <h1 class="bill-title">{{ bill.name }}</h1>
+                    
+                    <!-- 법률안 정보 -->
+                    <div class="bill-info">
+                        <div class="info-row">
+                            <span class="info-label">의안 번호:</span>
+                            <span class="info-value">{{ bill.number }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">위원회:</span>
+                            <span class="info-value">{{ bill.committee }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">발의연월일:</span>
+                            <span class="info-value">{{ bill.propose_date }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">대표발의자:</span>
+                            <span class="info-value">{{ bill.proposer }}</span>
+                        </div>
+                    </div>
+
+                    <button class="view-detail-btn" onclick="viewBillDetail('{{ bill.detail_link }}')">의안 상세</button>
+                </div>
+
+                <!-- 오른쪽 사이드바 -->
+                <div class="sidebar">
+                    <!-- 조문의 의안 요약 -->
+                    <div class="bill-summary">
+                        <div class="summary-title">조문의 의안</div>
+                        <div class="summary-subtitle">(제안배경과)</div>
+                        
+                        <div class="summary-section">
+                            <div class="summary-section-title">관련 법률안</div>
+                            <ul class="summary-list">
+                                {% for related_bill in related_bills %}
+                                <li onclick="goToBillDetail('{{ related_bill.id }}')">{{ related_bill.name }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 찬성/반대 투표 (중앙 배치) -->
+            <div class="vote-section-centered">
+                <div class="vote-buttons">
+                    <button class="vote-btn agree" data-vote="agree">찬성</button>
+                    <button class="vote-btn disagree" data-vote="disagree">반대</button>
+                </div>
+                
+                <div class="vote-counts">
+                    <div class="vote-count agree">
+                        <div class="vote-count-label">찬성</div>
+                        <div class="vote-count-number" id="agree-count">{{ "{:,}".format(vote_stats.agree_count) }}</div>
+                    </div>
+                    <div class="vote-count disagree">
+                        <div class="vote-count-label">반대</div>
+                        <div class="vote-count-number" id="disagree-count">{{ "{:,}".format(vote_stats.disagree_count) }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 댓글 섹션 (전체 너비) -->
+            <div class="full-width-section">
+                <div class="comments-section">
+                    <h2 class="comments-title">법안 토론</h2>
+                    
+                    <div class="comment-form">
+                        <div class="vote-required-message" id="vote-message" style="display: none;">
+                            댓글을 작성하려면 먼저 찬성 또는 반대를 선택해주세요.
+                        </div>
+                        <textarea 
+                            class="comment-input" 
+                            id="comment-input" 
+                            placeholder="법안에 대한 의견을 작성해주세요..."
+                            disabled
+                        ></textarea>
+                        <button class="comment-submit" id="comment-submit" disabled>댓글 작성</button>
+                    </div>
+
+                    <div class="comments-list" id="comments-list">
+                        {% for comment in comments %}
+                        <div class="comment-item {% if comment.parent_id %}reply{% endif %} {% if comment.is_under_review %}comment-under-review{% endif %}" 
+                             data-comment-id="{{ comment.id }}" 
+                             {% if comment.parent_id %}data-parent-id="{{ comment.parent_id }}"{% endif %}
+                             data-report-count="{{ comment.report_count }}">
+                            <div class="comment-header">
+                                <span class="comment-author">{{ comment.author }}</span>
+                                <span class="comment-stance {{ 'agree' if comment.stance == 'agree' else 'disagree' }}">
+                                    {{ '찬성' if comment.stance == 'agree' else '반대' }}
+                                </span>
+                                <span class="comment-time">{{ comment.time_ago }}</span>
+                                {% if comment.is_under_review %}
+                                <span class="under-review-badge">검토 중</span>
+                                {% endif %}
+                            </div>
+                            <div class="comment-content">{{ comment.content }}</div>
+                            <div class="comment-actions">
+                                <button class="comment-action-btn reply-btn" data-comment-id="{{ comment.id }}">답글</button>
+                                <button class="comment-action-btn report-btn {% if comment.is_reported_by_user %}reported{% endif %}" 
+                                        data-comment-id="{{ comment.id }}">
+                                    {% if comment.is_reported_by_user %}
+                                        신고됨
+                                    {% elif comment.report_count > 0 %}
+                                        신고 ({{ comment.report_count }})
+                                    {% else %}
+                                        신고
+                                    {% endif %}
+                                </button>
+                            </div>
+                            <div class="reply-form" id="reply-form-{{ comment.id }}">
+                                <textarea class="reply-input" placeholder="답글을 작성해주세요..."></textarea>
+                                <button class="reply-submit" data-parent-id="{{ comment.parent_id or comment.id }}">답글 작성</button>
+                                <button class="reply-cancel">취소</button>
+                            </div>
+                        </div>
+                        {% endfor %}
+
+                        <!-- 더보기 버튼 -->
+                        {% if has_more_comments %}
+                        <div style="text-align: center; margin-top: 20px;">
+                            <button onclick="loadMoreComments()" style="background-color: #4285f4; color: white; border: none; padding: 10px 30px; border-radius: 6px; cursor: pointer;">더보기</button>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        function goToHome() {
+            window.location.href = 'index.html';
+        }
+
+        function goToMembersPage() {
+            window.location.href = 'NAlist.html';
+        }
+
+        function geToBillsPage() {
+            window.location.href = 'LAWlist.html';
+        }
+
+        function goToProposalsPage() {
+           window.location.href = 'PROPlist.html';
+        }
+
+        function viewBillDetail(detailLink) {
+            if (detailLink) {
+                window.open(detailLink, '_blank');
+            } else {
+                alert('상세 페이지 링크를 찾을 수 없습니다.');
+            }
+        }
+
+        function goToBillDetail(billId) {
+            window.location.href = `/bill/${billId}`;
+        }
+
+        function loadMoreComments() {
+            // AJAX로 더 많은 댓글 로드
+            // 실제 구현에서는 서버에서 추가 댓글을 가져와야 함
+            alert('더 많은 댓글을 로드합니다.');
+        }
+
+        // 전역 상태
+        let userVote = null; // 'agree', 'disagree', null
+        let commentCounter = {{ comments|length + 1 }}; // 다음 익명 번호
+        let voteCounts = {
+            agree: {{ vote_stats.agree_count }},
+            disagree: {{ vote_stats.disagree_count }}
+        };
+
+        // 신고 관련 상태 (초기값은 서버에서 전달받은 데이터 기반)
+        let reportedComments = new Set({{ reported_comment_ids|tojson }}); // 사용자가 신고한 댓글 ID들
+        let commentReports = {{ comment_reports|tojson }}; // 댓글별 신고 수
+
+        // DOM 요소들
+        const voteButtons = document.querySelectorAll('.vote-btn');
+        const commentInput = document.getElementById('comment-input');
+        const commentSubmit = document.getElementById('comment-submit');
+        const commentsList = document.getElementById('comments-list');
+        const voteMessage = document.getElementById('vote-message');
+        const agreeCountEl = document.getElementById('agree-count');
+        const disagreeCountEl = document.getElementById('disagree-count');
+
+        // 답글 시스템 초기화
+        function initializeReplySystem() {
+            // 답글 버튼 이벤트
+            document.querySelectorAll('.reply-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const commentId = this.getAttribute('data-comment-id');
+                    const replyForm = document.getElementById(`reply-form-${commentId}`);
+                    
+                    // 다른 답글 폼들 숨기기
+                    document.querySelectorAll('.reply-form').forEach(form => {
+                        form.classList.remove('show');
+                    });
+                    
+                    // 현재 답글 폼 토글
+                    replyForm.classList.toggle('show');
+                    
+                    if (replyForm.classList.contains('show')) {
+                        replyForm.querySelector('.reply-input').focus();
+                    }
+                });
+            });
+
+            // 답글 작성 버튼 이벤트
+            document.querySelectorAll('.reply-submit').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    if (!userVote) {
+                        alert('먼저 찬성 또는 반대를 선택해주세요.');
+                        return;
+                    }
+                    
+                    const parentId = this.getAttribute('data-parent-id');
+                    const replyForm = this.closest('.reply-form');
+                    const replyInput = replyForm.querySelector('.reply-input');
+                    const content = replyInput.value.trim();
+                    
+                    if (!content) {
+                        alert('답글 내용을 입력해주세요.');
+                        return;
+                    }
+                    
+                    addReply(parentId, content, userVote);
+                    replyInput.value = '';
+                    replyForm.classList.remove('show');
+                });
+            });
+
+            // 답글 취소 버튼 이벤트
+            document.querySelectorAll('.reply-cancel').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const replyForm = this.closest('.reply-form');
+                    replyForm.classList.remove('show');
+                    replyForm.querySelector('.reply-input').value = '';
+                });
+            });
+
+            // 신고 버튼 이벤트
+            document.querySelectorAll('.report-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const commentId = this.getAttribute('data-comment-id');
+                    reportComment(commentId);
+                });
+            });
+        }
+
+        // 댓글 신고 기능
+        function reportComment(commentId) {
+            // 이미 신고한 댓글인지 확인
+            if (reportedComments.has(commentId)) {
+                alert('이미 신고한 댓글입니다.');
+                return;
+            }
+            
+            // 신고 확인
+            if (!confirm('이 댓글을 신고하시겠습니까?\n부적절한 내용이 포함된 댓글만 신고해주세요.')) {
+                return;
+            }
+            
+            // 실제 구현에서는 서버로 신고 요청 전송
+            // POST /api/comments/${commentId}/report
+            
+            // 신고 처리
+            reportedComments.add(commentId);
+            
+            // 신고 수 증가
+            if (!commentReports[commentId]) {
+                commentReports[commentId] = 0;
+            }
+            commentReports[commentId]++;
+            
+            // UI 업데이트
+            updateReportButton(commentId);
+            updateCommentStatus(commentId);
+            
+            alert('신고가 접수되었습니다. 관리자 검토 후 적절한 조치가 취해집니다.');
+        }
+
+        // 신고 버튼 UI 업데이트
+        function updateReportButton(commentId) {
+            const reportBtn = document.querySelector(`[data-comment-id="${commentId}"].report-btn`);
+            const reportCount = commentReports[commentId];
+            
+            if (reportBtn) {
+                if (reportedComments.has(commentId)) {
+                    reportBtn.classList.add('reported');
+                    reportBtn.textContent = '신고됨';
+                } else if (reportCount > 0) {
+                    reportBtn.textContent = `신고 (${reportCount})`;
+                } else {
+                    reportBtn.textContent = '신고';
+                }
+            }
+        }
+
+        // 댓글 상태 업데이트 (검토 중 표시)
+        function updateCommentStatus(commentId) {
+            const commentItem = document.querySelector(`[data-comment-id="${commentId}"]`);
+            const reportCount = commentReports[commentId];
+            
+            if (commentItem && reportCount >= 3) {
+                // 검토 중 상태로 변경
+                commentItem.classList.add('comment-under-review');
+                commentItem.setAttribute('data-report-count', reportCount);
+                
+                // 검토 중 배지 추가 (아직 없는 경우에만)
+                const header = commentItem.querySelector('.comment-header');
+                if (!header.querySelector('.under-review-badge')) {
+                    const badge = document.createElement('span');
+                    badge.className = 'under-review-badge';
+                    badge.textContent = '검토 중';
+                    header.appendChild(badge);
+                }
+            }
+        }
+
+        // 초기 신고 버튼 상태 설정
+        function initializeReportButtons() {
+            Object.keys(commentReports).forEach(commentId => {
+                updateReportButton(commentId);
+                updateCommentStatus(commentId);
+            });
+        }
+
+        // 답글 추가 함수
+        function addReply(parentId, content, stance) {
+            const stanceText = stance === 'agree' ? '찬성' : '반대';
+            const stanceClass = stance === 'agree' ? 'agree' : 'disagree';
+            
+            const replyItem = document.createElement('div');
+            replyItem.className = 'comment-item reply';
+            replyItem.setAttribute('data-comment-id', commentCounter);
+            replyItem.setAttribute('data-parent-id', parentId);
+            replyItem.setAttribute('data-report-count', '0');
+            
+            replyItem.innerHTML = `
+                <div class="comment-header">
+                    <span class="comment-author">익명${commentCounter}</span>
+                    <span class="comment-stance ${stanceClass}">${stanceText}</span>
+                    <span class="comment-time">방금 전</span>
+                </div>
+                <div class="comment-content">${content}</div>
+                <div class="comment-actions">
+                    <button class="comment-action-btn reply-btn" data-comment-id="${commentCounter}">답글</button>
+                    <button class="comment-action-btn report-btn" data-comment-id="${commentCounter}">신고</button>
+                </div>
+                <div class="reply-form" id="reply-form-${commentCounter}">
+                    <textarea class="reply-input" placeholder="답글을 작성해주세요..."></textarea>
+                    <button class="reply-submit" data-parent-id="${parentId}">답글 작성</button>
+                    <button class="reply-cancel">취소</button>
+                </div>
+            `;
+            
+            // 부모 댓글 찾기
+            const parentComment = document.querySelector(`[data-comment-id="${parentId}"]`);
+            let insertAfter = parentComment;
+            
+            // 해당 부모의 마지막 대댓글 찾기
+            let nextSibling = parentComment.nextElementSibling;
+            while (nextSibling && nextSibling.getAttribute('data-parent-id') === parentId) {
+                insertAfter = nextSibling;
+                nextSibling = nextSibling.nextElementSibling;
+            }
+            
+            // 답글 삽입
+            if (insertAfter.nextElementSibling) {
+                insertAfter.parentNode.insertBefore(replyItem, insertAfter.nextElementSibling);
+            } else {
+                insertAfter.parentNode.appendChild(replyItem);
+            }
+            
+            // 신고 상태 초기화
+            commentReports[commentCounter] = 0;
+            
+            commentCounter++;
+            
+            // 새 답글에 이벤트 리스너 추가
+            initializeReplySystem();
+            
+            // 새 답글 강조 효과
+            replyItem.style.backgroundColor = '#e3f2fd';
+            setTimeout(() => {
+                replyItem.style.backgroundColor = '';
+                replyItem.style.transition = 'background-color 0.5s';
+            }, 2000);
+        }
+
+        // 투표 버튼 이벤트
+        voteButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const vote = this.getAttribute('data-vote');
+                
+                // 이전 투표가 있다면 카운트 감소
+                if (userVote) {
+                    voteCounts[userVote]--;
+                    updateVoteCounts();
+                }
+                
+                // 같은 버튼을 다시 누르면 투표 취소
+                if (userVote === vote) {
+                    userVote = null;
+                    voteButtons.forEach(btn => btn.classList.remove('active'));
+                    disableComments();
+                } else {
+                    // 새로운 투표 설정
+                    userVote = vote;
+                    voteCounts[vote]++;
+                    updateVoteCounts();
+                    
+                    // 버튼 상태 업데이트
+                    voteButtons.forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    enableComments();
+                }
+                
+                // 실제 구현에서는 서버로 투표 전송
+                // POST /api/bills/{{ bill.id }}/vote { vote: userVote }
+            });
+        });
+
+        // 투표 수 업데이트
+        function updateVoteCounts() {
+            agreeCountEl.textContent = voteCounts.agree.toLocaleString();
+            disagreeCountEl.textContent = voteCounts.disagree.toLocaleString();
+        }
+
+        // 댓글 기능 활성화
+        function enableComments() {
+            commentInput.disabled = false;
+            commentSubmit.disabled = false;
+            voteMessage.style.display = 'none';
+            commentInput.placeholder = "법안에 대한 의견을 작성해주세요...";
+        }
+
+        // 댓글 기능 비활성화
+        function disableComments() {
+            commentInput.disabled = true;
+            commentSubmit.disabled = true;
+            voteMessage.style.display = 'block';
+            commentInput.placeholder = "댓글을 작성하려면 먼저 찬성 또는 반대를 선택해주세요.";
+            commentInput.value = '';
+        }
+
+        // 댓글 작성
+        commentSubmit.addEventListener('click', function() {
+            const content = commentInput.value.trim();
+            
+            if (!content) {
+                alert('댓글 내용을 입력해주세요.');
+                return;
+            }
+            
+            if (!userVote) {
+                alert('먼저 찬성 또는 반대를 선택해주세요.');
+                return;
+            }
+            
+            // 실제 구현에서는 서버로 댓글 전송
+            // POST /api/bills/{{ bill.id }}/comments { content: content, stance: userVote }
+            
+            addComment(content, userVote);
+            commentInput.value = '';
+        });
+
+        // 엔터키로 댓글 작성
+        commentInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                commentSubmit.click();
+            }
+        });
+
+        // 댓글 추가 함수
+        function addComment(content, stance) {
+            const commentItem = document.createElement('div');
+            commentItem.className = 'comment-item';
+            commentItem.setAttribute('data-comment-id', commentCounter);
+            commentItem.setAttribute('data-report-count', '0');
+            
+            const stanceText = stance === 'agree' ? '찬성' : '반대';
+            const stanceClass = stance === 'agree' ? 'agree' : 'disagree';
+            
+            commentItem.innerHTML = `
+                <div class="comment-header">
+                    <span class="comment-author">익명${commentCounter}</span>
+                    <span class="comment-stance ${stanceClass}">${stanceText}</span>
+                    <span class="comment-time">방금 전</span>
+                </div>
+                <div class="comment-content">${content}</div>
+                <div class="comment-actions">
+                    <button class="comment-action-btn reply-btn" data-comment-id="${commentCounter}">답글</button>
+                    <button class="comment-action-btn report-btn" data-comment-id="${commentCounter}">신고</button>
+                </div>
+                <div class="reply-form" id="reply-form-${commentCounter}">
+                    <textarea class="reply-input" placeholder="답글을 작성해주세요..."></textarea>
+                    <button class="reply-submit" data-parent-id="${commentCounter}">답글 작성</button>
+                    <button class="reply-cancel">취소</button>
+                </div>
+            `;
+            
+            // 맨 위에 새 댓글 추가
+            commentsList.insertBefore(commentItem, commentsList.firstChild);
+            
+            // 신고 상태 초기화
+            commentReports[commentCounter] = 0;
+            
+            commentCounter++;
+            
+            // 새 댓글에 이벤트 리스너 추가
+            initializeReplySystem();
+            
+            // 새 댓글 강조 효과
+            commentItem.style.backgroundColor = '#e3f2fd';
+            setTimeout(() => {
+                commentItem.style.backgroundColor = '';
+                commentItem.style.transition = 'background-color 0.5s';
+            }, 2000);
+        }
+
+        // 초기 상태 설정
+        document.addEventListener('DOMContentLoaded', function() {
+            disableComments();
+            initializeReplySystem();
+            initializeReportButtons();
+            
+            // 사용자의 기존 투표 상태가 있다면 복원
+            {% if user_vote %}
+            userVote = '{{ user_vote }}';
+            document.querySelector(`[data-vote="${userVote}"]`).classList.add('active');
+            enableComments();
+            {% endif %}
+        });
+    </script>
+</body>
+</html>

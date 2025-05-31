@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Law.GG - {{ member.name }} 국회의원</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+            line-height: 1.4;
+        }
+
+        /* 헤더 - 입법제안 페이지와 동일한 스타일로 수정 */
+        .header {
+            background: white;
+            border-bottom: 1px solid #e9ecef;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 20px;
+            font-weight: 700;
+            color: #2c3e50;
+            cursor: pointer;
+            transition: opacity 0.2s ease;
+        }
+
+        .logo:hover {
+            opacity: 0.8;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: #3498db;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .nav {
+            display: flex;
+            gap: 24px;
+        }
+
+        .nav-item {
+            color: #666;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+        .nav-item:hover {
+            color: #3498db;
+        }
+
+        /* 메인 컨테이너 */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 10px 20px;
+        }
+
+        /* 국회의원 프로필 */
+        .member-profile {
+            background-color: white;
+            border-radius: 8px;
+            padding: 40px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 40px;
+        }
+
+        .member-photo-section {
+            text-align: center;
+        }
+
+        .member-photo {
+            width: 250px;
+            height: 300px;
+            border-radius: 8px;
+            background-color: #dee2e6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6c757d;
+            font-size: 16px;
+            margin: 0 auto 20px;
+            object-fit: cover;
+        }
+
+        .member-photo img {
+            width: 100%;
+            height: 100%;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+
+        .party-tag {
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+            display: inline-block;
+            margin-bottom: 15px;
+        }
+
+        /* 정당별 색상 */
+        .party-tag.더불어민주당 { background-color: #004ea2; }
+        .party-tag.국민의힘 { background-color: #ed1c24; }
+        .party-tag.무소속 { background-color: #6c757d; }
+        .party-tag.국민의당 { background-color: #00a0e9; }
+        .party-tag.정의당 { background-color: #ffed00; color: #333; }
+        .party-tag.기본소득당 { background-color: #7b68ee; }
+        .party-tag.진보당 { background-color: #ff6b6b; }
+        .party-tag.기타 { background-color: #28a745; }
+
+        .member-info {
+            flex: 1;
+        }
+
+        .member-name {
+            font-size: 36px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .member-description {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .info-section {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 6px;
+        }
+
+        .info-title {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+
+        .info-content {
+            color: #333;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .contact-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .contact-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .contact-label {
+            font-weight: 600;
+            color: #495057;
+            width: 80px;
+            flex-shrink: 0;
+        }
+
+        .contact-value {
+            color: #333;
+            font-size: 14px;
+        }
+
+        .district-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+        }
+
+        .district-item {
+            text-align: center;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+        }
+
+        .district-label {
+            font-size: 12px;
+            color: #6c757d;
+            margin-bottom: 5px;
+        }
+
+        .district-value {
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        /* 발의 법률안 섹션 */
+        .bills-section {
+            background-color: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 30px;
+        }
+
+        .bills-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .bill-card {
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            color: #333;
+        }
+
+        .bill-card:hover {
+            border-color: #495057;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transform: translateY(-1px);
+        }
+
+        .bill-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 15px;
+            line-height: 1.4;
+        }
+
+        .bill-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        .bill-status {
+            background-color: #495057;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+
+        .no-bills {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-size: 16px;
+        }
+
+        /* 반응형 디자인 */
+        @media (max-width: 1024px) {
+            .member-profile {
+                grid-template-columns: 250px 1fr;
+                gap: 30px;
+                padding: 30px;
+            }
+
+            .member-photo {
+                width: 200px;
+                height: 240px;
+            }
+
+            .header {
+                padding: 16px 20px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .member-profile {
+                grid-template-columns: 1fr;
+                text-align: center;
+                padding: 25px;
+            }
+
+            .member-photo {
+                width: 200px;
+                height: 240px;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .contact-info {
+                grid-template-columns: 1fr;
+            }
+
+            .district-info {
+                grid-template-columns: 1fr;
+            }
+
+            .bills-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .member-name {
+                font-size: 28px;
+            }
+
+            .container {
+                padding: 20px 15px;
+            }
+
+            .nav {
+                gap: 16px;
+            }
+
+            .nav-item {
+                font-size: 14px;
+            }
+
+            .header {
+                padding: 16px 15px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .nav {
+                gap: 20px;
+            }
+            
+            .nav-item {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 헤더 -->
+    <header class="header">
+        <div class="logo" onclick="goToHome()">
+            <div class="logo-icon">⚖️</div>
+            <span>LAW.GG</span>
+        </div>
+        <nav class="nav">
+            <div class="nav-item" onclick="goToMembersPage()">국회의원</div>
+            <div class="nav-item" onclick="geToBillsPage()">법률안</div>
+            <div class="nav-item" onclick="goToProposalsPage()">입법제안</div>
+        </nav>
+    </header>
+
+    <!-- 메인 컨테이너 -->
+    <main class="container">
+        <!-- 국회의원 프로필 -->
+        <section class="member-profile">
+            <div class="member-photo-section">
+                <div class="member-photo" id="member-photo">
+                    {% if member.photo_url %}
+                        <img src="{{ member.photo_url }}" alt="{{ member.name }}" style="width: 100%; height: 100%; border-radius: 8px; object-fit: cover;">
+                    {% else %}
+                        <div style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background-color: #e9ecef; color: #6c757d;">
+                            {{ member.name[0] if member.name else '?' }}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="member-info">
+                <div class="party-tag {{ member.party.replace(' ', '') if member.party else ' 기타' }}" id="party-tag">{{ member.party or '무소속' }}</div>
+                <h1 class="member-name" id="member-name">{{ member.name }}</h1>
+                <p class="member-description" id="member-description">
+                    {% if member.terms %}
+                        {% for term in member.terms %}
+                            제{{ term.session }}대{% if not loop.last %}, {% endif %}
+                        {% endfor %} 국회의원
+                    {% endif %}
+                    {% if member.district_name %}
+                        , {{ member.district_name }} 출신
+                    {% endif %}
+                    {% if member.election_type %}
+                        , {{ member.election_type }} 당선
+                    {% endif %}
+                </p>
+
+                <!-- 경력 및 학력 정보 -->
+                <div class="info-grid">
+                    <div class="info-section">
+                        <h3 class="info-title">대표 경력</h3>
+                        <div class="info-content" id="career-info">
+                            {% if member.career and member.career|length > 0 %}
+                                {% for career_item in member.career[:5] %}
+                                    • {{ career_item }}<br>
+                                {% endfor %}
+                                {% if member.career|length > 5 %}
+                                    <span style="color: #6c757d; font-size: 12px;">외 {{ member.career|length - 5 }}개</span>
+                                {% endif %}
+                            {% else %}
+                                경력 정보가 없습니다.
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="info-section">
+                        <h3 class="info-title">학력</h3>
+                        <div class="info-content" id="education-info">
+                            {% if member.education and member.education|length > 0 %}
+                                {% for edu_item in member.education %}
+                                    • {{ edu_item }}<br>
+                                {% endfor %}
+                            {% else %}
+                                학력 정보가 없습니다.
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 연락처 정보 -->
+                <div class="contact-info">
+                    <div class="contact-item">
+                        <span class="contact-label">전화번호:</span>
+                        <span class="contact-value" id="phone-number">{{ member.phone or '-' }}</span>
+                    </div>
+                    <div class="contact-item">
+                        <span class="contact-label">이메일:</span>
+                        <span class="contact-value" id="email">{{ member.email or '-' }}</span>
+                    </div>
+                </div>
+
+                <!-- 선거구 정보 -->
+                <div class="district-info">
+                    <div class="district-item">
+                        <div class="district-label">선거구</div>
+                        <div class="district-value" id="district-name">{{ member.district_name or '-' }}</div>
+                    </div>
+                    <div class="district-item">
+                        <div class="district-label">득표율</div>
+                        <div class="district-value" id="vote-rate">
+                            {% if member.vote_rate %}
+                                {{ "%.1f"|format(member.vote_rate) }}%
+                            {% else %}
+                                -
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="district-item">
+                        <div class="district-label">홈페이지</div>
+                        <div class="district-value">
+                            {% if member.homepage %}
+                                <a href="{{ member.homepage }}" id="homepage-link" target="_blank" style="color: #007bff; text-decoration: none;">방문</a>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 발의 법률안 섹션 -->
+        <section class="bills-section">
+            <h2 class="section-title">발의 법률안 ({{ bills|length }}건)</h2>
+            <div class="bills-grid" id="bills-grid">
+                {% if bills and bills|length > 0 %}
+                    {% for bill in bills %}
+                    <a href="#" class="bill-card" data-bill-id="{{ bill.id }}" onclick="viewBillDetail('{{ bill.id }}', '{{ bill.title }}')">
+                        <div class="bill-title">{{ bill.title }}</div>
+                        <div class="bill-meta">
+                            <span>{{ bill.propose_date }}</span>
+                            <span class="bill-status">{{ bill.committee or '발의안 정보' }}</span>
+                        </div>
+                    </a>
+                    {% endfor %}
+                {% else %}
+                    <div class="no-bills">
+                        발의한 법률안이 없습니다.
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // 페이지 이동 함수들
+        function goToHome() {
+            window.location.href = '/';
+        }
+
+        function goToMembersPage() {
+            window.location.href = '/members';
+        }
+
+        function geToBillsPage() {
+            window.location.href = '/bills';
+        }
+
+        function goToProposalsPage() {
+           window.location.href = '/proposals';
+        }
+
+        function viewBillDetail(billId, billTitle) {
+            window.location.href = `/bills/${billId}`;
+        }
+
+        function viewMemberDetail(memberId, memberName) {
+            window.location.href = `/members/${memberId}`;
+        }
+
+        // 서버에서 전달받은 국회의원 정보
+        const MEMBER_DATA = {{ member|tojson }};
+        const BILLS_DATA = {{ bills|tojson }};
+
+        // 추가 클라이언트 사이드 기능이 필요한 경우
+        document.addEventListener('DOMContentLoaded', function() {
+            // 법률안 카드 호버 효과 등 추가 인터랙션
+            const billCards = document.querySelectorAll('.bill-card');
+            billCards.forEach(card => {
+                card.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const billId = this.getAttribute('data-bill-id');
+                    const billTitle = this.querySelector('.bill-title').textContent;
+                    viewBillDetail(billId, billTitle);
+                });
+            });
+
+            // 이메일 클릭 시 mailto 링크
+            const emailElement = document.getElementById('email');
+            if (emailElement && emailElement.textContent !== '-') {
+                emailElement.style.color = '#007bff';
+                emailElement.style.cursor = 'pointer';
+                emailElement.addEventListener('click', function() {
+                    window.location.href = `mailto:${this.textContent}`;
+                });
+            }
+
+            // 전화번호 클릭 시 tel 링크 (모바일)
+            const phoneElement = document.getElementById('phone-number');
+            if (phoneElement && phoneElement.textContent !== '-') {
+                phoneElement.style.color = '#007bff';
+                phoneElement.style.cursor = 'pointer';
+                phoneElement.addEventListener('click', function() {
+                    window.location.href = `tel:${this.textContent}`;
+                });
+            }
+        });
+    </script>
+</body>
+</html>

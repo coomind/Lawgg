@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Law.GG - {{ page_title }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+            line-height: 1.4;
+        }
+
+        /* 헤더 - 메인 페이지와 동일한 패딩으로 수정 */
+        .header {
+            background: white;
+            border-bottom: 1px solid #e9ecef;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 20px;
+            font-weight: 700;
+            color: #2c3e50;
+            cursor: pointer;
+            transition: opacity 0.2s ease;
+        }
+
+        .logo:hover {
+            opacity: 0.8;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: #3498db;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .nav {
+            display: flex;
+            gap: 24px;
+        }
+
+        .nav-item {
+            color: #666;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+        .nav-item:hover {
+            color: #3498db;
+        }
+
+        /* 메인 컨테이너 */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 50px 20px;
+        }
+
+        /* 제목과 등록 버튼 */
+        .title-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 50px;
+        }
+
+        .page-title {
+            font-size: 36px;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .register-btn {
+            background-color: #495057;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .register-btn:hover {
+            background-color: #343a40;
+        }
+
+        .register-btn:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+
+        /* 입법제안 테이블 */
+        .proposals-table {
+            background-color: white;
+            border-radius: 0;
+            overflow: hidden;
+            box-shadow: none;
+            border: none;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .table-header {
+            background-color: #e9ecef;
+            display: grid;
+            grid-template-columns: 1fr 3fr 1fr 1.5fr 1fr 1fr;
+            padding: 15px 25px;
+            font-weight: 600;
+            font-size: 14px;
+            color: #495057;
+            border-bottom: 1px solid #dee2e6;
+            text-align: center;
+            justify-items: center;
+            align-items: center;
+        }
+
+        .table-row {
+            display: grid;
+            grid-template-columns: 1fr 3fr 1fr 1.5fr 1fr 1fr;
+            padding: 18px 25px;
+            border-bottom: 1px solid #e9ecef;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            text-decoration: none;
+            color: #333;
+            align-items: center;
+            text-align: center;
+            background-color: white;
+            justify-items: center;
+        }
+
+        .table-row:hover {
+            background-color: #f8f9fa;
+        }
+
+        .table-row:last-child {
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .proposal-no {
+            font-weight: 600;
+            color: #495057;
+            font-size: 14px;
+        }
+
+        .proposal-title {
+            font-weight: 500;
+            color: #333;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .proposal-views {
+            font-size: 13px;
+            color: #6c757d;
+        }
+
+        .proposal-author {
+            font-size: 14px;
+            color: #6c757d;
+        }
+
+        .proposal-date {
+            font-size: 13px;
+            color: #6c757d;
+        }
+
+        .proposal-status {
+            font-size: 13px;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .proposal-status.public {
+            background-color: #e7f3ff;
+            color: #0066cc;
+        }
+
+        .proposal-status.private {
+            background-color: #f5f5f5;
+            color: #666;
+        }
+
+        .no-proposals {
+            padding: 60px;
+            text-align: center;
+            color: #666;
+            font-size: 16px;
+            grid-column: 1 / -1;
+        }
+
+        /* 페이지네이션 */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+            margin-top: 40px;
+        }
+
+        .page-btn {
+            width: 40px;
+            height: 40px;
+            border: 1px solid #dee2e6;
+            background-color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+            color: #495057;
+            transition: all 0.2s;
+            border-radius: 4px;
+        }
+
+        .page-btn:hover {
+            background-color: #e9ecef;
+            border-color: #adb5bd;
+        }
+
+        .page-btn.active {
+            background-color: #495057;
+            color: white;
+            border-color: #495057;
+        }
+
+        .page-btn.dots {
+            border: none;
+            cursor: default;
+            background-color: transparent;
+        }
+
+        .page-btn.dots:hover {
+            background-color: transparent;
+        }
+
+        .page-btn.disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .page-btn.disabled:hover {
+            background-color: white;
+            border-color: #dee2e6;
+        }
+
+        /* 반응형 디자인 */
+        @media (max-width: 1024px) {
+            .table-header, .table-row {
+                grid-template-columns: 1fr 2fr 1.5fr 1fr 1.5fr 1fr;
+                padding: 15px 20px;
+            }
+
+            .header {
+                padding: 16px 20px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .table-header, .table-row {
+                grid-template-columns: 1fr 2fr 1fr 1fr;
+                gap: 10px;
+                padding: 12px 15px;
+            }
+            
+            .proposal-date, .proposal-status {
+                display: none;
+            }
+
+            .page-title {
+                font-size: 28px;
+            }
+
+            .container {
+                padding: 30px 15px;
+            }
+
+            .nav {
+                gap: 16px;
+            }
+
+            .nav-item {
+                font-size: 14px;
+            }
+
+            .header {
+                padding: 16px 15px;
+            }
+
+            .title-section {
+                flex-direction: column;
+                gap: 20px;
+                align-items: flex-start;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .nav {
+                gap: 20px;
+            }
+            
+            .nav-item {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 헤더 -->
+    <header class="header">
+        <div class="logo" onclick="goToHome()">
+            <div class="logo-icon">⚖️</div>
+            <span>LAW.GG</span>
+        </div>
+        <nav class="nav">
+            <div class="nav-item" onclick="goToMembersPage()">국회의원</div>
+            <div class="nav-item" onclick="geToBillsPage()">법률안</div>
+            <div class="nav-item" onclick="goToProposalsPage()">입법제안</div>
+        </nav>
+    </header>
+
+    <!-- 메인 컨테이너 -->
+    <main class="container">
+        <!-- 제목과 등록 버튼 -->
+        <div class="title-section">
+            <h1 class="page-title">{{ page_title }}</h1>
+            {% if user_can_create %}
+            <button class="register-btn" id="register-btn" onclick="goToProposalWrite()">등록</button>
+            {% else %}
+            <button class="register-btn" disabled title="로그인이 필요합니다">등록</button>
+            {% endif %}
+        </div>
+
+        <!-- 입법제안 테이블 -->
+        <section class="proposals-table">
+            <div class="table-header">
+                <div>NO</div>
+                <div>제목</div>
+                <div>제안자</div>
+                <div>작성일자</div>
+                <div>조회수</div>
+                <div>공개여부</div>
+            </div>
+
+            {% if proposals and proposals|length > 0 %}
+                {% for proposal in proposals %}
+                <a href="#" class="table-row" data-proposal-id="{{ proposal.id }}" onclick="viewProposalDetail('{{ proposal.id }}', '{{ proposal.title }}')">
+                    <div class="proposal-no">{{ proposal.number or proposal.id }}</div>
+                    <div class="proposal-title">{{ proposal.title }}</div>
+                    <div class="proposal-author">{{ proposal.author_display_name or '익명' }}</div>
+                    <div class="proposal-date">{{ proposal.created_date }}</div>
+                    <div class="proposal-views">{{ "{:,}".format(proposal.view_count) }}</div>
+                    <div class="proposal-status {{ 'public' if proposal.is_public else 'private' }}">
+                        {{ '공개' if proposal.is_public else '비공개' }}
+                    </div>
+                </a>
+                {% endfor %}
+            {% else %}
+                <div class="no-proposals">
+                    등록된 입법제안이 없습니다.
+                    {% if user_can_create %}
+                        <br><a href="/proposals/new" style="color: #495057; text-decoration: underline;">첫 번째 제안을 등록해보세요!</a>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </section>
+
+        <!-- 페이지네이션 -->
+        {% if pagination.total_pages > 1 %}
+        <div class="pagination">
+            <!-- 이전 페이지 -->
+            {% if pagination.has_prev %}
+            <a href="?{{ pagination.prev_url_params }}" class="page-btn">‹</a>
+            {% else %}
+            <span class="page-btn disabled">‹</span>
+            {% endif %}
+
+            <!-- 페이지 번호들 -->
+            {% for page_num in pagination.page_range %}
+                {% if page_num == '...' %}
+                <span class="page-btn dots">...</span>
+                {% else %}
+                    {% if page_num == pagination.current_page %}
+                    <span class="page-btn active">{{ page_num }}</span>
+                    {% else %}
+                    <a href="?{{ pagination.get_url_params(page_num) }}" class="page-btn">{{ page_num }}</a>
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
+
+            <!-- 다음 페이지 -->
+            {% if pagination.has_next %}
+            <a href="?{{ pagination.next_url_params }}" class="page-btn">›</a>
+            {% else %}
+            <span class="page-btn disabled">›</span>
+            {% endif %}
+        </div>
+        {% endif %}
+    </main>
+
+    <script>
+        // 페이지 이동 함수들
+        function goToHome() {
+            window.location.href = '/';
+        }
+
+        function goToMembersPage() {
+            window.location.href = '/members';
+        }
+
+        function geToBillsPage() {
+            window.location.href = '/bills';
+        }
+
+        function goToProposalsPage() {
+           window.location.href = '/proposals';
+        }
+
+        function goToProposalWrite() {
+            window.location.href = '/proposals/new';
+        }
+
+        function viewBillDetail(billId, billTitle) {
+            window.location.href = `/bills/${billId}`;
+        }
+
+        function viewMemberDetail(memberId, memberName) {
+            window.location.href = `/members/${memberId}`;
+        }
+
+        function viewProposalDetail(proposalId, proposalTitle) {
+            window.location.href = `/proposals/${proposalId}`;
+        }
+
+        // 서버에서 전달받은 설정
+        const PAGE_CONFIG = {
+            currentPage: {{ pagination.current_page if pagination else 1 }},
+            totalPages: {{ pagination.total_pages if pagination else 1 }},
+            pageSize: {{ pagination.page_size if pagination else 20 }},
+            userCanCreate: {{ user_can_create|tojson }}
+        };
+
+        // 전역 변수
+        let currentPage = PAGE_CONFIG.currentPage;
+
+        // 페이지 로드 (URL 변경 방식 - SEO 친화적)
+        function loadPage(params = {}) {
+            const queryParams = new URLSearchParams(window.location.search);
+            
+            if (params.page !== undefined) {
+                if (params.page === 1) {
+                    queryParams.delete('page');
+                } else {
+                    queryParams.set('page', params.page);
+                }
+            }
+            
+            // URL 변경하여 페이지 리로드 (서버사이드 렌더링)
+            const newUrl = window.location.pathname + 
+                          (queryParams.toString() ? '?' + queryParams.toString() : '');
+            window.location.href = newUrl;
+        }
+
+        // 입법제안 행 클릭 이벤트 (초기 로드된 요소들에 대해)
+        function attachTableRowEvents() {
+            document.querySelectorAll('.table-row').forEach(row => {
+                row.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const proposalId = this.getAttribute('data-proposal-id');
+                    const proposalTitle = this.querySelector('.proposal-title').textContent;
+                    viewProposalDetail(proposalId, proposalTitle);
+                });
+            });
+        }
+
+        // 등록 버튼 클릭 이벤트
+        function initializeRegisterButton() {
+            const registerBtn = document.getElementById('register-btn');
+            if (registerBtn && !registerBtn.disabled) {
+                registerBtn.addEventListener('click', function() {
+                    goToProposalWrite();
+                });
+            }
+        }
+
+        // 페이지네이션 이벤트 (SEO 친화적 URL 방식)
+        function initializePagination() {
+            // 서버사이드 렌더링 방식이므로 별도 JavaScript 처리 불필요
+            // 링크 클릭 시 자동으로 새 페이지로 이동됨
+        }
+
+        // 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            attachTableRowEvents();
+            initializeRegisterButton();
+            initializePagination();
+            
+            console.log('입법제안 목록 페이지 로드 완료');
+            console.log('총 제안 수:', {{ proposals|length if proposals else 0 }});
+            console.log('현재 페이지:', currentPage);
+        });
+    </script>
+</body>
+</html>
