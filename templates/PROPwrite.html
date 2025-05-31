@@ -365,7 +365,7 @@
         </div>
         <nav class="nav">
             <div class="nav-item" onclick="goToMembersPage()">국회의원</div>
-            <div class="nav-item" onclick="geToBillsPage()">법률안</div>
+            <div class="nav-item" onclick="goToBillsPage()">법률안</div>
             <div class="nav-item" onclick="goToProposalsPage()">입법제안</div>
         </nav>
     </header>
@@ -545,7 +545,7 @@
         // API 베이스 URL 설정 (배포 시 변경)
         const API_BASE_URL = 'https://lawgg-backend.onrender.com';
 
-        function goToHome() {
+       function goToHome() {
             window.location.href = `${API_BASE_URL}/`;
         }
 
@@ -553,7 +553,7 @@
             window.location.href = `${API_BASE_URL}/members`;
         }
 
-        function geToBillsPage() {
+        function goToBillsPage() {
             window.location.href = `${API_BASE_URL}/bills`;
         }
 
@@ -568,6 +568,7 @@
         function viewMemberDetail(memberId, memberName) {
             window.location.href = `${API_BASE_URL}/members/${memberId}`;
         }
+        
         // 서버에서 전달받은 설정
         const FORM_CONFIG = {
             isEditMode: {{ is_edit_mode|tojson }},
