@@ -1003,12 +1003,11 @@ def not_found_error(error):
 def internal_error(error):
     db.session.rollback()
     return render_template('500.html'), 500
-    
+
 with app.app_context():
     db.create_all()
-    
 # 메인 실행
-#if __name__ == '__main__':
+if __name__ == '__main__':
     #with app.app_context():
         #db.create_all()
         # init_sample_data()  # 샘플 데이터 초기화
