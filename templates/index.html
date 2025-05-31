@@ -403,32 +403,35 @@
     </div>
 
     <!-- 자동완성 스크립트 -->
-    <script src="{{ url_for('static', filename='js/autocomplete.js') }}"></script>
+    <script src="https://lawgg-backend.onrender.com/static/js/autocomplete.js"></script>
     
     <script>
+         // API 베이스 URL 설정 (배포 시 변경)
+        const API_BASE_URL = 'https://lawgg-backend.onrender.com';
+
         function goToHome() {
-    window.location.href = 'https://lawgg-backend.onrender.com/';
-}
+            window.location.href = `${API_BASE_URL}/`;
+        }
 
-function goToMembersPage() {
-    window.location.href = 'https://lawgg-backend.onrender.com/members';
-}
+        function goToMembersPage() {
+            window.location.href = `${API_BASE_URL}/members`;
+        }
 
-function geToBillsPage() {
-    window.location.href = 'https://lawgg-backend.onrender.com/bills';
-}
+        function geToBillsPage() {
+            window.location.href = `${API_BASE_URL}/bills`;
+        }
 
-function goToProposalsPage() {
-    window.location.href = 'https://lawgg-backend.onrender.com/proposals';
-}
+        function goToProposalsPage() {
+           window.location.href = `${API_BASE_URL}/proposals`;
+        }
 
-function viewBillDetail(billId, billTitle) {
-    window.location.href = `https://lawgg-backend.onrender.com/bills/${billId}`;
-}
+        function viewBillDetail(billId, billTitle) {
+            window.location.href = `${API_BASE_URL}/bills/${billId}`;
+        }
 
-function viewMemberDetail(memberId, memberName) {
-    window.location.href = `https://lawgg-backend.onrender.com/members/${memberId}`;
-}
+        function viewMemberDetail(memberId, memberName) {
+            window.location.href = `${API_BASE_URL}/members/${memberId}`;
+        }
         function performSearch() {
             const query = document.getElementById('searchInput').value.trim();
             if (query) {
