@@ -125,6 +125,13 @@ class CommentLike(db.Model):
      __table_args__ = (db.UniqueConstraint('comment_id', 'ip_address'),)
 
 
+class BlockedIP(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    ip_address = db.Column(db.String(50), unique=True)
+    reason = db.Column(db.String(200))
+    blocked_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
 # 유틸리티 함수들
 def get_client_ip():
     if request.headers.get('X-Forwarded-For'):
@@ -1153,7 +1160,58 @@ def add_reply(parent_id):
         'time_ago': '방금 전',
         'parent_id': reply.parent_id
     })
+
+@app.route('/api/comments/<int:comment_id>/report', methods=['POST'])
+def report_comment(comment_id):
+    ip_address = get_client_ip()
     
+    # IP 차단 확인
+    if BlockedIP.query.filter_by(ip_address=ip_address).first():
+        return jsonify({'error': 'Blocked IP'}), 403
+    
+    # 이미 신고했는지 확인
+    existing_report = Report.query.filter_by(
+        comment_id=comment_id, 
+        reporter_ip=ip_address
+    ).first()
+    
+    if existing_report:
+        return jsonify({'error': 'Already reported'}), 400
+    
+    # 신고 추가
+    report = Report(comment_id=comment_id, reporter_ip=ip_address)
+    db.session.add(report)
+    
+    # 댓글의 신고 수 증가
+    comment = Comment.query.get(comment_id)
+    if comment:
+        comment.report_count += 1
+        if comment.report_count >= 3:
+            comment.is_under_review = True
+            
+        # 특정 IP가 너무 많은 신고를 하는 경우 차단
+        reporter_total = Report.query.filter_by(reporter_ip=ip_address).count()
+        if reporter_total > 50:  # 임계값
+            blocked = BlockedIP(
+                ip_address=ip_address,
+                reason='과도한 신고'
+            )
+            db.session.add(blocked)
+    
+    db.session.commit()
+    
+    return jsonify({
+        'report_count': comment.report_count,
+        'is_under_review': comment.is_under_review
+    })
+
+# 미들웨어로 차단된 IP 확인
+@app.before_request
+def check_blocked_ip():
+    if request.endpoint and 'api' in request.endpoint:
+        ip_address = get_client_ip()
+        if BlockedIP.query.filter_by(ip_address=ip_address).first():
+            return jsonify({'error': 'Access denied'}), 403
 # 오류 핸들러
 @app.errorhandler(404)
 def not_found_error(error):
