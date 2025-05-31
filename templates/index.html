@@ -406,9 +406,7 @@
     <script src="https://lawgg-backend.onrender.com/static/js/autocomplete.js"></script>
     
     <script>
-         // API 베이스 URL 설정 (배포 시 변경)
-        if (typeof API_BASE_URL === 'undefined') {
-        var API_BASE_URL = 'https://lawgg-backend.onrender.com';
+        API_BASE_URL = 'https://lawgg-backend.onrender.com';
         }
         function goToHome() {
             window.location.href = `${API_BASE_URL}/`;
