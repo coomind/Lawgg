@@ -1003,6 +1003,77 @@ def load_election_csv():
         db.session.commit()
         print("CSV 데이터 로드 완료!")
 
+@app.route('/search')
+def search():
+    query = request.args.get('q', '')
+    search_type = request.args.get('type', 'all')  # all, member, bill
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
+    
+    results = {
+        'members': [],
+        'bills': [],
+        'query': query
+    }
+    
+    if query:
+        # 국회의원 검색
+        if search_type in ['all', 'member']:
+            member_query = Member.query.filter(
+                db.or_(
+                    Member.name.contains(query),
+                    Member.party.contains(query),
+                    Member.district.contains(query)
+                )
+            )
+            
+            member_pagination = member_query.paginate(
+                page=page, per_page=per_page, error_out=False
+            )
+            
+            results['members'] = [{
+                'id': m.id,
+                'name': m.name,
+                'party': m.party,
+                'district': m.district,
+                'photo_url': m.photo_url,
+                'session_num': m.session_num
+            } for m in member_pagination.items]
+            
+            results['member_pages'] = member_pagination.pages
+        
+        # 법률안 검색
+        if search_type in ['all', 'bill']:
+            bill_query = Bill.query.filter(
+                db.or_(
+                    Bill.name.contains(query),
+                    Bill.proposer.contains(query),
+                    Bill.committee.contains(query)
+                )
+            )
+            
+            bill_pagination = bill_query.paginate(
+                page=page, per_page=per_page, error_out=False
+            )
+            
+            results['bills'] = [{
+                'id': b.id,
+                'number': b.number,
+                'name': b.name,
+                'proposer': b.proposer,
+                'propose_date': b.propose_date,
+                'committee': b.committee
+            } for b in bill_pagination.items]
+            
+            results['bill_pages'] = bill_pagination.pages
+    
+    # 검색 결과 페이지 렌더링
+    return render_template('search_results.html',
+                         results=results,
+                         query=query,
+                         search_type=search_type,
+                         current_page=page)
+    
 # 오류 핸들러
 @app.errorhandler(404)
 def not_found_error(error):
