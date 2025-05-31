@@ -1180,25 +1180,41 @@
         }
 
         // 댓글 작성
-        commentSubmit.addEventListener('click', function() {
-            const content = commentInput.value.trim();
-            
-            if (!content) {
-                alert('댓글 내용을 입력해주세요.');
-                return;
+        commentSubmit.addEventListener('click', async function() {
+        const content = commentInput.value.trim();
+        if (!content) {
+            alert('댓글 내용을 입력해주세요.');
+            return;
+        }
+        if (!userVote) {
+            alert('먼저 찬성 또는 반대를 선택해주세요.');
+            return;
+        }
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/bills/${billId}/comments`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    content: content,
+                    stance: userVote
+                })
+            });
+            if (!response.ok) {
+                throw new Error('댓글 작성 실패');
             }
-            
-            if (!userVote) {
-                alert('먼저 찬성 또는 반대를 선택해주세요.');
-                return;
-            }
-            
-            // 실제 구현에서는 서버로 댓글 전송
-            // POST /api/bills/{{ bill.id }}/comments { content: content, stance: userVote }
-            
-            addComment(content, userVote);
+        
+            const commentData = await response.json();
+            // 댓글 추가
+            addComment(commentData);
             commentInput.value = '';
-        });
+        } catch (error) {
+            console.error('댓글 작성 오류:', error);
+            alert('댓글 작성 중 오류가 발생했습니다.');
+        }
+    });
+
 
         // 엔터키로 댓글 작성
         commentInput.addEventListener('keydown', function(e) {
@@ -1208,43 +1224,44 @@
         });
 
         // 댓글 추가 함수
-        function addComment(content, stance) {
-            const commentItem = document.createElement('div');
-            commentItem.className = 'comment-item';
-            commentItem.setAttribute('data-comment-id', commentCounter);
-            commentItem.setAttribute('data-report-count', '0');
+    function addComment(commentData) {
+        const commentItem = document.createElement('div');
+        commentItem.className = 'comment-item';
+        commentItem.setAttribute('data-comment-id', commentData.id);
+        commentItem.setAttribute('data-report-count', '0');
+    
+        const stanceClass = commentData.stance === 'agree' ? 'agree' : 'disagree';
+        const stanceText = commentData.stance === 'agree' ? '찬성' : '반대';
+    
+        commentItem.innerHTML = `
+            <div class="comment-header">
+                <span class="comment-author">${commentData.author}</span>
+                <span class="comment-stance ${stanceClass}">${stanceText}</span>
+                <span class="comment-time">${commentData.time_ago || '방금 전'}</span>
+            </div>
+            <div class="comment-content">${commentData.content}</div>
+            <div class="comment-actions">
+                <button class="comment-action-btn reply-btn" data-comment-id="${commentData.id}">답글</button>
+                <button class="comment-action-btn report-btn" data-comment-id="${commentData.id}">신고</button>
+            </div>
+            <div class="reply-form" id="reply-form-${commentData.id}">
+                <textarea class="reply-input" placeholder="답글을 작성해주세요..."></textarea>
+                <button class="reply-submit" data-parent-id="${commentData.id}">답글 작성</button>
+                <button class="reply-cancel">취소</button>
+            </div>
+        `;
             
-            const stanceText = stance === 'agree' ? '찬성' : '반대';
-            const stanceClass = stance === 'agree' ? 'agree' : 'disagree';
-            
-            commentItem.innerHTML = `
-                <div class="comment-header">
-                    <span class="comment-author">익명${commentCounter}</span>
-                    <span class="comment-stance ${stanceClass}">${stanceText}</span>
-                    <span class="comment-time">방금 전</span>
-                </div>
-                <div class="comment-content">${content}</div>
-                <div class="comment-actions">
-                    <button class="comment-action-btn reply-btn" data-comment-id="${commentCounter}">답글</button>
-                    <button class="comment-action-btn report-btn" data-comment-id="${commentCounter}">신고</button>
-                </div>
-                <div class="reply-form" id="reply-form-${commentCounter}">
-                    <textarea class="reply-input" placeholder="답글을 작성해주세요..."></textarea>
-                    <button class="reply-submit" data-parent-id="${commentCounter}">답글 작성</button>
-                    <button class="reply-cancel">취소</button>
-                </div>
-            `;
-            
-            // 맨 위에 새 댓글 추가
-            commentsList.insertBefore(commentItem, commentsList.firstChild);
-            
+            // 첫 번째 댓글 앞에 새 댓글 추가
+        const commentsList = document.getElementById('comments-list');
+        commentsList.insertBefore(commentItem, commentsList.firstChild);
+        initializeReplySystem();
             // 신고 상태 초기화
             commentReports[commentCounter] = 0;
             
             commentCounter++;
             
-            // 새 댓글에 이벤트 리스너 추가
-            initializeReplySystem();
+            // 새 댓글에 신고 시스템 이벤트 추가
+            initializeReportSystem();
             
             // 새 댓글 강조 효과
             commentItem.style.backgroundColor = '#e3f2fd';
