@@ -777,33 +777,6 @@ def add_bill_comment(bill_id):
         'time_ago': '방금 전'
     })
 
-@app.route('/api/comments/<int:comment_id>/report', methods=['POST'])
-def report_comment(comment_id):
-    ip_address = get_client_ip()
-    
-    # 이미 신고했는지 확인
-    existing_report = Report.query.filter_by(comment_id=comment_id, reporter_ip=ip_address).first()
-    if existing_report:
-        return jsonify({'error': 'Already reported'}), 400
-    
-    # 신고 추가
-    report = Report(comment_id=comment_id, reporter_ip=ip_address)
-    db.session.add(report)
-    
-    # 댓글의 신고 수 증가
-    comment = Comment.query.get(comment_id)
-    if comment:
-        comment.report_count += 1
-        if comment.report_count >= 3:
-            comment.is_under_review = True
-    
-    db.session.commit()
-    
-    return jsonify({
-        'report_count': comment.report_count,
-        'is_under_review': comment.is_under_review
-    })
-
 @app.route('/api/proposals/<int:proposal_id>/vote', methods=['POST'])
 def vote_proposal(proposal_id):
     data = request.get_json()
