@@ -329,7 +329,7 @@
             </div>
             <nav class="nav">
                 <div class="nav-item" onclick="goToMembersPage()">국회의원</div>
-                <div class="nav-item" onclick="geToBillsPage()">법률안</div>
+                <div class="nav-item" onclick="goToBillsPage()">법률안</div>
                 <div class="nav-item" onclick="goToProposalsPage()">입법제안</div>
             </nav>
         </header>
@@ -407,7 +407,6 @@
     
     <script>
         API_BASE_URL = 'https://lawgg-backend.onrender.com';
-        }
         function goToHome() {
             window.location.href = `${API_BASE_URL}/`;
         }
@@ -416,7 +415,7 @@
             window.location.href = `${API_BASE_URL}/members`;
         }
 
-        function geToBillsPage() {
+        function goToBillsPage() {
             window.location.href = `${API_BASE_URL}/bills`;
         }
 
