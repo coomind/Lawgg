@@ -156,7 +156,7 @@ def sync_members_from_api():
                     'Type': 'xml',
                     'pIndex': page,
                     'pSize': page_size,
-                    'UNIT_CD': f'{term:02d}'
+                    
                 }
                 
                 try:
