@@ -948,7 +948,7 @@
                     voteButtons.forEach(btn => btn.classList.remove('active'));
                     this.classList.add('active');
                     enableComments();
-                }
+                }    
             
                 // 투표 수 업데이트
                 voteCounts.agree = data.agree_count;
@@ -982,14 +982,17 @@
         // 댓글 작성
     commentSubmit.addEventListener('click', async function() {
         const content = commentInput.value.trim();
+    
         if (!content) {
             alert('댓글 내용을 입력해주세요.');
             return;
-        }
+        }    
+        
         if (!userVote) {
             alert('먼저 찬성 또는 반대를 선택해주세요.');
             return;
         }
+        
         try {
             const response = await fetch(`${API_BASE_URL}/api/bills/${billId}/comments`, {
                 method: 'POST',
@@ -1001,19 +1004,20 @@
                     stance: userVote
                 })
             });
+        
             if (!response.ok) {
                 throw new Error('댓글 작성 실패');
             }
         
             const commentData = await response.json();
-            // 댓글 추가
-            addComment(commentData);
-            commentInput.value = '';
+                // 댓글 추가
+                addComment(commentData);
+                commentInput.value = '';
         } catch (error) {
             console.error('댓글 작성 오류:', error);
             alert('댓글 작성 중 오류가 발생했습니다.');
-        }
-    });
+            }
+     });
 
 
         // 엔터키로 댓글 작성
