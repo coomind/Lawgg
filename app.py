@@ -1213,76 +1213,73 @@ def background_sync():
     """백그라운드에서 동기화 실행"""
     global sync_status
     
-    try:
-        sync_status.update({
-            'running': True,
-            'progress': 5,
-            'message': 'API 연결 테스트 중...',
-            'error': None,
-            'completed': False,
-            'start_time': datetime.now().isoformat(),
-            'processed_count': 0
-        })
-        
-        from sync_data import test_api_connection, sync_members_from_api
-        
-        # API 연결 테스트
-        sync_status.update({
-            'progress': 10,
-            'message': 'API 연결 확인 중...'
-        })
-        
-        if not test_api_connection():
+    # Flask 애플리케이션 컨텍스트 설정
+    with app.app_context():
+        try:
+            sync_status.update({
+                'running': True,
+                'progress': 5,
+                'message': 'API 연결 테스트 중...',
+                'error': None,
+                'completed': False,
+                'start_time': datetime.now().isoformat(),
+                'processed_count': 0
+            })
+            
+            from sync_data import test_api_connection, sync_members_from_api
+            
+            # API 연결 테스트
+            sync_status.update({
+                'progress': 10,
+                'message': 'API 연결 확인 중...'
+            })
+            
+            if not test_api_connection():
+                sync_status.update({
+                    'running': False,
+                    'error': 'API 연결 실패',
+                    'completed': True,
+                    'progress': 0
+                })
+                return
+            
+            sync_status.update({
+                'progress': 30,
+                'message': '국회의원 데이터 동기화 중...'
+            })
+            
+            # 실제 동기화 실행
+            sync_members_from_api()
+            
+            sync_status.update({
+                'progress': 90,
+                'message': '데이터 저장 중...'
+            })
+            
+            time.sleep(1)
+            
+            # 완료 - 여기서 Member.query.count() 사용
+            member_count = Member.query.count()
+            
             sync_status.update({
                 'running': False,
-                'error': 'API 연결 실패 - 국회 OpenAPI에 접근할 수 없습니다.',
+                'progress': 100,
+                'message': f'동기화 완료! {member_count}명의 국회의원 데이터를 업데이트했습니다.',
                 'completed': True,
-                'progress': 0
+                'processed_count': member_count
             })
-            return
-        
-        sync_status.update({
-            'progress': 20,
-            'message': 'API 연결 성공! 국회의원 데이터 동기화 시작...'
-        })
-        
-        time.sleep(1)  # 상태 확인을 위한 잠시 대기
-        
-        sync_status.update({
-            'progress': 30,
-            'message': '국회의원 정보를 가져오는 중...'
-        })
-        
-        # 실제 동기화 실행
-        sync_members_from_api()
-        
-        sync_status.update({
-            'progress': 90,
-            'message': '데이터 저장 중...'
-        })
-        
-        time.sleep(1)
-        
-        # 완료
-        sync_status.update({
-            'running': False,
-            'progress': 100,
-            'message': '동기화 완료! 국회의원 데이터를 성공적으로 업데이트했습니다.',
-            'completed': True,
-            'processed_count': Member.query.count()
-        })
-        
-    except Exception as e:
-        import traceback
-        error_detail = traceback.format_exc()
-        
-        sync_status.update({
-            'running': False,
-            'error': f'동기화 중 오류 발생: {str(e)}',
-            'completed': True,
-            'progress': 0,
-            'error_detail': error_detail
-        })
+            
+        except Exception as e:
+            import traceback
+            error_detail = traceback.format_exc()
+            
+            sync_status.update({
+                'running': False,
+                'error': f'동기화 중 오류 발생: {str(e)}',
+                'completed': True,
+                'progress': 0,
+                'error_detail': error_detail
+            })
 
 @app.route('/sync/start')
 def start_sync():
