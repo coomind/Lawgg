@@ -1020,6 +1020,10 @@ def search():
     ).limit(10).all()
     
     # 간단한 검색 결과 표시 (템플릿 없이)
+    member_items = "".join([f"<div class='item' onclick='location.href=\"/members/{m.id}\"'>{m.name} ({m.party}) - {m.district}</div>" for m in members]) if members else '<p>검색 결과가 없습니다.</p>'
+
+    bill_items = "".join([f"<div class='item' onclick='location.href=\"/bills/{b.id}\"'>{b.name} - {b.proposer}</div>" for b in bills]) if bills else '<p>검색 결과가 없습니다.</p>'
+    
     result_html = f"""
     <!DOCTYPE html>
     <html lang="ko">
@@ -1041,12 +1045,12 @@ def search():
     
         <div class="section">
             <h2>국회의원 ({len(members)}명)</h2>
-            {"".join([f"<div class='item' onclick='location.href=\"/members/{m.id}\"'>{m.name} ({m.party}) - {m.district}</div>" for m in members]) if members else '<p>검색 결과가 없습니다.</p>'}
+            {member_items}
         </div>
     
         <div class="section">
             <h2>법률안 ({len(bills)}건)</h2>
-            {"".join([f"<div class='item' onclick='location.href=\"/bills/{b.id}\"'>{b.name} - {b.proposer}</div>" for b in bills]) if bills else '<p>검색 결과가 없습니다.</p>'}
+            {bill_items}
         </div>
     </body>
     </html>
