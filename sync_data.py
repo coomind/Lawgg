@@ -34,20 +34,36 @@ def test_api_connection():
         print(f"테스트 URL: {test_url}")
         print(f"파라미터: {params}")
         
-        # 더 긴 타임아웃과 headers 추가
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        }
-        
-        response = requests.get(test_url, params=params, timeout=60, headers=headers)
+        response = requests.get(test_url, params=params, timeout=30)
         print(f"응답 코드: {response.status_code}")
-        print(f"응답 내용 (처음 1000자): {response.text[:1000]}")
+        print(f"응답 내용 (처음 500자): {response.text[:500]}")
         
         if response.status_code == 200:
+            # XML 파싱 시도
             try:
                 root = ET.fromstring(response.content)
-                result_code = root.findtext('.//RESULT_CODE')
-                result_msg = root.findtext('.//RESULT_MESSAGE')
+                # 다양한 방법으로 결과 코드 찾기
+                result_code = None
+                result_msg = None
+                
+                # 방법 1: .//RESULT/CODE
+                code_elem = root.find('.//RESULT/CODE')
+                if code_elem is not None:
+                    result_code = code_elem.text
+                
+                # 방법 2: .//CODE  
+                if result_code is None:
+                    code_elem = root.find('.//CODE')
+                    if code_elem is not None:
+                        result_code = code_elem.text
+                
+                # 메시지도 찾기
+                msg_elem = root.find('.//RESULT/MESSAGE')
+                if msg_elem is not None:
+                    result_msg = msg_elem.text
+                elif root.find('.//MESSAGE') is not None:
+                    result_msg = root.find('.//MESSAGE').text
+                
                 print(f"API 결과 코드: {result_code}")
                 print(f"API 결과 메시지: {result_msg}")
                 
@@ -55,27 +71,22 @@ def test_api_connection():
                     print("✅ API 연결 성공!")
                     return True
                 else:
-                    print("❌ API 오류:", result_msg)
+                    print(f"❌ API 오류: {result_msg}")
                     return False
+                    
             except ET.ParseError as e:
                 print(f"❌ XML 파싱 오류: {str(e)}")
-                print(f"응답 내용: {response.text}")
+                # 하지만 200 응답이므로 성공으로 처리
+                if 'INFO-000' in response.text:
+                    print("✅ 응답 텍스트에서 INFO-000 확인됨, 연결 성공!")
+                    return True
                 return False
         else:
             print(f"❌ HTTP 오류: {response.status_code}")
-            print(f"응답 내용: {response.text}")
             return False
             
-    except requests.exceptions.Timeout:
-        print("❌ 연결 타임아웃 - 요청 시간이 초과되었습니다.")
-        return False
-    except requests.exceptions.ConnectionError:
-        print("❌ 연결 오류 - 네트워크 연결을 확인해주세요.")
-        return False
     except Exception as e:
-        print(f"❌ 예상치 못한 오류: {type(e).__name__}: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        print(f"❌ 연결 오류: {type(e).__name__}: {str(e)}")
         return False
         
 def sync_members_from_api():
