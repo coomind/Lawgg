@@ -858,7 +858,9 @@
 
     <script>
        // API 베이스 URL 설정 (배포 시 변경)
+        const billId = {{ bill.id }};
         const API_BASE_URL = 'https://lawgg-backend.onrender.com';
+
 
         function goToHome() {
             window.location.href = `${API_BASE_URL}/`;
@@ -1154,13 +1156,18 @@
                     body: JSON.stringify({ vote: vote })
                 });
             
-                if (!response.ok) {
-                    throw new Error('투표 실패');
-                }
-            
                 const data = await response.json();
             
-            // 같은 버튼을 다시 누르면 투표 취소
+                if (!response.ok) {
+                    throw new Error(data.error || '투표 실패');
+                }
+            
+                // 이전 투표가 있다면 카운트 감소 (클라이언트 측)
+                if (userVote && userVote !== vote) {
+                    voteCounts[userVote]--;
+                }
+            
+                // 같은 버튼을 다시 누르면 투표 취소
                 if (userVote === vote) {
                     userVote = null;
                     voteButtons.forEach(btn => btn.classList.remove('active'));
@@ -1168,19 +1175,21 @@
                 } else {
                     // 새로운 투표 설정
                     userVote = vote;
+                    voteCounts[vote]++;
+                
                     voteButtons.forEach(btn => btn.classList.remove('active'));
                     this.classList.add('active');
                     enableComments();
                 }
             
-                // 투표 수 업데이트
+                // 서버에서 받은 정확한 카운트로 업데이트
                 voteCounts.agree = data.agree_count;
                 voteCounts.disagree = data.disagree_count;
                 updateVoteCounts();
             
             } catch (error) {
                 console.error('투표 오류:', error);
-                alert('투표 처리 중 오류가 발생했습니다.');
+                alert('투표 처리 중 오류가 발생했습니다: ' + error.message);
             }
         });
     });
