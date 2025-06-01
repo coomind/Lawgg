@@ -1343,6 +1343,39 @@ def test_api():
             "status": "error",
             "message": f"테스트 중 오류 발생: {str(e)}"
         }), 500
+
+@app.route('/debug/api')
+def debug_api():
+    """API 디버그 정보"""
+    try:
+        import requests
+        
+        # 기본 연결 테스트
+        test_url = "https://open.assembly.go.kr/portal/openapi/ALLNAMEMBER"
+        params = {
+            'KEY': 'a3fada8210244129907d945abe2beada',
+            'Type': 'xml',
+            'pIndex': 1,
+            'pSize': 1
+        }
+        
+        response = requests.get(test_url, params=params, timeout=30)
+        
+        return jsonify({
+            'status': 'debug',
+            'url': test_url,
+            'params': params,
+            'status_code': response.status_code,
+            'response_text': response.text[:1000],
+            'headers': dict(response.headers)
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'status': 'debug_error',
+            'error': str(e),
+            'error_type': type(e).__name__
+        })
     
 # 메인 실행
 if __name__ == '__main__':
