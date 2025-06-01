@@ -406,9 +406,13 @@
                     {% for member in trending_members %}
                     <div class="member-avatar">
                         {% if member.photo_url %}
-                            <img src="{{ member.photo_url }}" alt="{{ member.name }}" class="avatar-img">
+                            <div class="member-avatar">
+                                <img src="{{ member.photo_url }}" alt="{{ member.name }}" class="avatar-img">
+                            </div>
                         {% else %}
-                            {{ member.name[0] }}
+                            <div class="member-avatar">
+                                {{ member.name[0] }}
+                            </div>
                         {% endif %}
                     </div>
                         <div class="list-number">{{ loop.index }}</div>
