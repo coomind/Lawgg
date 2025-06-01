@@ -1277,7 +1277,16 @@ def background_sync():
                 'processed_count': 0
             })
             
-            from sync_data import test_api_connection, sync_members_from_api, sync_bills_from_api
+            try:
+                from sync_data import test_api_connection, sync_members_from_api, sync_bills_from_api
+            except ImportError as e:
+                sync_status.update({
+                    'running': False,
+                    'error': f'함수 import 실패: {str(e)}',
+                    'completed': True,
+                    'progress': 0
+                })
+                return
             
             # API 연결 테스트
             sync_status.update({
