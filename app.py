@@ -429,7 +429,6 @@ def bills_list():
                          pagination=pagination_data)
 
 @app.route('/bills/<int:bill_id>')
-@app.route('/bills/<int:bill_id>')
 def bill_detail(bill_id):
     bill = Bill.query.get_or_404(bill_id)
     bill.view_count += 1
@@ -450,8 +449,8 @@ def bill_detail(bill_id):
         'disagree_count': disagree_count
     }
     
-    # 댓글 가져오기 (모든 댓글을 가져와서 정렬)
-    all_comments = Comment.query.filter_by(bill_id=bill_id).order_by(Comment.created_at.desc()).all()
+    # 댓글 가져오기 (부모 댓글만)
+    comments = Comment.query.filter_by(bill_id=bill_id, parent_id=None).order_by(Comment.created_at.desc()).limit(10).all()
     
     # 사용자가 신고한 댓글 ID들
     user_reports = Report.query.filter_by(reporter_ip=ip_address).all()
@@ -461,11 +460,12 @@ def bill_detail(bill_id):
     user_likes = CommentLike.query.filter_by(ip_address=ip_address).all()
     liked_comment_ids = [l.comment_id for l in user_likes]
     
-    # 댓글 데이터 정리 (부모 댓글과 답글 분리)
-    parent_comments = []
-    replies_by_parent = {}
+    # 댓글 데이터 준비
+    comments_data = []
+    comment_reports = {}
     
-    for comment in all_comments:
+    for comment in comments:
+        # 좋아요 수 계산
         like_count = CommentLike.query.filter_by(comment_id=comment.id).count()
         
         comment_data = {
@@ -478,35 +478,38 @@ def bill_detail(bill_id):
             'is_under_review': comment.is_under_review or comment.report_count >= 3,
             'is_reported_by_user': comment.id in reported_comment_ids,
             'like_count': like_count,
-            'is_liked_by_user': comment.id in liked_comment_ids,
-            'parent_id': comment.parent_id
+            'is_liked_by_user': comment.id in liked_comment_ids
         }
-        
-        if comment.parent_id is None:
-            parent_comments.append(comment_data)
-        else:
-            if comment.parent_id not in replies_by_parent:
-                replies_by_parent[comment.parent_id] = []
-            replies_by_parent[comment.parent_id].append(comment_data)
-    
-    # 최종 댓글 리스트 구성
-    comments_data = []
-    for parent in parent_comments:
-        comments_data.append(parent)
-        if parent['id'] in replies_by_parent:
-            comments_data.extend(replies_by_parent[parent['id']])
-    
-    # 댓글 신고 정보
-    comment_reports = {}
-    for comment in all_comments:
+        comments_data.append(comment_data)
         comment_reports[str(comment.id)] = comment.report_count
+        
+        # 답글들도 추가
+        for reply in comment.replies:
+            reply_like_count = CommentLike.query.filter_by(comment_id=reply.id).count()
+            
+            reply_data = {
+                'id': reply.id,
+                'parent_id': reply.parent_id,
+                'author': reply.author or f'익명{reply.id}',
+                'content': reply.content,
+                'stance': reply.stance,
+                'time_ago': time_ago(reply.created_at),
+                'report_count': reply.report_count,
+                'is_under_review': reply.is_under_review or reply.report_count >= 3,
+                'is_reported_by_user': reply.id in reported_comment_ids,
+                'like_count': reply_like_count,
+                'is_liked_by_user': reply.id in liked_comment_ids
+            }
+            comments_data.append(reply_data)
+            comment_reports[str(reply.id)] = reply.report_count
     
-    # 관련 법률안
+    # 관련 법률안 (같은 위원회) - 실제 데이터만
     related_bills = Bill.query.filter(
         Bill.committee == bill.committee,
         Bill.id != bill.id
     ).limit(5).all()
     
+    # 관련 법률안이 있을 때만 데이터 생성
     related_bills_data = []
     if related_bills:
         related_bills_data = [{
@@ -525,7 +528,8 @@ def bill_detail(bill_id):
         'propose_date': bill.propose_date,
         'committee': bill.committee,
         'detail_link': bill.detail_link,
-        'proposal_reason': bill_content
+        'proposal_reason': bill_content.get('proposal_reason', ''),
+        'main_content': bill_content.get('main_content', '')
     }
     
     return render_template('LAWdetail.html',
@@ -537,7 +541,8 @@ def bill_detail(bill_id):
                          liked_comment_ids=liked_comment_ids,
                          comment_reports=comment_reports,
                          related_bills=related_bills_data,
-                         has_more_comments=len(parent_comments) >= 10)
+                         has_more_comments=len(comments) >= 10)
+
 @app.route('/proposals')
 def proposals_list():
     page = request.args.get('page', 1, type=int)
@@ -816,6 +821,7 @@ def add_bill_comment(bill_id):
     data = request.get_json()
     content = data.get('content', '').strip()
     stance = data.get('stance')
+    parent_id = data.get('parent_id')
     ip_address = get_client_ip()
     
     if not content or stance not in ['agree', 'disagree']:
@@ -826,15 +832,13 @@ def add_bill_comment(bill_id):
     if not user_vote:
         return jsonify({'error': 'Vote required'}), 403
     
-    # 익명 번호 생성
-    comment_count = Comment.query.filter_by(bill_id=bill_id).count()
-    
     comment = Comment(
         bill_id=bill_id,
+        parent_id=parent_id,
         content=content,
         stance=stance,
         ip_address=ip_address,
-        author=f'익명{comment_count + 1}'
+        author=f'익명{Comment.query.count() + 1}'
     )
     
     db.session.add(comment)
@@ -845,18 +849,16 @@ def add_bill_comment(bill_id):
         'author': comment.author,
         'content': comment.content,
         'stance': comment.stance,
-        'time_ago': '방금 전',
-        'like_count': 0,
-        'report_count': 0,
-        'is_liked_by_user': False,
-        'is_reported_by_user': False
+        'time_ago': '방금 전'
     })
-
     
 def crawl_bill_content(bill_number):
     """국회 법률안 상세 페이지에서 제안이유 및 주요내용 크롤링"""
     if not bill_number:
-        return ''
+        return {
+            'proposal_reason': '',
+            'main_content': ''
+        }
     
     url = f"https://likms.assembly.go.kr/bill/billDetail.do?billId={bill_number}"
     
@@ -870,37 +872,31 @@ def crawl_bill_content(bill_number):
         # "제안이유 및 주요내용" 부분 추출
         if "제안이유 및 주요내용" in content_text:
             start_idx = content_text.find("제안이유 및 주요내용")
-            # 다음 섹션까지 또는 적당한 길이로 추출
-            end_markers = ["심사경과", "위원회 검토보고서", "제안이유", "■"]
+            # 적당한 길이로 추출
+            content = content_text[start_idx:start_idx+2000]
             
-            end_idx = len(content_text)
-            for marker in end_markers:
-                marker_pos = content_text.find(marker, start_idx + 50)
-                if marker_pos != -1 and marker_pos < end_idx:
-                    end_idx = marker_pos
+            # 문장 단위로 분리
+            sentences = [s.strip() for s in content.split('.') if s.strip()]
             
-            content = content_text[start_idx:min(end_idx, start_idx + 2000)]
+            # 제안배경과 주요내용 분리
+            mid_point = len(sentences) // 2
             
-            # 첫 번째 줄(제목) 제거하고 내용만 추출
-            lines = content.split('\n')
-            full_content = []
+            proposal_reason = '. '.join(sentences[1:mid_point])[:400]  # 첫 문장 제외
+            main_content = '. '.join(sentences[mid_point:])[:400]
             
-            for line in lines[1:]:
-                line = line.strip()
-                if line and not line.startswith('■') and len(line) > 10:
-                    full_content.append(line)
-            
-            combined_content = ' '.join(full_content)
-            
-            if len(combined_content) > 1500:
-                combined_content = combined_content[:1500] + "..."
-            
-            return combined_content.strip() if combined_content else ''
+            return {
+                'proposal_reason': proposal_reason.strip() if proposal_reason else '',
+                'main_content': main_content.strip() if main_content else ''
+            }
             
     except Exception as e:
         print(f"크롤링 오류: {e}")
     
-    return ''
+    # 크롤링 실패 시 빈 값 반환
+    return {
+        'proposal_reason': '',
+        'main_content': ''
+    }
 
 @app.route('/api/proposals/<int:proposal_id>/vote', methods=['POST'])
 def vote_proposal(proposal_id):
@@ -1188,9 +1184,6 @@ def search():
 def toggle_comment_like(comment_id):
     ip_address = get_client_ip()
     
-    # 댓글 존재 확인
-    comment = Comment.query.get_or_404(comment_id)
-    
     # 기존 좋아요 확인
     existing_like = CommentLike.query.filter_by(
         comment_id=comment_id,
@@ -1227,28 +1220,21 @@ def add_reply(parent_id):
     stance = data.get('stance')
     ip_address = get_client_ip()
     
-    if not content or stance not in ['agree', 'disagree']:
-        return jsonify({'error': 'Content and stance required'}), 400
+    if not content:
+        return jsonify({'error': 'Content required'}), 400
     
     # 부모 댓글 확인
     parent_comment = Comment.query.get_or_404(parent_id)
     
-    # 해당 법률안에 대한 투표 확인
-    bill_id = parent_comment.bill_id
-    user_vote = BillVote.query.filter_by(bill_id=bill_id, ip_address=ip_address).first()
-    if not user_vote:
-        return jsonify({'error': 'Vote required'}), 403
-    
-    # 익명 번호 생성
-    comment_count = Comment.query.filter_by(bill_id=bill_id).count()
-    
+    # 답글 생성
     reply = Comment(
         bill_id=parent_comment.bill_id,
+        proposal_id=parent_comment.proposal_id,
         parent_id=parent_id,
         content=content,
         stance=stance,
         ip_address=ip_address,
-        author=f'익명{comment_count + 1}'
+        author=f'익명{Comment.query.count() + 1}'
     )
     
     db.session.add(reply)
@@ -1260,19 +1246,12 @@ def add_reply(parent_id):
         'content': reply.content,
         'stance': reply.stance,
         'time_ago': '방금 전',
-        'parent_id': reply.parent_id,
-        'like_count': 0,
-        'report_count': 0,
-        'is_liked_by_user': False,
-        'is_reported_by_user': False
+        'parent_id': reply.parent_id
     })
 
 @app.route('/api/comments/<int:comment_id>/report', methods=['POST'])
 def report_comment(comment_id):
     ip_address = get_client_ip()
-    
-    # 댓글 존재 확인
-    comment = Comment.query.get_or_404(comment_id)
     
     # IP 차단 확인
     if BlockedIP.query.filter_by(ip_address=ip_address).first():
@@ -1292,18 +1271,20 @@ def report_comment(comment_id):
     db.session.add(report)
     
     # 댓글의 신고 수 증가
-    comment.report_count += 1
-    if comment.report_count >= 3:
-        comment.is_under_review = True
-        
-    # 특정 IP가 너무 많은 신고를 하는 경우 차단
-    reporter_total = Report.query.filter_by(reporter_ip=ip_address).count()
-    if reporter_total > 50:
-        blocked = BlockedIP(
-            ip_address=ip_address,
-            reason='과도한 신고'
-        )
-        db.session.add(blocked)
+    comment = Comment.query.get(comment_id)
+    if comment:
+        comment.report_count += 1
+        if comment.report_count >= 3:
+            comment.is_under_review = True
+            
+        # 특정 IP가 너무 많은 신고를 하는 경우 차단
+        reporter_total = Report.query.filter_by(reporter_ip=ip_address).count()
+        if reporter_total > 50:  # 임계값
+            blocked = BlockedIP(
+                ip_address=ip_address,
+                reason='과도한 신고'
+            )
+            db.session.add(blocked)
     
     db.session.commit()
     
