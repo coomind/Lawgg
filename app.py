@@ -1373,6 +1373,24 @@ def debug_api():
             'error': str(e),
             'error_type': type(e).__name__
         })
+
+@app.route('/admin/reset-db')
+def reset_database():
+    """데이터베이스 초기화 (주의: 모든 데이터 삭제)"""
+    try:
+        # 모든 테이블 삭제 후 재생성
+        db.drop_all()
+        db.create_all()
+        
+        return jsonify({
+            'status': 'success',
+            'message': '데이터베이스가 초기화되었습니다. 모든 데이터가 삭제되었습니다.'
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error', 
+            'message': f'초기화 실패: {str(e)}'
+        }), 500
     
 # 메인 실행
 if __name__ == '__main__':
