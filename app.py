@@ -1191,6 +1191,14 @@ def favicon():
     
 #with app.app_context():
     #db.create_all()
+
+@app.route('/sync')
+def run_sync():
+    import sync_data
+    sync_data.sync_members_from_api()
+    sync_data.sync_bills_from_api()
+    return '✅ 데이터 동기화 완료!'
+    
 # 메인 실행
 if __name__ == '__main__':
     with app.app_context():
