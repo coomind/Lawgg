@@ -279,6 +279,13 @@
             color: #666;
         }
 
+        .avatar-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .content-sections {
@@ -390,7 +397,13 @@
                 </h2>
                 <ul class="section-list">
                     {% for member in trending_members %}
-                    <li onclick="viewMemberDetail('{{ member.id }}', '{{ member.name }}')">
+                    <div class="member-avatar">
+                        {% if member.photo_url %}
+                            <img src="{{ member.photo_url }}" alt="{{ member.name }}" class="avatar-img">
+                        {% else %}
+                            {{ member.name[0] }}
+                        {% endif %}
+                    </div>
                         <div class="list-number">{{ loop.index }}</div>
                         <div class="member-avatar">{{ member.name[0] }}</div>
                         <div class="member-info">
