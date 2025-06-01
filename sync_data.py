@@ -183,8 +183,13 @@ def sync_members_from_api():
                                  row.findtext('PARTY_NM', '')).strip()
                         
                         birth_str = row.findtext('BIRDY_DT', '').strip()
+                        if not name or not birth_str:
+                            continue
                         
-                        birth_year = None
+                        birth_year = int(birth_str[:4]) if len(birth_str) >= 4 else None
+                        current_year = datetime.now().year
+                        age = current_year - birth_year if birth_year else None
+
                         if birth_str and len(birth_str) >= 4:
                             try:
                                 birth_year = int(birth_str[:4])
@@ -196,7 +201,7 @@ def sync_members_from_api():
 
                         matched_terms = [term for (csv_name, term) in csv_data.keys() 
                                          if csv_name == name and term in [20, 21, 22]]
-                        if not matched_terms:
+                        if not matched_terms or (age is not None and age > 90):
                             continue  # CSV에 없으면 건너뜀
 
                         member = Member.query.filter_by(name=name, birth_date=birth_str).first()
