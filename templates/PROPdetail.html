@@ -418,44 +418,19 @@
         .comment-actions {
             margin-left: 42px;
             margin-top: 10px;
-            display: flex;
-            gap: 15px;
-            align-items: center;
         }
 
         .comment-action {
             font-size: 12px;
             color: #666;
             text-decoration: none;
+            margin-right: 15px;
             cursor: pointer;
             transition: color 0.2s;
-            border: none;
-            background: none;
-            padding: 0;
-            display: flex;
-            align-items: center;
-            gap: 4px;
         }
 
         .comment-action:hover {
             color: #333;
-        }
-
-        .comment-action.like-btn {
-            color: #666;
-        }
-
-        .comment-action.like-btn.liked {
-            color: #3498db;
-            font-weight: 600;
-        }
-
-        .comment-action.reply-btn {
-            color: #666;
-        }
-
-        .comment-action.reply-btn:hover {
-            color: #3498db;
         }
 
         .comment-action.report-btn {
@@ -469,168 +444,6 @@
         .comment-action.report-btn.reported {
             color: #6c757d;
             cursor: not-allowed;
-        }
-
-        /* 답글 관련 스타일 */
-        .reply-form {
-            display: none;
-            margin-left: 42px;
-            margin-top: 10px;
-            padding: 15px;
-            background-color: #f8f9fa;
-            border-radius: 6px;
-            border: 1px solid #e9ecef;
-        }
-
-        .reply-form.active {
-            display: block;
-        }
-
-        .reply-input {
-            width: 100%;
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
-            resize: vertical;
-            min-height: 60px;
-            margin-bottom: 8px;
-        }
-
-        .reply-input:focus {
-            outline: none;
-            border-color: #495057;
-            box-shadow: 0 0 0 2px rgba(73, 80, 87, 0.1);
-        }
-
-        .reply-actions {
-            display: flex;
-            gap: 8px;
-            justify-content: flex-end;
-        }
-
-        .reply-submit, .reply-cancel {
-            padding: 6px 12px;
-            border: none;
-            border-radius: 4px;
-            font-size: 12px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-
-        .reply-submit {
-            background-color: #495057;
-            color: white;
-        }
-
-        .reply-submit:hover {
-            background-color: #343a40;
-        }
-
-        .reply-cancel {
-            background-color: #6c757d;
-            color: white;
-        }
-
-        .reply-cancel:hover {
-            background-color: #545b62;
-        }
-
-        .replies-section {
-            margin-left: 42px;
-            margin-top: 10px;
-        }
-
-        .reply-item {
-            background-color: #f8f9fa;
-            padding: 12px;
-            border-radius: 6px;
-            margin-bottom: 8px;
-            border-left: 3px solid #dee2e6;
-        }
-
-        .reply-header {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 6px;
-        }
-
-        .reply-avatar {
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            background-color: #dee2e6;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            color: #666;
-        }
-
-        .reply-author {
-            font-size: 13px;
-            font-weight: 600;
-            color: #333;
-        }
-
-        .reply-stance {
-            padding: 1px 6px;
-            border-radius: 10px;
-            font-size: 11px;
-            font-weight: 500;
-        }
-
-        .reply-stance.agree {
-            background-color: #d4edda;
-            color: #155724;
-        }
-
-        .reply-stance.disagree {
-            background-color: #f8d7da;
-            color: #721c24;
-        }
-
-        .reply-date {
-            font-size: 11px;
-            color: #666;
-        }
-
-        .reply-content {
-            font-size: 13px;
-            color: #333;
-            line-height: 1.4;
-            margin-left: 32px;
-        }
-
-        .reply-actions {
-            margin-left: 32px;
-            margin-top: 6px;
-            display: flex;
-            gap: 12px;
-            align-items: center;
-        }
-
-        .reply-action {
-            font-size: 11px;
-            color: #666;
-            cursor: pointer;
-            transition: color 0.2s;
-            border: none;
-            background: none;
-            padding: 0;
-            display: flex;
-            align-items: center;
-            gap: 2px;
-        }
-
-        .reply-action:hover {
-            color: #333;
-        }
-
-        .reply-action.like-btn.liked {
-            color: #3498db;
-            font-weight: 600;
         }
 
         /* 입법제안 신고 버튼 스타일 */
@@ -704,31 +517,6 @@
 
             .header {
                 padding: 16px 15px;
-            }
-
-            .comment-actions {
-                flex-wrap: wrap;
-                margin-left: 0;
-            }
-
-            .comment-content {
-                margin-left: 0;
-            }
-
-            .reply-form {
-                margin-left: 0;
-            }
-
-            .replies-section {
-                margin-left: 20px;
-            }
-
-            .reply-content {
-                margin-left: 0;
-            }
-
-            .reply-actions {
-                margin-left: 0;
             }
         }
 
@@ -877,101 +665,46 @@
                     <div style="clear: both;"></div>
                 </div>
 
-                <div id="comments-list">
-                    {% for comment in comments %}
-                    <div class="comment-item {% if comment.is_under_review %}comment-under-review{% endif %}" 
-                         data-comment-id="{{ comment.id }}" 
-                         data-report-count="{{ comment.report_count }}">
-                        <div class="comment-header">
-                            <div class="comment-avatar">
-                                {% if comment.author_avatar %}
-                                    {{ comment.author_avatar }}
-                                {% else %}
-                                    👤
-                                {% endif %}
-                            </div>
-                            <span class="comment-author">{{ comment.author }}</span>
-                            <span class="comment-stance {{ 'agree' if comment.stance == 'agree' else 'disagree' }}">
-                                {{ '찬성' if comment.stance == 'agree' else '반대' }}
-                            </span>
-                            <span class="comment-date">{{ comment.time_ago }}</span>
-                            {% if comment.is_under_review %}
-                            <span class="under-review-badge">검토 중</span>
+                {% for comment in comments %}
+                <div class="comment-item {% if comment.is_under_review %}comment-under-review{% endif %}" 
+                     data-comment-id="{{ comment.id }}" 
+                     data-report-count="{{ comment.report_count }}">
+                    <div class="comment-header">
+                        <div class="comment-avatar">
+                            {% if comment.author_avatar %}
+                                {{ comment.author_avatar }}
+                            {% else %}
+                                👤
                             {% endif %}
                         </div>
-                        <div class="comment-content">
-                            {{ comment.content }}
-                        </div>
-                        <div class="comment-actions">
-                            <button class="comment-action like-btn {% if comment.is_liked_by_user %}liked{% endif %}" 
-                                    data-comment-id="{{ comment.id }}">
-                                👍 {{ comment.likes_count or 0 }}
-                            </button>
-                            <button class="comment-action reply-btn" data-comment-id="{{ comment.id }}">
-                                답글
-                            </button>
-                            <button class="comment-action report-btn {% if comment.is_reported_by_user %}reported{% endif %}" 
-                                    data-comment-id="{{ comment.id }}">
-                                {% if comment.is_reported_by_user %}
-                                    신고됨
-                                {% elif comment.report_count > 0 %}
-                                    신고 ({{ comment.report_count }})
-                                {% else %}
-                                    신고
-                                {% endif %}
-                            </button>
-                        </div>
-                        
-                        <!-- 답글 작성 폼 -->
-                        <div class="reply-form" id="reply-form-{{ comment.id }}">
-                            <textarea class="reply-input" placeholder="답글을 작성해주세요..."></textarea>
-                            <div class="reply-actions">
-                                <button class="reply-submit" data-parent-id="{{ comment.id }}">답글 작성</button>
-                                <button class="reply-cancel" data-comment-id="{{ comment.id }}">취소</button>
-                            </div>
-                        </div>
-                        
-                        <!-- 답글 목록 -->
-                        <div class="replies-section" id="replies-{{ comment.id }}">
-                            {% for reply in comment.replies %}
-                            <div class="reply-item" data-reply-id="{{ reply.id }}">
-                                <div class="reply-header">
-                                    <div class="reply-avatar">
-                                        {% if reply.author_avatar %}
-                                            {{ reply.author_avatar }}
-                                        {% else %}
-                                            👤
-                                        {% endif %}
-                                    </div>
-                                    <span class="reply-author">{{ reply.author }}</span>
-                                    <span class="reply-stance {{ 'agree' if reply.stance == 'agree' else 'disagree' }}">
-                                        {{ '찬성' if reply.stance == 'agree' else '반대' }}
-                                    </span>
-                                    <span class="reply-date">{{ reply.time_ago }}</span>
-                                </div>
-                                <div class="reply-content">
-                                    {{ reply.content }}
-                                </div>
-                                <div class="reply-actions">
-                                    <button class="reply-action like-btn {% if reply.is_liked_by_user %}liked{% endif %}" 
-                                            data-reply-id="{{ reply.id }}">
-                                        👍 {{ reply.likes_count or 0 }}
-                                    </button>
-                                    <button class="reply-action report-btn {% if reply.is_reported_by_user %}reported{% endif %}" 
-                                            data-reply-id="{{ reply.id }}">
-                                        {% if reply.is_reported_by_user %}
-                                            신고됨
-                                        {% else %}
-                                            신고
-                                        {% endif %}
-                                    </button>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
+                        <span class="comment-author">{{ comment.author }}</span>
+                        <span class="comment-stance {{ 'agree' if comment.stance == 'agree' else 'disagree' }}">
+                            {{ '찬성' if comment.stance == 'agree' else '반대' }}
+                        </span>
+                        <span class="comment-date">{{ comment.time_ago }}</span>
+                        {% if comment.is_under_review %}
+                        <span class="under-review-badge">검토 중</span>
+                        {% endif %}
                     </div>
-                    {% endfor %}
+                    <div class="comment-content">
+                        {{ comment.content }}
+                    </div>
+                    <div class="comment-actions">
+                        <span class="comment-action">좋아요 · {{ comment.likes_count or 0 }}</span>
+                        <span class="comment-action">답글</span>
+                        <span class="comment-action report-btn {% if comment.is_reported_by_user %}reported{% endif %}" 
+                              data-comment-id="{{ comment.id }}">
+                            {% if comment.is_reported_by_user %}
+                                신고됨
+                            {% elif comment.report_count > 0 %}
+                                신고 ({{ comment.report_count }})
+                            {% else %}
+                                신고
+                            {% endif %}
+                        </span>
+                    </div>
                 </div>
+                {% endfor %}
 
                 {% if has_more_comments %}
                 <button onclick="loadMoreComments()" style="width: 100%; padding: 10px; background-color: #4285f4; color: white; border: none; border-radius: 6px; margin-top: 20px; cursor: pointer;">더보기</button>
@@ -981,7 +714,6 @@
     </main>
 
     <script>
-      
        // API 베이스 URL 설정 (배포 시 변경)
         const API_BASE_URL = 'https://lawgg-backend.onrender.com';
 
