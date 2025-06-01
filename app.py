@@ -227,6 +227,7 @@ def index():
         'name': member.name,
         'party': member.party,
         'view_count': member.view_count
+        'photo_url' : member.photo_url
     } for member in trending_members]
     
     return render_template('index.html',
