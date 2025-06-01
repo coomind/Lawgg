@@ -449,18 +449,25 @@ def bill_detail(bill_id):
         'disagree_count': disagree_count
     }
     
-    # 댓글 가져오기
+    # 댓글 가져오기 (부모 댓글만)
     comments = Comment.query.filter_by(bill_id=bill_id, parent_id=None).order_by(Comment.created_at.desc()).limit(10).all()
     
     # 사용자가 신고한 댓글 ID들
     user_reports = Report.query.filter_by(reporter_ip=ip_address).all()
     reported_comment_ids = [r.comment_id for r in user_reports if r.comment_id]
     
+    # 사용자가 좋아요한 댓글 ID들
+    user_likes = CommentLike.query.filter_by(ip_address=ip_address).all()
+    liked_comment_ids = [l.comment_id for l in user_likes]
+    
     # 댓글 데이터 준비
     comments_data = []
     comment_reports = {}
     
     for comment in comments:
+        # 좋아요 수 계산
+        like_count = CommentLike.query.filter_by(comment_id=comment.id).count()
+        
         comment_data = {
             'id': comment.id,
             'author': comment.author or f'익명{comment.id}',
@@ -469,13 +476,17 @@ def bill_detail(bill_id):
             'time_ago': time_ago(comment.created_at),
             'report_count': comment.report_count,
             'is_under_review': comment.is_under_review or comment.report_count >= 3,
-            'is_reported_by_user': comment.id in reported_comment_ids
+            'is_reported_by_user': comment.id in reported_comment_ids,
+            'like_count': like_count,
+            'is_liked_by_user': comment.id in liked_comment_ids
         }
         comments_data.append(comment_data)
         comment_reports[str(comment.id)] = comment.report_count
         
         # 답글들도 추가
         for reply in comment.replies:
+            reply_like_count = CommentLike.query.filter_by(comment_id=reply.id).count()
+            
             reply_data = {
                 'id': reply.id,
                 'parent_id': reply.parent_id,
@@ -485,21 +496,29 @@ def bill_detail(bill_id):
                 'time_ago': time_ago(reply.created_at),
                 'report_count': reply.report_count,
                 'is_under_review': reply.is_under_review or reply.report_count >= 3,
-                'is_reported_by_user': reply.id in reported_comment_ids
+                'is_reported_by_user': reply.id in reported_comment_ids,
+                'like_count': reply_like_count,
+                'is_liked_by_user': reply.id in liked_comment_ids
             }
             comments_data.append(reply_data)
             comment_reports[str(reply.id)] = reply.report_count
     
-    # 관련 법률안 (같은 위원회)
+    # 관련 법률안 (같은 위원회) - 실제 데이터만
     related_bills = Bill.query.filter(
         Bill.committee == bill.committee,
         Bill.id != bill.id
     ).limit(5).all()
     
-    related_bills_data = [{
-        'id': rb.id,
-        'name': rb.name[:30] + '...' if len(rb.name) > 30 else rb.name
-    } for rb in related_bills]
+    # 관련 법률안이 있을 때만 데이터 생성
+    related_bills_data = []
+    if related_bills:
+        related_bills_data = [{
+            'id': rb.id,
+            'name': rb.name[:50] + '...' if len(rb.name) > 50 else rb.name
+        } for rb in related_bills]
+    
+    # 법률안 상세 내용 크롤링
+    bill_content = crawl_bill_content(bill.number if bill.number else '')
     
     bill_data = {
         'id': bill.id,
@@ -508,7 +527,9 @@ def bill_detail(bill_id):
         'proposer': bill.proposer,
         'propose_date': bill.propose_date,
         'committee': bill.committee,
-        'detail_link': bill.detail_link
+        'detail_link': bill.detail_link,
+        'proposal_reason': bill_content.get('proposal_reason', ''),
+        'main_content': bill_content.get('main_content', '')
     }
     
     return render_template('LAWdetail.html',
@@ -517,6 +538,7 @@ def bill_detail(bill_id):
                          user_vote=user_vote_type,
                          comments=comments_data,
                          reported_comment_ids=reported_comment_ids,
+                         liked_comment_ids=liked_comment_ids,
                          comment_reports=comment_reports,
                          related_bills=related_bills_data,
                          has_more_comments=len(comments) >= 10)
@@ -829,6 +851,52 @@ def add_bill_comment(bill_id):
         'stance': comment.stance,
         'time_ago': '방금 전'
     })
+    
+def crawl_bill_content(bill_number):
+    """국회 법률안 상세 페이지에서 제안이유 및 주요내용 크롤링"""
+    if not bill_number:
+        return {
+            'proposal_reason': '',
+            'main_content': ''
+        }
+    
+    url = f"https://likms.assembly.go.kr/bill/billDetail.do?billId={bill_number}"
+    
+    try:
+        response = requests.get(url, timeout=10)
+        soup = BeautifulSoup(response.content, 'html.parser')
+        
+        # 제안이유 및 주요내용 섹션 찾기
+        content_text = soup.get_text()
+        
+        # "제안이유 및 주요내용" 부분 추출
+        if "제안이유 및 주요내용" in content_text:
+            start_idx = content_text.find("제안이유 및 주요내용")
+            # 적당한 길이로 추출
+            content = content_text[start_idx:start_idx+2000]
+            
+            # 문장 단위로 분리
+            sentences = [s.strip() for s in content.split('.') if s.strip()]
+            
+            # 제안배경과 주요내용 분리
+            mid_point = len(sentences) // 2
+            
+            proposal_reason = '. '.join(sentences[1:mid_point])[:400]  # 첫 문장 제외
+            main_content = '. '.join(sentences[mid_point:])[:400]
+            
+            return {
+                'proposal_reason': proposal_reason.strip() if proposal_reason else '',
+                'main_content': main_content.strip() if main_content else ''
+            }
+            
+    except Exception as e:
+        print(f"크롤링 오류: {e}")
+    
+    # 크롤링 실패 시 빈 값 반환
+    return {
+        'proposal_reason': '',
+        'main_content': ''
+    }
 
 @app.route('/api/proposals/<int:proposal_id>/vote', methods=['POST'])
 def vote_proposal(proposal_id):
@@ -1501,7 +1569,7 @@ if __name__ == '__main__':
         # 데이터베이스 테이블 생성
         db.create_all()
 
-        add_sample_data()
+        
         # 데이터가 없으면 동기화 실행
         if Member.query.count() == 0:
             print("데이터베이스가 비어있습니다. 초기 데이터를 로드합니다...")
