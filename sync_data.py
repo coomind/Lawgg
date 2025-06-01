@@ -1,3 +1,9 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+Law.GG 데이터 동기화 스크립트 - 디버깅 버전
+"""
+
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -13,252 +19,249 @@ import time
 API_KEY = 'a3fada8210244129907d945abe2beada'
 BASE_URL = 'https://open.assembly.go.kr/portal/openapi'
 
-# CSV 데이터를 메모리에 로드
-def load_csv_data_to_memory():
-    """CSV 파일에서 선거구/득표율 정보를 메모리에 로드"""
-    csv_data = {}
-    csv_file = '국회의원_당선자_통합명부_20_21_22대.csv'
+def test_api_connection():
+    """API 연결 테스트"""
+    print("\n=== API 연결 테스트 ===")
+    test_url = f"{BASE_URL}/ALLNAMEMBER"
+    params = {
+        'KEY': API_KEY,
+        'Type': 'xml',
+        'pIndex': 1,
+        'pSize': 1
+    }
     
-    if not os.path.exists(csv_file):
-        print(f"CSV 파일을 찾을 수 없습니다: {csv_file}")
-        return csv_data
-    
-    with open(csv_file, 'r', encoding='utf-8-sig') as file:
-        reader = csv.DictReader(file)
+    try:
+        print(f"테스트 URL: {test_url}")
+        print(f"파라미터: {params}")
         
-        for row in reader:
-            name = row.get('name', '').strip()
-            age = row.get('age', '').strip()  # 실제로는 대수
-            constituency = row.get('constituency', '').strip()
-            vote_percent = row.get('vote_percent', '').strip()
-            status = row.get('status', '').strip()
+        response = requests.get(test_url, params=params, timeout=30)
+        print(f"응답 코드: {response.status_code}")
+        print(f"응답 내용 (처음 500자): {response.text[:500]}")
+        
+        if response.status_code == 200:
+            root = ET.fromstring(response.content)
+            result_code = root.findtext('.//RESULT_CODE')
+            result_msg = root.findtext('.//RESULT_MESSAGE')
+            print(f"API 결과 코드: {result_code}")
+            print(f"API 결과 메시지: {result_msg}")
             
-            if not name or status != '당선':
-                continue
+            if result_code == 'INFO-000':
+                print("✅ API 연결 성공!")
+                return True
+            else:
+                print("❌ API 오류:", result_msg)
+                return False
+        else:
+            print(f"❌ HTTP 오류: {response.status_code}")
+            return False
             
-            # 대수 파싱
-            try:
-                session_num = int(age) if age else None
-            except:
-                session_num = None
-            
-            # 득표율 파싱
-            vote_rate = None
-            if vote_percent and vote_percent != 'nan%':
-                try:
-                    vote_rate = float(vote_percent.replace('%', ''))
-                except:
-                    pass
-            
-            # 키: (이름, 대수)
-            key = (name, session_num)
-            csv_data[key] = {
-                'constituency': constituency,
-                'vote_rate': vote_rate
-            }
-    
-    print(f"CSV에서 {len(csv_data)}개의 선거 데이터를 로드했습니다.")
-    return csv_data
+    except Exception as e:
+        print(f"❌ 연결 오류: {type(e).__name__}: {str(e)}")
+        return False
 
 def sync_members_from_api():
     """국회 OpenAPI에서 국회의원 정보 동기화"""
     print("\n=== 국회 OpenAPI에서 국회의원 정보 가져오기 ===")
     
-    # CSV 데이터 먼저 로드
-    csv_data = load_csv_data_to_memory()
+    # API 연결 테스트 먼저
+    if not test_api_connection():
+        print("API 연결 실패! 종료합니다.")
+        return
     
-    # 20, 21, 22대 국회의원 정보 가져오기
-    for term in [20, 21, 22]:
-        print(f"\n{term}대 국회의원 정보 동기화 중...")
-        
-        url = f"{BASE_URL}/ALLNAMEMBER"
-        params = {
-            'KEY': API_KEY,
-            'Type': 'xml',
-            'pIndex': 1,
-            'pSize': 300,
-            'UNIT_CD': f'{term:02d}'
-        }
-        
-        try:
-            response = requests.get(url, params=params, timeout=30)
-            response.raise_for_status()
-            
-            root = ET.fromstring(response.content)
-            
-            # 헤더 정보 확인
-            result_code = root.findtext('.//RESULT_CODE')
-            if result_code != 'INFO-000':
-                print(f"API 오류 ({term}대): {root.findtext('.//RESULT_MESSAGE')}")
-                continue
-            
-            count = 0
-            for row in root.findall('.//row'):
-                # API에서 정보 파싱
-                name = row.findtext('HG_NM', '')
-                party = row.findtext('POLY_NM', '')
-                orig_nm = row.findtext('ORIG_NM', '')  # 선거구
-                birth_date = row.findtext('BTH_DATE', '')
-                gender = row.findtext('SEX_GBN_NM', '')
-                phone = row.findtext('TEL_NO', '')
-                email = row.findtext('E_MAIL', '')
-                homepage = row.findtext('HOMEPAGE', '')
-                mem_title = row.findtext('MEM_TITLE', '')  # 약력
-                jpg_link = row.findtext('jpgLink', '')
+    # CSV 데이터 로드
+    csv_data = {}
+    csv_file = '국회의원_당선자_통합명부_20_21_22대.csv'
+    
+    if os.path.exists(csv_file):
+        with open(csv_file, 'r', encoding='utf-8-sig') as file:
+            reader = csv.DictReader(file)
+            for row in reader:
+                name = row.get('name', '').strip()
+                age = row.get('age', '').strip()
+                constituency = row.get('constituency', '').strip()
+                vote_percent = row.get('vote_percent', '').strip()
                 
-                # 나이 계산
-                age = None
-                if birth_date:
+                try:
+                    session_num = int(age) if age else None
+                except:
+                    session_num = None
+                
+                vote_rate = None
+                if vote_percent and vote_percent != 'nan%':
                     try:
-                        birth_year = int(birth_date[:4])
-                        age = datetime.now().year - birth_year + 1
+                        vote_rate = float(vote_percent.replace('%', ''))
                     except:
                         pass
                 
-                # DB에 저장 또는 업데이트
-                member = Member.query.filter_by(name=name, session_num=term).first()
-                
-                if not member:
-                    member = Member(
-                        name=name,
-                        session_num=term,
-                        view_count=0
-                    )
-                    db.session.add(member)
-                
-                # API 정보 업데이트
-                member.party = party
-                member.age = age
-                member.gender = gender
-                member.phone = phone
-                member.email = email
-                member.homepage = homepage
-                member.career = mem_title
-                member.photo_url = jpg_link
-                
-                # CSV에서 선거구/득표율 정보 매칭
-                csv_key = (name, term)
-                if csv_key in csv_data:
-                    csv_info = csv_data[csv_key]
-                    member.district = csv_info['constituency']
-                    member.vote_rate = csv_info['vote_rate']
-                else:
-                    # CSV에 없으면 API의 ORIG_NM 사용
-                    member.district = orig_nm
-                
-                count += 1
-                if count % 10 == 0:
-                    print(f"  처리 중: {count}명...")
-            
-            db.session.commit()
-            print(f"{term}대: {count}명 동기화 완료")
-            time.sleep(1)  # API 호출 간격
-            
-        except Exception as e:
-            print(f"오류 발생 ({term}대): {e}")
-            db.session.rollback()
-            continue
-    
-    print("\n국회의원 정보 동기화 완료!")
-
-def sync_bills_from_api():
-    """국회 OpenAPI에서 법률안 정보 동기화"""
-    print("\n=== 국회 OpenAPI에서 법률안 정보 가져오기 ===")
-    
-    url = f"{BASE_URL}/nzmimeepazxkubdpn"
-    
-    # 최근 법률안 500개 가져오기 (100개씩 5페이지)
-    total_count = 0
-    
-    for page in range(1, 6):
-        print(f"\n페이지 {page}/5 처리 중...")
+                if name and session_num:
+                    key = (name, session_num)
+                    csv_data[key] = {
+                        'constituency': constituency,
+                        'vote_rate': vote_rate
+                    }
         
-        params = {
-            'KEY': API_KEY,
-            'Type': 'xml',
-            'pIndex': page,
-            'pSize': 100,
-            'AGE': '22'  # 22대 국회
-        }
+        print(f"CSV에서 {len(csv_data)}개의 선거 데이터를 로드했습니다.")
+    
+    # 22대만 먼저 테스트
+    term = 22
+    print(f"\n{term}대 국회의원 정보 동기화 중...")
+    
+    url = f"{BASE_URL}/ALLNAMEMBER"
+    params = {
+        'KEY': API_KEY,
+        'Type': 'xml',
+        'pIndex': 1,
+        'pSize': 100,  # 처음 100명만
+        'UNIT_CD': f'{term:02d}'
+    }
+    
+    try:
+        response = requests.get(url, params=params, timeout=30)
+        print(f"응답 상태: {response.status_code}")
         
-        try:
-            response = requests.get(url, params=params, timeout=30)
-            response.raise_for_status()
+        if response.status_code != 200:
+            print(f"HTTP 오류: {response.status_code}")
+            print(f"응답 내용: {response.text[:500]}")
+            return
+        
+        root = ET.fromstring(response.content)
+        
+        # 결과 확인
+        result_code = root.findtext('.//RESULT_CODE')
+        result_msg = root.findtext('.//RESULT_MESSAGE')
+        
+        print(f"API 응답 - 코드: {result_code}, 메시지: {result_msg}")
+        
+        if result_code != 'INFO-000':
+            print(f"API 오류: {result_msg}")
+            return
+        
+        # 데이터 파싱
+        count = 0
+        rows = root.findall('.//row')
+        print(f"찾은 데이터: {len(rows)}개")
+        
+        for row in rows[:10]:  # 처음 10명만 테스트
+            name = row.findtext('HG_NM', '')
+            party = row.findtext('POLY_NM', '')
             
-            root = ET.fromstring(response.content)
-            
-            # 헤더 정보 확인
-            result_code = root.findtext('.//RESULT_CODE')
-            if result_code != 'INFO-000':
-                print(f"API 오류: {root.findtext('.//RESULT_MESSAGE')}")
+            if not name:
                 continue
             
-            count = 0
-            for row in root.findall('.//row'):
-                # API에서 정보 파싱
-                bill_no = row.findtext('BILL_NO', '')
-                bill_name = row.findtext('BILL_NAME', '')
-                proposer = row.findtext('PROPOSER', '')
-                committee = row.findtext('COMMITTEE', '')
-                propose_dt = row.findtext('PROPOSE_DT', '')
-                detail_link = row.findtext('DETAIL_LINK', '')
-                
-                # 날짜 형식 변환
-                if propose_dt and len(propose_dt) == 8:
-                    propose_dt = f"{propose_dt[:4]}-{propose_dt[4:6]}-{propose_dt[6:8]}"
-                
-                # DB에 저장 또는 업데이트
-                bill = Bill.query.filter_by(number=bill_no).first()
-                
-                if not bill:
-                    bill = Bill(
-                        number=bill_no,
-                        name=bill_name,
-                        view_count=0
-                    )
-                    db.session.add(bill)
-                
-                # 정보 업데이트
-                bill.proposer = proposer
-                bill.committee = committee
-                bill.propose_date = propose_dt
-                bill.detail_link = detail_link
-                
-                count += 1
+            # 기존 의원 확인 또는 생성
+            member = Member.query.filter_by(name=name, session_num=term).first()
             
-            db.session.commit()
-            total_count += count
-            print(f"  {count}개 법률안 처리 완료")
-            time.sleep(1)  # API 호출 간격
+            if not member:
+                member = Member(
+                    name=name,
+                    session_num=term,
+                    view_count=0
+                )
+                db.session.add(member)
             
-        except Exception as e:
-            print(f"오류 발생 (페이지 {page}): {e}")
-            db.session.rollback()
-            continue
+            # 정보 업데이트
+            member.party = party or '무소속'
+            member.gender = row.findtext('SEX_GBN_NM', '')
+            member.phone = row.findtext('TEL_NO', '')
+            member.email = row.findtext('E_MAIL', '')
+            member.homepage = row.findtext('HOMEPAGE', '')
+            member.photo_url = row.findtext('jpgLink', '')
+            
+            # CSV 정보 매칭
+            csv_key = (name, term)
+            if csv_key in csv_data:
+                csv_info = csv_data[csv_key]
+                member.district = csv_info['constituency']
+                member.vote_rate = csv_info['vote_rate']
+            else:
+                member.district = row.findtext('ORIG_NM', '')
+            
+            count += 1
+            print(f"처리: {name} ({party})")
+        
+        db.session.commit()
+        print(f"\n✅ {count}명의 국회의원 정보를 동기화했습니다.")
+        
+    except Exception as e:
+        print(f"❌ 오류 발생: {type(e).__name__}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        db.session.rollback()
+
+def add_sample_data():
+    """테스트용 샘플 데이터 추가"""
+    print("\n=== 샘플 데이터 추가 ===")
     
-    print(f"\n총 {total_count}개의 법률안 동기화 완료!")
+    # 샘플 국회의원
+    sample_members = [
+        {'name': '홍길동', 'party': '더불어민주당', 'district': '서울 종로구', 'session_num': 22},
+        {'name': '김철수', 'party': '국민의힘', 'district': '부산 해운대구갑', 'session_num': 22},
+        {'name': '이영희', 'party': '정의당', 'district': '비례대표', 'session_num': 22},
+    ]
+    
+    for data in sample_members:
+        if not Member.query.filter_by(name=data['name']).first():
+            member = Member(**data, view_count=0)
+            db.session.add(member)
+    
+    # 샘플 법률안
+    sample_bills = [
+        {
+            'number': '2100001',
+            'name': '개인정보 보호법 일부개정법률안',
+            'proposer': '홍길동',
+            'propose_date': '2024-01-15',
+            'committee': '정무위원회',
+            'view_count': 0
+        },
+        {
+            'number': '2100002',
+            'name': '국민건강보험법 일부개정법률안',
+            'proposer': '김철수',
+            'propose_date': '2024-01-20',
+            'committee': '보건복지위원회',
+            'view_count': 0
+        },
+    ]
+    
+    for data in sample_bills:
+        if not Bill.query.filter_by(number=data['number']).first():
+            bill = Bill(**data)
+            db.session.add(bill)
+    
+    db.session.commit()
+    print("✅ 샘플 데이터 추가 완료")
+
+# /sync 라우트 추가 (app.py에 추가)
+@app.route('/sync')
+def sync_route():
+    """웹에서 동기화 실행"""
+    try:
+        with app.app_context():
+            # 샘플 데이터만 추가
+            add_sample_data()
+            
+            # 실제 API 동기화는 Shell에서 실행
+            # sync_members_from_api()
+            
+        return "샘플 데이터 추가 완료! 실제 API 동기화는 Render Shell에서 실행하세요."
+    except Exception as e:
+        return f"오류 발생: {str(e)}"
 
 if __name__ == '__main__':
     with app.app_context():
-        # 데이터베이스 테이블 생성
         db.create_all()
         
-        # 1. 국회의원 정보 동기화 (API + CSV)
+        # 샘플 데이터 추가
+        add_sample_data()
+        
+        # API 동기화 시도
         sync_members_from_api()
         
-        # 2. 법률안 정보 동기화
-        sync_bills_from_api()
-        
-        # 3. 결과 확인
+        # 결과 확인
         member_count = Member.query.count()
         bill_count = Bill.query.count()
         
-        print("\n=== 동기화 완료 ===")
+        print(f"\n=== 최종 결과 ===")
         print(f"총 국회의원 수: {member_count}명")
         print(f"총 법률안 수: {bill_count}개")
-        
-        # 샘플 데이터 확인
-        print("\n샘플 데이터:")
-        sample_members = Member.query.limit(5).all()
-        for m in sample_members:
-            print(f"- {m.name} ({m.party}) - {m.district} - 득표율: {m.vote_rate}%")
