@@ -1189,13 +1189,23 @@ def internal_error(error):
 def favicon():
     return '', 204  # No Content
     
-with app.app_context():
-    db.create_all()
+#with app.app_context():
+    #db.create_all()
 # 메인 실행
 if __name__ == '__main__':
-    #with app.app_context():
-        #db.create_all()
-        # init_sample_data()  # 샘플 데이터 초기화
-    load_election_csv()  # CSV 데이터 로드
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    with app.app_context():
+        # 데이터베이스 테이블 생성
+        db.create_all()
+        
+        # 데이터가 없으면 동기화 실행
+        if Member.query.count() == 0:
+            print("데이터베이스가 비어있습니다. 초기 데이터를 로드합니다...")
+            from sync_data import sync_members_from_api, sync_bills_from_api
+            
+            # API에서 데이터 가져오기
+            sync_members_from_api()
+            sync_bills_from_api()
+            
+            print("초기 데이터 로드 완료!")
+        
+    app.run(debug=True, host='0.0.0.0', port=5000)
