@@ -36,7 +36,7 @@ CORS(app)
 # 데이터베이스 모델들
 class Member(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(50), nullable=False, unique=True)  # unique 추가
+    name = db.Column(db.String(50), nullable=False)  # unique 추가
     party = db.Column(db.String(50))  # 현재 소속 정당
     district = db.Column(db.String(100))  # 현재 선거구
     photo_url = db.Column(db.String(200))
