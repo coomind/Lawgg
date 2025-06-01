@@ -195,10 +195,10 @@ def sync_members_from_api():
                             continue
 
                         member = Member.query.filter_by(name=name, birth_date=birth_str).first()
-                            if not member:
-                                member = Member(name=name, birth_date=birth_str, view_count=0)
-                                db.session.add(member)
-                                print(f"✨ 신규 의원: {name}")
+                        if not member:
+                            member = Member(name=name, birth_date=birth_str, view_count=0)
+                            db.session.add(member)
+                            print(f"✨ 신규 의원: {name}")
                         
                         # 🧠 CSV 기반 대수 판단
                         matched_terms = [term for (csv_name, term) in csv_data.keys() if csv_name == name]
