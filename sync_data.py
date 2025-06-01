@@ -201,7 +201,8 @@ def sync_members_from_api():
                             print(f"✨ 신규 의원: {name}")
                         
                         # 🧠 CSV 기반 대수 판단
-                        matched_terms = [term for (csv_name, term) in csv_data.keys() if csv_name == name]
+                        matched_terms = [term for (csv_name, term) in csv_data.keys() 
+                                         if csv_name == name and term in [20, 21, 22]]
                         if not matched_terms:
                             continue  # CSV에 없으면 건너뜀
             
