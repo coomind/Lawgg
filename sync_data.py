@@ -34,31 +34,50 @@ def test_api_connection():
         print(f"테스트 URL: {test_url}")
         print(f"파라미터: {params}")
         
-        response = requests.get(test_url, params=params, timeout=30)
+        # 더 긴 타임아웃과 headers 추가
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+        
+        response = requests.get(test_url, params=params, timeout=60, headers=headers)
         print(f"응답 코드: {response.status_code}")
-        print(f"응답 내용 (처음 500자): {response.text[:500]}")
+        print(f"응답 내용 (처음 1000자): {response.text[:1000]}")
         
         if response.status_code == 200:
-            root = ET.fromstring(response.content)
-            result_code = root.findtext('.//RESULT_CODE')
-            result_msg = root.findtext('.//RESULT_MESSAGE')
-            print(f"API 결과 코드: {result_code}")
-            print(f"API 결과 메시지: {result_msg}")
-            
-            if result_code == 'INFO-000':
-                print("✅ API 연결 성공!")
-                return True
-            else:
-                print("❌ API 오류:", result_msg)
+            try:
+                root = ET.fromstring(response.content)
+                result_code = root.findtext('.//RESULT_CODE')
+                result_msg = root.findtext('.//RESULT_MESSAGE')
+                print(f"API 결과 코드: {result_code}")
+                print(f"API 결과 메시지: {result_msg}")
+                
+                if result_code == 'INFO-000':
+                    print("✅ API 연결 성공!")
+                    return True
+                else:
+                    print("❌ API 오류:", result_msg)
+                    return False
+            except ET.ParseError as e:
+                print(f"❌ XML 파싱 오류: {str(e)}")
+                print(f"응답 내용: {response.text}")
                 return False
         else:
             print(f"❌ HTTP 오류: {response.status_code}")
+            print(f"응답 내용: {response.text}")
             return False
             
-    except Exception as e:
-        print(f"❌ 연결 오류: {type(e).__name__}: {str(e)}")
+    except requests.exceptions.Timeout:
+        print("❌ 연결 타임아웃 - 요청 시간이 초과되었습니다.")
         return False
-
+    except requests.exceptions.ConnectionError:
+        print("❌ 연결 오류 - 네트워크 연결을 확인해주세요.")
+        return False
+    except Exception as e:
+        print(f"❌ 예상치 못한 오류: {type(e).__name__}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return False
+        
 def sync_members_from_api():
     """국회 OpenAPI에서 국회의원 정보 동기화"""
     print("\n=== 국회 OpenAPI에서 국회의원 정보 가져오기 ===")
