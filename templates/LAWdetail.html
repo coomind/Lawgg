@@ -1,4 +1,4 @@
-<!DOCTYPE html>More actions
+<!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
@@ -392,22 +392,10 @@
             cursor: pointer;
             padding: 0;
             transition: color 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 4px;
         }
 
         .comment-action-btn:hover {
             color: #495057;
-        }
-
-        .comment-action-btn.like-btn {
-            color: #666;
-        }
-
-        .comment-action-btn.like-btn.liked {
-            color: #3498db;
-            font-weight: 600;
         }
 
         .comment-action-btn.report-btn {
@@ -709,7 +697,7 @@
             .nav {
                 gap: 20px;
             }
-
+            
             .nav-item {
                 font-size: 14px;
             }
@@ -738,7 +726,7 @@
                 <!-- 왼쪽 메인 콘텐츠 -->
                 <div class="main-content">
                     <h1 class="bill-title">{{ bill.name }}</h1>
-
+                    
                     <!-- 법률안 정보 -->
                     <div class="bill-info">
                         <div class="info-row">
@@ -768,7 +756,7 @@
                     <div class="bill-summary">
                         <div class="summary-title">조문의 의안</div>
                         <div class="summary-subtitle">(제안배경과)</div>
-
+                        
                         <div class="summary-section">
                             <div class="summary-section-title">관련 법률안</div>
                             <ul class="summary-list">
@@ -787,7 +775,7 @@
                     <button class="vote-btn agree" data-vote="agree">찬성</button>
                     <button class="vote-btn disagree" data-vote="disagree">반대</button>
                 </div>
-
+                
                 <div class="vote-counts">
                     <div class="vote-count agree">
                         <div class="vote-count-label">찬성</div>
@@ -804,7 +792,7 @@
             <div class="full-width-section">
                 <div class="comments-section">
                     <h2 class="comments-title">법안 토론</h2>
-
+                    
                     <div class="comment-form">
                         <div class="vote-required-message" id="vote-message" style="display: none;">
                             댓글을 작성하려면 먼저 찬성 또는 반대를 선택해주세요.
@@ -836,10 +824,6 @@
                             </div>
                             <div class="comment-content">{{ comment.content }}</div>
                             <div class="comment-actions">
-                                <button class="comment-action-btn like-btn {% if comment.is_liked_by_user %}liked{% endif %}" 
-                                        data-comment-id="{{ comment.id }}">
-                                    👍 {{ comment.likes_count or 0 }}
-                                </button>
                                 <button class="comment-action-btn reply-btn" data-comment-id="{{ comment.id }}">답글</button>
                                 <button class="comment-action-btn report-btn {% if comment.is_reported_by_user %}reported{% endif %}" 
                                         data-comment-id="{{ comment.id }}">
@@ -920,10 +904,6 @@
         let reportedComments = new Set({{ reported_comment_ids|tojson }}); // 사용자가 신고한 댓글 ID들
         let commentReports = {{ comment_reports|tojson }}; // 댓글별 신고 수
 
-        // 좋아요 관련 상태
-        let likedComments = new Set({{ liked_comment_ids|tojson }}); // 사용자가 좋아요한 댓글 ID들
-        let commentLikes = {{ comment_likes|tojson }}; // 댓글별 좋아요 수
-
         // DOM 요소들
         const voteButtons = document.querySelectorAll('.vote-btn');
         const commentInput = document.getElementById('comment-input');
@@ -933,53 +913,6 @@
         const agreeCountEl = document.getElementById('agree-count');
         const disagreeCountEl = document.getElementById('disagree-count');
 
-        // 좋아요 시스템 초기화
-        function initializeLikeSystem() {
-            // 좋아요 버튼 이벤트
-            document.querySelectorAll('.like-btn').forEach(btn => {
-                btn.removeEventListener('click', likeComment); // 기존 이벤트 제거
-                btn.addEventListener('click', likeComment);
-            });
-        }
-
-        // 댓글 좋아요 기능
-        async function likeComment(e) {
-            const btn = e.currentTarget;
-            const commentId = btn.getAttribute('data-comment-id');
-            
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/comments/${commentId}/like`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                });
-                
-                const data = await response.json();
-                
-                if (!response.ok) {
-                    throw new Error(data.error || '좋아요 실패');
-                }
-                
-                // 좋아요 상태 토글
-                if (btn.classList.contains('liked')) {
-                    btn.classList.remove('liked');
-                    likedComments.delete(commentId);
-                } else {
-                    btn.classList.add('liked');
-                    likedComments.add(commentId);
-                }
-                
-                // 좋아요 수 업데이트
-                commentLikes[commentId] = data.likes_count;
-                btn.innerHTML = `👍 ${data.likes_count}`;
-                
-            } catch (error) {
-                console.error('좋아요 오류:', error);
-                alert('좋아요 처리 중 오류가 발생했습니다: ' + error.message);
-            }
-        }
-
         // 답글 시스템 초기화
         function initializeReplySystem() {
             // 답글 버튼 이벤트
@@ -987,15 +920,15 @@
                 btn.addEventListener('click', function() {
                     const commentId = this.getAttribute('data-comment-id');
                     const replyForm = document.getElementById(`reply-form-${commentId}`);
-
+                    
                     // 다른 답글 폼들 숨기기
                     document.querySelectorAll('.reply-form').forEach(form => {
                         form.classList.remove('show');
                     });
-
+                    
                     // 현재 답글 폼 토글
                     replyForm.classList.toggle('show');
-
+                    
                     if (replyForm.classList.contains('show')) {
                         replyForm.querySelector('.reply-input').focus();
                     }
@@ -1072,18 +1005,18 @@
         async function reportComment(e) {
             const btn = e.currentTarget;
             const commentId = btn.getAttribute('data-comment-id');
-
+    
     // 이미 신고한 댓글인지 확인
             if (btn.classList.contains('reported')) {
                 alert('이미 신고한 댓글입니다.');
                 return;
             }
-
+    
             // 신고 확인
             if (!confirm('이 댓글을 신고하시겠습니까?\n부적절한 내용이 포함된 댓글만 신고해주세요.')) {
                 return;
             }
-
+    
             try {
                 const response = await fetch(`${API_BASE_URL}/api/comments/${commentId}/report`, {
                     method: 'POST',
@@ -1091,9 +1024,9 @@
                         'Content-Type': 'application/json',
                     }
                 });
-
+        
                 const data = await response.json();
-
+        
                 if (!response.ok) {
                     if (data.error === 'Already reported') {
                         alert('이미 신고한 댓글입니다.');
@@ -1103,17 +1036,17 @@
                     }
                     throw new Error(data.error || '신고 실패');
                 }
-
+        
         // 신고 성공
                 btn.classList.add('reported');
                 btn.textContent = '신고됨';
                 btn.disabled = true;
-
+        
                 // 신고 수 업데이트
                 const commentItem = document.querySelector(`[data-comment-id="${commentId}"]`);
                 if (commentItem) {
                     commentItem.setAttribute('data-report-count', data.report_count);
-
+            
             // 3회 이상 신고 시 검토 중 표시
                     if (data.is_under_review) {
                         commentItem.classList.add('comment-under-review');
@@ -1126,29 +1059,20 @@
                         }
                     }
                 }
-
+        
                 alert('신고가 접수되었습니다.');
-
+        
             } catch (error) {
                 console.error('신고 오류:', error);
                 alert('신고 처리 중 오류가 발생했습니다: ' + error.message);
             }
         }
 
-        // 신고 시스템 초기화
-        function initializeReportSystem() {
-            // 댓글 신고 버튼 이벤트
-            document.querySelectorAll('.report-btn').forEach(btn => {
-                btn.removeEventListener('click', reportComment); // 기존 이벤트 제거
-                btn.addEventListener('click', reportComment);
-            });
-        }
-
         // 페이지 로드 시 신고 상태 유지
         function maintainReportStates() {
             // 로컬 스토리지에 신고한 댓글 ID 저장
             const reportedComments = JSON.parse(localStorage.getItem('reportedComments') || '[]');
-
+    
             reportedComments.forEach(commentId => {
                 const btn = document.querySelector(`[data-comment-id="${commentId}"].report-btn`);
                 if (btn) {
@@ -1178,7 +1102,7 @@
         function updateReportButton(commentId) {
             const reportBtn = document.querySelector(`[data-comment-id="${commentId}"].report-btn`);
             const reportCount = commentReports[commentId];
-
+            
             if (reportBtn) {
                 if (reportedComments.has(commentId)) {
                     reportBtn.classList.add('reported');
@@ -1195,12 +1119,12 @@
         function updateCommentStatus(commentId) {
             const commentItem = document.querySelector(`[data-comment-id="${commentId}"]`);
             const reportCount = commentReports[commentId];
-
+            
             if (commentItem && reportCount >= 3) {
                 // 검토 중 상태로 변경
                 commentItem.classList.add('comment-under-review');
                 commentItem.setAttribute('data-report-count', reportCount);
-
+                
                 // 검토 중 배지 추가 (아직 없는 경우에만)
                 const header = commentItem.querySelector('.comment-header');
                 if (!header.querySelector('.under-review-badge')) {
@@ -1232,13 +1156,13 @@
         function addReply(parentId, content, stance) {
             const stanceText = stance === 'agree' ? '찬성' : '반대';
             const stanceClass = stance === 'agree' ? 'agree' : 'disagree';
-
+            
             const replyItem = document.createElement('div');
             replyItem.className = 'comment-item reply';
             replyItem.setAttribute('data-comment-id', commentCounter);
             replyItem.setAttribute('data-parent-id', parentId);
             replyItem.setAttribute('data-report-count', '0');
-
+            
             replyItem.innerHTML = `
                 <div class="comment-header">
                     <span class="comment-author">익명${commentCounter}</span>
@@ -1247,9 +1171,6 @@
                 </div>
                 <div class="comment-content">${content}</div>
                 <div class="comment-actions">
-                    <button class="comment-action-btn like-btn" data-comment-id="${commentCounter}">
-                        👍 0
-                    </button>
                     <button class="comment-action-btn reply-btn" data-comment-id="${commentCounter}">답글</button>
                     <button class="comment-action-btn report-btn" data-comment-id="${commentCounter}">신고</button>
                 </div>
@@ -1259,35 +1180,33 @@
                     <button class="reply-cancel">취소</button>
                 </div>
             `;
-
+            
             // 부모 댓글 찾기
             const parentComment = document.querySelector(`[data-comment-id="${parentId}"]`);
             let insertAfter = parentComment;
-
+            
             // 해당 부모의 마지막 대댓글 찾기
             let nextSibling = parentComment.nextElementSibling;
             while (nextSibling && nextSibling.getAttribute('data-parent-id') === parentId) {
                 insertAfter = nextSibling;
                 nextSibling = nextSibling.nextElementSibling;
             }
-
+            
             // 답글 삽입
             if (insertAfter.nextElementSibling) {
                 insertAfter.parentNode.insertBefore(replyItem, insertAfter.nextElementSibling);
             } else {
                 insertAfter.parentNode.appendChild(replyItem);
             }
-
+            
             // 신고 상태 초기화
             commentReports[commentCounter] = 0;
-            commentLikes[commentCounter] = 0;
-
+            
             commentCounter++;
-
+            
             // 새 답글에 이벤트 리스너 추가
             initializeReplySystem();
-            initializeLikeSystem();
-
+            
             // 새 답글 강조 효과
             replyItem.style.backgroundColor = '#e3f2fd';
             setTimeout(() => {
@@ -1296,17 +1215,11 @@
             }, 2000);
         }
 
-        // 투표 수 업데이트 함수
-        function updateVoteCounts() {
-            agreeCountEl.textContent = voteCounts.agree.toLocaleString();
-            disagreeCountEl.textContent = voteCounts.disagree.toLocaleString();
-        }
-
         // 투표 버튼 이벤트
     voteButtons.forEach(button => {
         button.addEventListener('click', async function() {
             const vote = this.getAttribute('data-vote');
-
+        
             try {
                 const response = await fetch(`${API_BASE_URL}/api/bills/${billId}/vote`, {
                     method: 'POST',
@@ -1315,18 +1228,18 @@
                     },
                     body: JSON.stringify({ vote: vote })
                 });
-
+            
                 const data = await response.json();
-
+            
                 if (!response.ok) {
                     throw new Error(data.error || '투표 실패');
                 }
-
+            
                 // 이전 투표가 있다면 카운트 감소 (클라이언트 측)
                 if (userVote && userVote !== vote) {
                     voteCounts[userVote]--;
                 }
-
+            
                 // 같은 버튼을 다시 누르면 투표 취소
                 if (userVote === vote) {
                     userVote = null;
@@ -1336,24 +1249,24 @@
                     // 새로운 투표 설정
                     userVote = vote;
                     voteCounts[vote]++;
-
+                
                     voteButtons.forEach(btn => btn.classList.remove('active'));
                     this.classList.add('active');
                     enableComments();
                 }
-
+            
                 // 서버에서 받은 정확한 카운트로 업데이트
                 voteCounts.agree = data.agree_count;
                 voteCounts.disagree = data.disagree_count;
                 updateVoteCounts();
-
+            
             } catch (error) {
                 console.error('투표 오류:', error);
                 alert('투표 처리 중 오류가 발생했습니다: ' + error.message);
             }
         });
     });
-
+       
 
         // 댓글 기능 활성화
         function enableComments() {
@@ -1397,7 +1310,7 @@
             if (!response.ok) {
                 throw new Error('댓글 작성 실패');
             }
-
+        
             const commentData = await response.json();
             // 댓글 추가
             addComment(commentData);
@@ -1422,10 +1335,10 @@
         commentItem.className = 'comment-item';
         commentItem.setAttribute('data-comment-id', commentData.id);
         commentItem.setAttribute('data-report-count', '0');
-
+    
         const stanceClass = commentData.stance === 'agree' ? 'agree' : 'disagree';
         const stanceText = commentData.stance === 'agree' ? '찬성' : '반대';
-
+    
         commentItem.innerHTML = `
             <div class="comment-header">
                 <span class="comment-author">${commentData.author}</span>
@@ -1434,9 +1347,6 @@
             </div>
             <div class="comment-content">${commentData.content}</div>
             <div class="comment-actions">
-                <button class="comment-action-btn like-btn" data-comment-id="${commentData.id}">
-                    👍 0
-                </button>
                 <button class="comment-action-btn reply-btn" data-comment-id="${commentData.id}">답글</button>
                 <button class="comment-action-btn report-btn" data-comment-id="${commentData.id}">신고</button>
             </div>
@@ -1446,22 +1356,19 @@
                 <button class="reply-cancel">취소</button>
             </div>
         `;
-
+            
             // 첫 번째 댓글 앞에 새 댓글 추가
         const commentsList = document.getElementById('comments-list');
         commentsList.insertBefore(commentItem, commentsList.firstChild);
         initializeReplySystem();
             // 신고 상태 초기화
             commentReports[commentCounter] = 0;
-            commentLikes[commentCounter] = 0;
-
+            
             commentCounter++;
-
+            
             // 새 댓글에 신고 시스템 이벤트 추가
-            // 새 댓글에 이벤트 추가
             initializeReportSystem();
-            initializeLikeSystem();
-
+            
             // 새 댓글 강조 효과
             commentItem.style.backgroundColor = '#e3f2fd';
             setTimeout(() => {
@@ -1475,8 +1382,7 @@
             disableComments();
             initializeReplySystem();
             initializeReportButtons();
-            initializeLikeSystem();
-
+            
             // 사용자의 기존 투표 상태가 있다면 복원
             {% if user_vote %}
             userVote = '{{ user_vote }}';
