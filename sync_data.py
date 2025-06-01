@@ -10,7 +10,7 @@ from datetime import datetime
 import time
 
 # API 설정
-API_KEY = '79deed587e6043f291a36420cfd972de'
+API_KEY = 'a3fada8210244129907d945abe2beada'
 BASE_URL = 'https://open.assembly.go.kr/portal/openapi'
 
 # CSV 데이터를 메모리에 로드
