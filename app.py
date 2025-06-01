@@ -27,7 +27,7 @@ else:
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # API 키 설정
-ASSEMBLY_API_KEY = '79deed587e6043f291a36420cfd972de'
+ASSEMBLY_API_KEY = 'a3fada8210244129907d945abe2beada'
 
 db = SQLAlchemy(app)
 CORS(app)
