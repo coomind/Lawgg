@@ -36,9 +36,9 @@ CORS(app)
 # 데이터베이스 모델들
 class Member(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(50), nullable=False)
-    party = db.Column(db.String(50))
-    district = db.Column(db.String(100))
+    name = db.Column(db.String(50), nullable=False, unique=True)  # unique 추가
+    party = db.Column(db.String(50))  # 현재 소속 정당
+    district = db.Column(db.String(100))  # 현재 선거구
     photo_url = db.Column(db.String(200))
     age = db.Column(db.Integer)
     gender = db.Column(db.String(10))
@@ -47,10 +47,59 @@ class Member(db.Model):
     phone = db.Column(db.String(50))
     email = db.Column(db.String(100))
     homepage = db.Column(db.String(200))
-    vote_rate = db.Column(db.Float)
+    vote_rate = db.Column(db.Float)  # 최신 득표율
     view_count = db.Column(db.Integer, default=0)
-    session_num = db.Column(db.Integer)  # 20, 21, 22대
+    
+    # 새로운 필드들
+    sessions = db.Column(db.String(50))  # "20,21,22" 형태
+    current_session = db.Column(db.Integer)  # 현재/최신 대수
+    first_session = db.Column(db.Integer)  # 첫 당선 대수
+    
+    # 대수별 상세 정보 (JSON 형태로 저장)
+    session_details = db.Column(db.Text)  # JSON: {"20": {"party": "A당", "district": "서울"}, "21": {...}}
+    
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def get_session_list(self):
+        """대수 리스트 반환"""
+        if self.sessions:
+            return [int(x) for x in self.sessions.split(',')]
+        return []
+    
+    def add_session(self, session_num):
+        """새 대수 추가"""
+        sessions = self.get_session_list()
+        if session_num not in sessions:
+            sessions.append(session_num)
+            sessions.sort()
+            self.sessions = ','.join(map(str, sessions))
+            
+            # 첫 당선 대수 설정
+            if not self.first_session:
+                self.first_session = min(sessions)
+            
+            # 현재 대수 업데이트 (가장 최신)
+            self.current_session = max(sessions)
+    
+    def get_session_details(self):
+        """대수별 상세 정보 반환"""
+        if self.session_details:
+            import json
+            return json.loads(self.session_details)
+        return {}
+    
+    def update_session_details(self, session_num, party, district, vote_rate=None):
+        """대수별 상세 정보 업데이트"""
+        import json
+        details = self.get_session_details()
+        
+        details[str(session_num)] = {
+            'party': party,
+            'district': district,
+            'vote_rate': vote_rate
+        }
+        
+        self.session_details = json.dumps(details, ensure_ascii=False)
 
 class Bill(db.Model):
     id = db.Column(db.Integer, primary_key=True)
