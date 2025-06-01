@@ -776,13 +776,12 @@
 
         // 신고 시스템 초기화
         function initializeReportSystem() {
-            // 댓글 신고 버튼 이벤트
+        // 댓글 신고 버튼 이벤트
             document.querySelectorAll('.report-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const commentId = this.getAttribute('data-comment-id');
-                    reportComment(commentId);
-                });
+                btn.removeEventListener('click', reportComment); // 기존 이벤트 제거
+                btn.addEventListener('click', reportComment);
             });
+        }    
 
             // 입법제안 신고 버튼 이벤트
             const proposalReportBtn = document.getElementById('proposal-report-btn');
@@ -931,11 +930,16 @@
                     body: JSON.stringify({ vote: vote })
                 });
             
+                const data = await response.json();
+            
                 if (!response.ok) {
-                    throw new Error('투표 실패');
+                    throw new Error(data.error || '투표 실패');
                 }
             
-                const data = await response.json();
+                // 이전 투표가 있다면 카운트 감소 (클라이언트 측)
+                if (userVote && userVote !== vote) {
+                    voteCounts[userVote]--;
+                }
             
                 // 같은 버튼을 다시 누르면 투표 취소
                 if (userVote === vote) {
@@ -945,19 +949,21 @@
                 } else {
                     // 새로운 투표 설정
                     userVote = vote;
+                    voteCounts[vote]++;
+                
                     voteButtons.forEach(btn => btn.classList.remove('active'));
                     this.classList.add('active');
                     enableComments();
-                }    
+                }
             
-                // 투표 수 업데이트
+                // 서버에서 받은 정확한 카운트로 업데이트
                 voteCounts.agree = data.agree_count;
                 voteCounts.disagree = data.disagree_count;
                 updateVoteCounts();
             
             } catch (error) {
                 console.error('투표 오류:', error);
-                alert('투표 처리 중 오류가 발생했습니다.');
+                alert('투표 처리 중 오류가 발생했습니다: ' + error.message);
             }
         });
     });
@@ -1054,6 +1060,28 @@
                 <button class="reply-cancel">취소</button>
             </div>
         `;
+    function maintainReportStates() {
+            // 로컬 스토리지에 신고한 댓글 ID 저장
+        const reportedComments = JSON.parse(localStorage.getItem('reportedComments') || '[]');
+    
+        reportedComments.forEach(commentId => {
+            const btn = document.querySelector(`[data-comment-id="${commentId}"].report-btn`);
+            if (btn) {
+                btn.classList.add('reported');
+                btn.textContent = '신고됨';
+                btn.disabled = true;
+            }
+        });
+    }
+
+        // 신고 시 로컬 스토리지에 저장
+    function saveReportedComment(commentId) {
+        const reportedComments = JSON.parse(localStorage.getItem('reportedComments') || '[]');
+        if (!reportedComments.includes(commentId)) {
+            reportedComments.push(commentId);
+            localStorage.setItem('reportedComments', JSON.stringify(reportedComments));
+        }
+    }
             
             // 첫 번째 댓글 앞에 새 댓글 추가
         const commentsList = document.getElementById('comments-list');
@@ -1085,7 +1113,7 @@
             }
             
             initializeReportSystem();
-            initializeReportButtons();
+            maintainReportStates();
             
             console.log('입법제안 상세보기 페이지 로드 완료');
         });
