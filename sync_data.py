@@ -196,7 +196,7 @@ def sync_members_from_api():
 
                         member = Member.query.filter_by(name=name, birth_date=birth_str).first()
                             if not member:
-                                member = Member(name=name, birth_date=birth_date, view_count=0)
+                                member = Member(name=name, birth_date=birth_str, view_count=0)
                                 db.session.add(member)
                                 print(f"✨ 신규 의원: {name}")
                         
