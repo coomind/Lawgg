@@ -187,17 +187,8 @@ def sync_members_from_api():
                             continue
                         
                         birth_year = int(birth_str[:4]) if len(birth_str) >= 4 else None
-                        current_year = datetime.now().year
-                        age = current_year - birth_year if birth_year else None
-
-                        if birth_str and len(birth_str) >= 4:
-                            try:
-                                birth_year = int(birth_str[:4])
-                            except:
-                                pass
-            
-                        if not name or not birth_str:
-                            continue
+                        
+                        age = datetime.now().year - birth_year if birth_year else None
 
                         matched_terms = [term for (csv_name, term) in csv_data.keys() 
                                          if csv_name == name and term in [20, 21, 22]]
