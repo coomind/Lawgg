@@ -10,7 +10,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 import re
 from bs4 import BeautifulSoup
-from sync import add_sample_data, sync_members_from_api, test_api_connection
+from sync_data import add_sample_data, sync_members_from_api, test_api_connection
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'  # 실제 배포시 변경 필요
