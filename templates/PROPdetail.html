@@ -1114,6 +1114,12 @@
             
             initializeReportSystem();
             maintainReportStates();
+
+            {% if user_vote %}
+            userVote = '{{ user_vote }}';
+            document.querySelector(`[data-vote="${userVote}"]`).classList.add('active');
+            enableComments();
+            {% endif %}
             
             console.log('입법제안 상세보기 페이지 로드 완료');
         });
