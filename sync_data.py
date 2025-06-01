@@ -198,13 +198,13 @@ def sync_members_from_api():
                         if not matched_terms:
                             continue  # CSV에 없으면 건너뜀
             
-                        member = Member.query.filter_by(name=name, current_session=term).first()
-                        if not member:
-                            member = Member(name=name, current_session=term, view_count=0)
-                            db.session.add(member)
-                            print(f"✨ 신규 의원: {name}")
-            
                         for term in matched_terms:
+                            member = Member.query.filter_by(name=name, current_session=term).first()
+                            if not member:
+                                member = Member(name=name, current_session=term, view_count=0)
+                                db.session.add(member)
+                                print(f"✨ 신규 의원: {name}")
+                                
                             member.add_session(term)
             
                             # 최신 정보 업데이트
