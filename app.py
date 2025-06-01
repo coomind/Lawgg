@@ -907,7 +907,7 @@ def autocomplete_members():
         return jsonify([])
     
     members = Member.query.filter(Member.name.contains(query)).limit(10).all()
-    results = [{'id': m.id, 'name': m.name, 'party': m.party} for m in members]
+    results = [{'id': m.id, 'name': m.name, 'party': m.party, 'photo_url': m.photo_url} for m in members]
     
     return jsonify(results)
 
