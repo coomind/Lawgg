@@ -1038,12 +1038,12 @@ def search():
     <body>
         <a href="/" class="back-btn">← 메인으로</a>
         <h1>"{query}" 검색 결과</h1>
-        
+    
         <div class="section">
             <h2>국회의원 ({len(members)}명)</h2>
             {"".join([f'<div class="item" onclick="location.href=\'/members/{m.id}\'">{m.name} ({m.party}) - {m.district}</div>' for m in members]) if members else '<p>검색 결과가 없습니다.</p>'}
         </div>
-        
+    
         <div class="section">
             <h2>법률안 ({len(bills)}건)</h2>
             {"".join([f'<div class="item" onclick="location.href=\'/bills/{b.id}\'">{b.name} - {b.proposer}</div>' for b in bills]) if bills else '<p>검색 결과가 없습니다.</p>'}
