@@ -49,6 +49,7 @@ class Member(db.Model):
     homepage = db.Column(db.String(200))
     vote_rate = db.Column(db.Float)  # 최신 득표율
     view_count = db.Column(db.Integer, default=0)
+    birth_date = db.Column(db.String(10))
     
     # 새로운 필드들
     sessions = db.Column(db.String(50))  # "20,21,22" 형태
