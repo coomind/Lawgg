@@ -404,25 +404,26 @@
                 </h2>
                 <ul class="section-list">
                     {% for member in trending_members %}
-                    <div class="member-avatar">
-                        {% if member.photo_url %}
-                            <div class="member-avatar">
-                                <img src="{{ member.photo_url }}" alt="{{ member.name }}" class="avatar-img">
-                            </div>
-                        {% else %}
-                            <div class="member-avatar">
-                                {{ member.name[0] }}
-                            </div>
-                        {% endif %}
-                    </div>
+                    <li onclick="viewMemberDetail('{{ member.id }}', '{{ member.name }}')">
                         <div class="list-number">{{ loop.index }}</div>
-                        <div class="member-avatar">{{ member.name[0] }}</div>
+                        
+                        {% if member.photo_url %}
+                        <div class="member-avatar">
+                            <img src="{{ member.photo_url }}" alt="{{ member.name }}" class="avatar-img">
+                        </div>
+                        {% else %}
+                        <div class="member-avatar">
+                            {{ member.name[0] }}
+                        </div>
+                        {% endif %}
+                        
                         <div class="member-info">
                             <span class="member-name">{{ member.name }}</span>
                             {% if member.party %}
                             <span class="member-party">{{ member.party }}</span>
                             {% endif %}
                         </div>
+                        
                         <span class="view-count">{{ "{:,}".format(member.view_count) }}회</span>
                     </li>
                     {% endfor %}
