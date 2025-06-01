@@ -326,7 +326,7 @@ def member_detail(member_id):
         'email': member.email,
         'homepage': member.homepage,
         'vote_rate': member.vote_rate,
-        'terms': [{'session': member.session_num}] if member.session_num else []
+        'terms': [{'session': s } for s in member.get_session_list()] if member.sessions else []
     }
     
     bills_data = [{
