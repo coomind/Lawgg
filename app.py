@@ -226,7 +226,7 @@ def index():
         'id': member.id,
         'name': member.name,
         'party': member.party,
-        'view_count': member.view_count
+        'view_count': member.view_count,
         'photo_url' : member.photo_url
     } for member in trending_members]
     
