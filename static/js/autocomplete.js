@@ -184,8 +184,22 @@ function initAutocomplete(inputId, type = 'all') {
             justify-content: center;
             font-size: 16px;
             flex-shrink: 0;
+            overflow: hidden;
         `;
-        avatar.textContent = result.type === 'member' ? '👤' : '📋';
+        if (result.type === 'member' && result.photo_url) {
+            const img = document.createElement('img');
+            img.src = result.photo_url;
+            img.alt = result.name;
+            img.style.cssText = `
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                border-radius: 50%;
+            `;
+            avatar.appendChild(img);
+        } else {
+            avatar.textContent = result.type === 'member' ? '👤' : '📋';
+        }
 
         // 텍스트 정보
         const textContainer = document.createElement('div');
