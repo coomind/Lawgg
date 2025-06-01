@@ -231,37 +231,3 @@ def add_sample_data():
     
     db.session.commit()
     print("✅ 샘플 데이터 추가 완료")
-
-# /sync 라우트 추가 (app.py에 추가)
-@app.route('/sync')
-def sync_route():
-    """웹에서 동기화 실행"""
-    try:
-        with app.app_context():
-            # 샘플 데이터만 추가
-            add_sample_data()
-            
-            # 실제 API 동기화는 Shell에서 실행
-            # sync_members_from_api()
-            
-        return "샘플 데이터 추가 완료! 실제 API 동기화는 Render Shell에서 실행하세요."
-    except Exception as e:
-        return f"오류 발생: {str(e)}"
-
-if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-        
-        # 샘플 데이터 추가
-        add_sample_data()
-        
-        # API 동기화 시도
-        sync_members_from_api()
-        
-        # 결과 확인
-        member_count = Member.query.count()
-        bill_count = Bill.query.count()
-        
-        print(f"\n=== 최종 결과 ===")
-        print(f"총 국회의원 수: {member_count}명")
-        print(f"총 법률안 수: {bill_count}개")
