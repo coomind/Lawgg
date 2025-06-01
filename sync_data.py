@@ -182,7 +182,8 @@ def sync_members_from_api():
                                  row.findtext('PLPT_NM', '') or 
                                  row.findtext('PARTY_NM', '')).strip()
                         
-                        birth_str = row.findtext('BIRDY_DT', '')
+                        birth_str = row.findtext('BIRDY_DT', '').strip()
+                        
                         birth_year = None
                         if birth_str and len(birth_str) >= 4:
                             try:
@@ -190,21 +191,22 @@ def sync_members_from_api():
                             except:
                                 pass
             
-                        if not name:
+                        if not name or not birth_str:
                             continue
-            
+
+                        member = Member.query.filter_by(name=name, birth_date=birth_str).first()
+                            if not member:
+                                member = Member(name=name, birth_date=birth_date, view_count=0)
+                                db.session.add(member)
+                                print(f"✨ 신규 의원: {name}")
+                        
                         # 🧠 CSV 기반 대수 판단
                         matched_terms = [term for (csv_name, term) in csv_data.keys() if csv_name == name]
                         if not matched_terms:
                             continue  # CSV에 없으면 건너뜀
             
                         for term in matched_terms:
-                            member = Member.query.filter_by(name=name, current_session=term).first()
-                            if not member:
-                                member = Member(name=name, current_session=term, view_count=0)
-                                db.session.add(member)
-                                print(f"✨ 신규 의원: {name}")
-                                
+                            
                             member.add_session(term)
             
                             # 최신 정보 업데이트
@@ -221,7 +223,7 @@ def sync_members_from_api():
                                 member.photo_url = (row.findtext('jpgLink', '') or 
                                                     row.findtext('NAAS_PIC', ''))
                                 member.age = birth_year
-            
+                                
                                 # CSV 정보
                                 csv_key = (name, term)
                                 district = csv_data[csv_key]['constituency']
