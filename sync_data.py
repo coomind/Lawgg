@@ -181,6 +181,14 @@ def sync_members_from_api():
                         party = (row.findtext('POLY_NM', '') or 
                                  row.findtext('PLPT_NM', '') or 
                                  row.findtext('PARTY_NM', '')).strip()
+                        
+                        birth_str = row.findtext('BIRDY_DT', '')
+                        birth_year = None
+                        if birth_str and len(birth_str) >= 4:
+                            try:
+                                birth_year = int(birth_str[:4])
+                            except:
+                                pass
             
                         if not name:
                             continue
@@ -212,6 +220,7 @@ def sync_members_from_api():
                                                    row.findtext('NAAS_HP_URL', ''))
                                 member.photo_url = (row.findtext('jpgLink', '') or 
                                                     row.findtext('NAAS_PIC', ''))
+                                member.age = birth_year
             
                                 # CSV 정보
                                 csv_key = (name, term)
