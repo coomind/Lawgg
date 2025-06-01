@@ -1277,7 +1277,7 @@ def background_sync():
                 'processed_count': 0
             })
             
-            from sync_data import test_api_connection, sync_members_from_api
+            from sync_data import test_api_connection, sync_members_from_api, sync_bills_from_api
             
             # API 연결 테스트
             sync_status.update({
@@ -1301,6 +1301,14 @@ def background_sync():
             
             # 실제 동기화 실행
             sync_members_from_api()
+
+            # 법률안 동기화
+            sync_status.update({
+                'progress': 60,
+                'message': '법률안 데이터 동기화 중...'
+            })
+            
+            sync_bills_from_api()
             
             sync_status.update({
                 'progress': 90,
@@ -1311,13 +1319,14 @@ def background_sync():
             
             # 완료 - 여기서 Member.query.count() 사용
             member_count = Member.query.count()
+            bill_count = Bill.query.count()
             
             sync_status.update({
                 'running': False,
                 'progress': 100,
-                'message': f'동기화 완료! {member_count}명의 국회의원 데이터를 업데이트했습니다.',
+                'message': f'동기화 완료! 국회의원 {member_count}명, 법률안 {bill_count}건 업데이트',
                 'completed': True,
-                'processed_count': member_count
+                'processed_count': member_count + bill_count
             })
             
         except Exception as e:
@@ -1442,7 +1451,41 @@ def reset_database():
             'status': 'error', 
             'message': f'초기화 실패: {str(e)}'
         }), 500
-    
+
+@app.route('/sync/bills')
+def sync_bills_route():
+    """법률안 데이터 동기화"""
+    try:
+        from sync_data import sync_bills_from_api
+        sync_bills_from_api()
+        
+        return jsonify({
+            "status": "success",
+            "message": "20, 21, 22대 법률안 데이터 동기화 완료!"
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"오류 발생: {str(e)}"
+        }), 500
+
+@app.route('/sync/all')
+def sync_all_route():
+    """전체 데이터 동기화 (국회의원 + 법률안)"""
+    try:
+        from sync_data import sync_all_data
+        sync_all_data()
+        
+        return jsonify({
+            "status": "success",
+            "message": "전체 데이터 동기화 완료!"
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"오류 발생: {str(e)}"
+        }), 500
+        
 # 메인 실행
 if __name__ == '__main__':
     with app.app_context():
