@@ -285,9 +285,9 @@ def add_sample_data():
     
     # 샘플 국회의원
     sample_members = [
-        {'name': '홍길동', 'party': '더불어민주당', 'district': '서울 종로구', 'sessions': 22},
-        {'name': '김철수', 'party': '국민의힘', 'district': '부산 해운대구갑', 'sessions': 22},
-        {'name': '이영희', 'party': '정의당', 'district': '비례대표', 'sessions': 22},
+        {'name': '홍길동', 'party': '더불어민주당', 'district': '서울 종로구', 'session_num': 22},
+        {'name': '김철수', 'party': '국민의힘', 'district': '부산 해운대구갑', 'session_num': 22},
+        {'name': '이영희', 'party': '정의당', 'district': '비례대표', 'session_num': 22},
     ]
     
     for data in sample_members:
