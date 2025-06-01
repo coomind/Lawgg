@@ -922,7 +922,7 @@
             const vote = this.getAttribute('data-vote');
         
             try {
-                const response = await fetch(`${API_BASE_URL}/api/bills/${billId}/vote`, {
+                const response = await fetch(`${API_BASE_URL}/api/proposals/${proposalId}/vote`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -984,6 +984,29 @@
             commentInput.placeholder = "댓글을 작성하려면 먼저 찬성 또는 반대를 선택해주세요.";
             commentInput.value = '';
         }
+        
+        function maintainReportStates() {
+            // 로컬 스토리지에 신고한 댓글 ID 저장
+            const reportedComments = JSON.parse(localStorage.getItem('reportedComments') || '[]');
+    
+            reportedComments.forEach(commentId => {
+                const btn = document.querySelector(`[data-comment-id="${commentId}"].report-btn`);
+                if (btn) {
+                    btn.classList.add('reported');
+                    btn.textContent = '신고됨';
+                    btn.disabled = true;
+                }
+            });
+        }
+
+        // 신고 시 로컬 스토리지에 저장
+        function saveReportedComment(commentId) {
+            const reportedComments = JSON.parse(localStorage.getItem('reportedComments') || '[]');
+            if (!reportedComments.includes(commentId)) {
+                reportedComments.push(commentId);
+                localStorage.setItem('reportedComments', JSON.stringify(reportedComments));
+            }
+        }
 
         // 댓글 작성
     commentSubmit.addEventListener('click', async function() {
@@ -1000,7 +1023,7 @@
         }
         
         try {
-            const response = await fetch(`${API_BASE_URL}/api/bills/${billId}/comments`, {
+            const response = await fetch(`${API_BASE_URL}/api/proposals/${proposalId}/comments`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1060,28 +1083,6 @@
                 <button class="reply-cancel">취소</button>
             </div>
         `;
-    function maintainReportStates() {
-            // 로컬 스토리지에 신고한 댓글 ID 저장
-        const reportedComments = JSON.parse(localStorage.getItem('reportedComments') || '[]');
-    
-        reportedComments.forEach(commentId => {
-            const btn = document.querySelector(`[data-comment-id="${commentId}"].report-btn`);
-            if (btn) {
-                btn.classList.add('reported');
-                btn.textContent = '신고됨';
-                btn.disabled = true;
-            }
-        });
-    }
-
-        // 신고 시 로컬 스토리지에 저장
-    function saveReportedComment(commentId) {
-        const reportedComments = JSON.parse(localStorage.getItem('reportedComments') || '[]');
-        if (!reportedComments.includes(commentId)) {
-            reportedComments.push(commentId);
-            localStorage.setItem('reportedComments', JSON.stringify(reportedComments));
-        }
-    }
             
             // 첫 번째 댓글 앞에 새 댓글 추가
         const commentsList = document.getElementById('comments-list');
