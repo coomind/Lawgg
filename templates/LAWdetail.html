@@ -1002,36 +1002,101 @@
         }
 
         // 댓글 신고 기능
-        function reportComment(commentId) {
-            // 이미 신고한 댓글인지 확인
-            if (reportedComments.has(commentId)) {
+        async function reportComment(e) {
+            const btn = e.currentTarget;
+            const commentId = btn.getAttribute('data-comment-id');
+    
+    // 이미 신고한 댓글인지 확인
+            if (btn.classList.contains('reported')) {
                 alert('이미 신고한 댓글입니다.');
                 return;
             }
-            
+    
             // 신고 확인
             if (!confirm('이 댓글을 신고하시겠습니까?\n부적절한 내용이 포함된 댓글만 신고해주세요.')) {
                 return;
             }
+    
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/comments/${commentId}/report`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+        
+                const data = await response.json();
+        
+                if (!response.ok) {
+                    if (data.error === 'Already reported') {
+                        alert('이미 신고한 댓글입니다.');
+                        btn.classList.add('reported');
+                        btn.textContent = '신고됨';
+                        return;
+                    }
+                    throw new Error(data.error || '신고 실패');
+                }
+        
+        // 신고 성공
+                btn.classList.add('reported');
+                btn.textContent = '신고됨';
+                btn.disabled = true;
+        
+                // 신고 수 업데이트
+                const commentItem = document.querySelector(`[data-comment-id="${commentId}"]`);
+                if (commentItem) {
+                    commentItem.setAttribute('data-report-count', data.report_count);
             
-            // 실제 구현에서는 서버로 신고 요청 전송
-            // POST /api/comments/${commentId}/report
-            
-            // 신고 처리
-            reportedComments.add(commentId);
-            
-            // 신고 수 증가
-            if (!commentReports[commentId]) {
-                commentReports[commentId] = 0;
+            // 3회 이상 신고 시 검토 중 표시
+                    if (data.is_under_review) {
+                        commentItem.classList.add('comment-under-review');
+                        const header = commentItem.querySelector('.comment-header');
+                        if (!header.querySelector('.under-review-badge')) {
+                            const badge = document.createElement('span');
+                            badge.className = 'under-review-badge';
+                            badge.textContent = '검토 중';
+                            header.appendChild(badge);
+                        }
+                    }
+                }
+        
+                alert('신고가 접수되었습니다.');
+        
+            } catch (error) {
+                console.error('신고 오류:', error);
+                alert('신고 처리 중 오류가 발생했습니다: ' + error.message);
             }
-            commentReports[commentId]++;
-            
-            // UI 업데이트
-            updateReportButton(commentId);
-            updateCommentStatus(commentId);
-            
-            alert('신고가 접수되었습니다. 관리자 검토 후 적절한 조치가 취해집니다.');
         }
+
+        // 페이지 로드 시 신고 상태 유지
+        function maintainReportStates() {
+            // 로컬 스토리지에 신고한 댓글 ID 저장
+            const reportedComments = JSON.parse(localStorage.getItem('reportedComments') || '[]');
+    
+            reportedComments.forEach(commentId => {
+                const btn = document.querySelector(`[data-comment-id="${commentId}"].report-btn`);
+                if (btn) {
+                    btn.classList.add('reported');
+                    btn.textContent = '신고됨';
+                    btn.disabled = true;
+                }
+            });
+        }
+
+        // 신고 시 로컬 스토리지에 저장
+        function saveReportedComment(commentId) {
+            const reportedComments = JSON.parse(localStorage.getItem('reportedComments') || '[]');
+            if (!reportedComments.includes(commentId)) {
+                reportedComments.push(commentId);
+                localStorage.setItem('reportedComments', JSON.stringify(reportedComments));
+            }
+        }
+
+        // 초기화 시 호출
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeReportSystem();
+            maintainReportStates();
+        });
 
         // 신고 버튼 UI 업데이트
         function updateReportButton(commentId) {
@@ -1078,6 +1143,14 @@
                 updateCommentStatus(commentId);
             });
         }
+        function initializeReportSystem() {
+            // 댓글 신고 버튼 이벤트
+            document.querySelectorAll('.report-btn').forEach(btn => {
+                btn.removeEventListener('click', reportComment); // 기존 이벤트 제거
+                btn.addEventListener('click', reportComment);
+            });
+        }
+
 
         // 답글 추가 함수
         function addReply(parentId, content, stance) {
