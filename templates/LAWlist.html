@@ -216,7 +216,7 @@
         .table-header {
             background-color: #f8f9fa;
             display: grid;
-            grid-template-columns: 140px 1fr 140px 140px 160px;
+            grid-template-columns: 1fr 140px 140px 160px;
             padding: 18px 30px;
             font-weight: 600;
             font-size: 14px;
@@ -226,7 +226,7 @@
 
         .table-row {
             display: grid;
-            grid-template-columns: 140px 1fr 140px 140px 160px;
+            grid-template-columns: 1fr 140px 140px 160px;
             padding: 18px 30px;
             border-top: 1px solid #e9ecef;
             cursor: pointer;
@@ -502,7 +502,7 @@
         <!-- 법률안 테이블 -->
         <section class="bills-section">
             <div class="table-header">
-                <div>의안번호</div>
+                
                 <div>의안명</div>
                 <div>제안일자</div>
                 <div>제안자</div>
@@ -512,7 +512,7 @@
             {% if bills %}
                 {% for bill in bills %}
                 <a href="#" class="table-row" data-bill-id="{{ bill.id }}">
-                    <div class="bill-number">{{ bill.number or '-' }}</div>
+                    
                     <div class="bill-title">{{ bill.name or '-' }}</div>
                     <div class="bill-date">{{ bill.propose_date or '-' }}</div>
                     <div class="bill-court">{{ bill.proposer or '-' }}</div>
