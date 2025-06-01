@@ -993,77 +993,67 @@ def load_election_csv():
         db.session.commit()
         print("CSV 데이터 로드 완료!")
 
+# app.py에 검색 라우트 추가 (오류 핸들러 위에 추가)
+
 @app.route('/search')
 def search():
     query = request.args.get('q', '')
-    search_type = request.args.get('type', 'all')  # all, member, bill
-    page = request.args.get('page', 1, type=int)
-    per_page = 20
     
-    results = {
-        'members': [],
-        'bills': [],
-        'query': query
-    }
+    if not query:
+        return redirect(url_for('index'))
     
-    if query:
-        # 국회의원 검색
-        if search_type in ['all', 'member']:
-            member_query = Member.query.filter(
-                db.or_(
-                    Member.name.contains(query),
-                    Member.party.contains(query),
-                    Member.district.contains(query)
-                )
-            )
-            
-            member_pagination = member_query.paginate(
-                page=page, per_page=per_page, error_out=False
-            )
-            
-            results['members'] = [{
-                'id': m.id,
-                'name': m.name,
-                'party': m.party,
-                'district': m.district,
-                'photo_url': m.photo_url,
-                'session_num': m.session_num
-            } for m in member_pagination.items]
-            
-            results['member_pages'] = member_pagination.pages
+    # 국회의원 검색
+    members = Member.query.filter(
+        db.or_(
+            Member.name.contains(query),
+            Member.party.contains(query),
+            Member.district.contains(query)
+        )
+    ).limit(10).all()
+    
+    # 법률안 검색
+    bills = Bill.query.filter(
+        db.or_(
+            Bill.name.contains(query),
+            Bill.proposer.contains(query)
+        )
+    ).limit(10).all()
+    
+    # 간단한 검색 결과 표시 (템플릿 없이)
+    result_html = f"""
+    <!DOCTYPE html>
+    <html lang="ko">
+    <head>
+        <meta charset="UTF-8">
+        <title>Law.GG - "{query}" 검색 결과</title>
+        <style>
+            body {{ font-family: Arial, sans-serif; margin: 20px; }}
+            h1 {{ color: #333; }}
+            .section {{ margin: 20px 0; }}
+            .item {{ padding: 10px; border: 1px solid #ddd; margin: 5px 0; cursor: pointer; }}
+            .item:hover {{ background-color: #f5f5f5; }}
+            .back-btn {{ padding: 10px 20px; background: #333; color: white; text-decoration: none; border-radius: 5px; }}
+        </style>
+    </head>
+    <body>
+        <a href="/" class="back-btn">← 메인으로</a>
+        <h1>"{query}" 검색 결과</h1>
         
-        # 법률안 검색
-        if search_type in ['all', 'bill']:
-            bill_query = Bill.query.filter(
-                db.or_(
-                    Bill.name.contains(query),
-                    Bill.proposer.contains(query),
-                    Bill.committee.contains(query)
-                )
-            )
-            
-            bill_pagination = bill_query.paginate(
-                page=page, per_page=per_page, error_out=False
-            )
-            
-            results['bills'] = [{
-                'id': b.id,
-                'number': b.number,
-                'name': b.name,
-                'proposer': b.proposer,
-                'propose_date': b.propose_date,
-                'committee': b.committee
-            } for b in bill_pagination.items]
-            
-            results['bill_pages'] = bill_pagination.pages
+        <div class="section">
+            <h2>국회의원 ({len(members)}명)</h2>
+            {"".join([f'<div class="item" onclick="location.href=\\'/members/{m.id}\\'">{m.name} ({m.party}) - {m.district}</div>' for m in members]) if members else '<p>검색 결과가 없습니다.</p>'}
+        </div>
+        
+        <div class="section">
+            <h2>법률안 ({len(bills)}건)</h2>
+            {"".join([f'<div class="item" onclick="location.href=\\'/bills/{b.id}\\'">{b.name} - {b.proposer}</div>' for b in bills]) if bills else '<p>검색 결과가 없습니다.</p>'}
+        </div>
+    </body>
+    </html>
+    """
     
-    # 검색 결과 페이지 렌더링
-    return render_template('search_results.html',
-                         results=results,
-                         query=query,
-                         search_type=search_type,
-                         current_page=page)
-
+    return result_html
+    
 # 좋아요 API 엔드포인트
 @app.route('/api/comments/<int:comment_id>/like', methods=['POST'])
 def toggle_comment_like(comment_id):
