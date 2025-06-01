@@ -10,7 +10,6 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 import re
 from bs4 import BeautifulSoup
-from sync_data import add_sample_data, sync_members_from_api, test_api_connection
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'  # 실제 배포시 변경 필요
@@ -1201,16 +1200,23 @@ def favicon():
 def sync_route():
     """웹에서 동기화 실행"""
     try:
-        with app.app_context():
-            # 샘플 데이터만 추가
-            add_sample_data()
-            
-            # 실제 API 동기화는 Shell에서 실행
-            # sync_members_from_api()
-            
-        return "샘플 데이터 추가 완료! 실제 API 동기화는 Render Shell에서 실행하세요."
+        # 여기서 import (필요할 때만)
+        from sync_data import add_sample_data
+        add_sample_data()
+        
+        return jsonify({
+            "status": "success", 
+            "message": "샘플 데이터 추가 완료!"
+        })
     except Exception as e:
-        return f"오류 발생: {str(e)}"
+        import traceback
+        error_detail = traceback.format_exc()
+        
+        return jsonify({
+            "status": "error", 
+            "message": f"오류 발생: {str(e)}",
+            "detail": error_detail
+        }), 500
     
 # 메인 실행
 if __name__ == '__main__':
