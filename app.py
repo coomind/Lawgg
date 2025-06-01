@@ -10,6 +10,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 import re
 from bs4 import BeautifulSoup
+import threading
+import time
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'  # 실제 배포시 변경 필요
@@ -1196,26 +1198,150 @@ def favicon():
 #with app.app_context():
     #db.create_all()
 
-@app.route('/sync')
-def sync_route():
-    """웹에서 동기화 실행"""
+
+sync_status = {
+    'running': False,
+    'progress': 0,
+    'message': '',
+    'error': None,
+    'completed': False,
+    'start_time': None,
+    'processed_count': 0
+}
+
+def background_sync():
+    """백그라운드에서 동기화 실행"""
+    global sync_status
+    
     try:
-        # 여기서 import (필요할 때만)
-        from sync_data import add_sample_data
-        add_sample_data()
-        
-        return jsonify({
-            "status": "success", 
-            "message": "샘플 데이터 추가 완료!"
+        sync_status.update({
+            'running': True,
+            'progress': 5,
+            'message': 'API 연결 테스트 중...',
+            'error': None,
+            'completed': False,
+            'start_time': datetime.now().isoformat(),
+            'processed_count': 0
         })
+        
+        from sync_data import test_api_connection, sync_members_from_api
+        
+        # API 연결 테스트
+        sync_status.update({
+            'progress': 10,
+            'message': 'API 연결 확인 중...'
+        })
+        
+        if not test_api_connection():
+            sync_status.update({
+                'running': False,
+                'error': 'API 연결 실패 - 국회 OpenAPI에 접근할 수 없습니다.',
+                'completed': True,
+                'progress': 0
+            })
+            return
+        
+        sync_status.update({
+            'progress': 20,
+            'message': 'API 연결 성공! 국회의원 데이터 동기화 시작...'
+        })
+        
+        time.sleep(1)  # 상태 확인을 위한 잠시 대기
+        
+        sync_status.update({
+            'progress': 30,
+            'message': '국회의원 정보를 가져오는 중...'
+        })
+        
+        # 실제 동기화 실행
+        sync_members_from_api()
+        
+        sync_status.update({
+            'progress': 90,
+            'message': '데이터 저장 중...'
+        })
+        
+        time.sleep(1)
+        
+        # 완료
+        sync_status.update({
+            'running': False,
+            'progress': 100,
+            'message': '동기화 완료! 국회의원 데이터를 성공적으로 업데이트했습니다.',
+            'completed': True,
+            'processed_count': Member.query.count()
+        })
+        
     except Exception as e:
         import traceback
         error_detail = traceback.format_exc()
         
+        sync_status.update({
+            'running': False,
+            'error': f'동기화 중 오류 발생: {str(e)}',
+            'completed': True,
+            'progress': 0,
+            'error_detail': error_detail
+        })
+
+@app.route('/sync/start')
+def start_sync():
+    """동기화 시작"""
+    global sync_status
+    
+    if sync_status['running']:
         return jsonify({
-            "status": "error", 
-            "message": f"오류 발생: {str(e)}",
-            "detail": error_detail
+            'status': 'error',
+            'message': '이미 동기화가 진행 중입니다. 잠시 후 다시 시도해주세요.'
+        })
+    
+    # 상태 초기화
+    sync_status = {
+        'running': False,
+        'progress': 0,
+        'message': '',
+        'error': None,
+        'completed': False,
+        'start_time': None,
+        'processed_count': 0
+    }
+    
+    # 백그라운드 스레드로 실행
+    thread = threading.Thread(target=background_sync)
+    thread.daemon = True
+    thread.start()
+    
+    return jsonify({
+        'status': 'success',
+        'message': '동기화가 시작되었습니다. 진행상황을 확인해주세요.'
+    })
+
+@app.route('/sync/status')
+def sync_status_api():
+    """동기화 진행상황 확인"""
+    return jsonify(sync_status)
+
+@app.route('/sync/test')
+def test_api():
+    """국회 API 연결 테스트만"""
+    try:
+        from sync_data import test_api_connection
+        
+        if test_api_connection():
+            return jsonify({
+                "status": "success",
+                "message": "국회 OpenAPI 연결 성공!"
+            })
+        else:
+            return jsonify({
+                "status": "error",
+                "message": "국회 OpenAPI 연결 실패"
+            }), 500
+            
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"테스트 중 오류 발생: {str(e)}"
         }), 500
     
 # 메인 실행
