@@ -134,137 +134,116 @@ def sync_members_from_api():
             
             print(f"CSV에서 {len(csv_data)}개의 선거 데이터를 로드했습니다.")
         
-        # 20, 21, 22대 국회의원 각각 처리
-        terms = [20, 21, 22]
-        total_processed = 0
-        
-        for term in terms:
+        # 1. term 루프 제거
             print(f"\n{'='*50}")
-            print(f"{term}대 국회의원 정보 동기화 중...")
+            print(f"국회의원 전체 정보 동기화 중...")
             print(f"{'='*50}")
             
-            term_count = 0
             page = 1
             page_size = 1000
+            total_processed = 0
             
             while True:
-                print(f"\n--- {term}대 {page}페이지 처리 중 ---")
-                
+                print(f"\n--- {page}페이지 처리 중 ---")
+            
                 url = f"{BASE_URL}/ALLNAMEMBER"
                 params = {
                     'KEY': API_KEY,
                     'Type': 'xml',
                     'pIndex': page,
-                    'pSize': page_size,
-                    
+                    'pSize': page_size
                 }
-                
+            
                 try:
                     response = requests.get(url, params=params, timeout=60)
                     print(f"응답 상태: {response.status_code}")
-                    
+            
                     if response.status_code != 200:
                         print(f"HTTP 오류: {response.status_code}")
                         break
-                    
+            
                     if 'INFO-000' not in response.text:
-                        print(f"{term}대 API 오류 발생")
+                        print("API 오류 발생")
                         break
-                    
+            
                     root = ET.fromstring(response.content)
                     rows = root.findall('.//row')
                     print(f"이번 페이지에서 찾은 데이터: {len(rows)}개")
-                    
+            
                     if len(rows) == 0:
                         break
-                    
+            
                     for row in rows:
                         name = (row.findtext('HG_NM', '') or 
-                               row.findtext('NAAS_NM', '') or 
-                               row.findtext('KOR_NM', ''))
-                        
+                                row.findtext('NAAS_NM', '') or 
+                                row.findtext('KOR_NM', '')).strip()
+            
                         party = (row.findtext('POLY_NM', '') or 
-                                row.findtext('PLPT_NM', '') or 
-                                row.findtext('PARTY_NM', ''))
-                        
+                                 row.findtext('PLPT_NM', '') or 
+                                 row.findtext('PARTY_NM', '')).strip()
+            
                         if not name:
                             continue
-                        
-                        # 기존 의원 확인 (이름으로만)
+            
+                        # 🧠 CSV 기반 대수 판단
+                        matched_terms = [term for (csv_name, term) in csv_data.keys() if csv_name == name]
+                        if not matched_terms:
+                            continue  # CSV에 없으면 건너뜀
+            
                         member = Member.query.filter_by(name=name).first()
-                        
                         if not member:
-                            # 새 의원 생성
-                            member = Member(
-                                name=name,
-                                view_count=0
-                            )
+                            member = Member(name=name, view_count=0)
                             db.session.add(member)
                             print(f"✨ 신규 의원: {name}")
-                        
-                        # 대수 추가
-                        member.add_session(term)
-                        
-                        # 현재 정보 업데이트 (최신 대수 기준)
-                        if term >= (member.current_session or 0):
-                            member.party = party or '무소속'
-                            member.gender = (row.findtext('SEX_GBN_NM', '') or 
-                                           row.findtext('NTR_DIV', ''))
-                            member.phone = (row.findtext('TEL_NO', '') or 
-                                          row.findtext('NAAS_TEL_NO', ''))
-                            member.email = (row.findtext('E_MAIL', '') or 
-                                          row.findtext('NAAS_EMAIL_ADDR', ''))
-                            member.homepage = (row.findtext('HOMEPAGE', '') or 
-                                             row.findtext('NAAS_HP_URL', ''))
-                            member.photo_url = (row.findtext('jpgLink', '') or 
-                                              row.findtext('NAAS_PIC', ''))
-                        
-                        # CSV 정보 매칭
-                        csv_key = (name, term)
-                        district = None
-                        vote_rate = None
-                        
-                        if csv_key in csv_data:
-                            csv_info = csv_data[csv_key]
-                            district = csv_info['constituency']
-                            vote_rate = csv_info['vote_rate']
-                        else:
-                            district = (row.findtext('ORIG_NM', '') or 
-                                      row.findtext('ELECD_NM', ''))
-                        
-                        # 현재 선거구/득표율 업데이트 (최신 대수)
-                        if term >= (member.current_session or 0):
-                            member.district = district
-                            member.vote_rate = vote_rate
-                        
-                        # 대수별 상세 정보 저장
-                        member.update_session_details(term, party or '무소속', district, vote_rate)
-                        
-                        term_count += 1
+            
+                        for term in matched_terms:
+                            member.add_session(term)
+            
+                            # 최신 정보 업데이트
+                            if term >= (member.current_session or 0):
+                                member.party = party or '무소속'
+                                member.gender = (row.findtext('SEX_GBN_NM', '') or 
+                                                 row.findtext('NTR_DIV', ''))
+                                member.phone = (row.findtext('TEL_NO', '') or 
+                                                row.findtext('NAAS_TEL_NO', ''))
+                                member.email = (row.findtext('E_MAIL', '') or 
+                                                row.findtext('NAAS_EMAIL_ADDR', ''))
+                                member.homepage = (row.findtext('HOMEPAGE', '') or 
+                                                   row.findtext('NAAS_HP_URL', ''))
+                                member.photo_url = (row.findtext('jpgLink', '') or 
+                                                    row.findtext('NAAS_PIC', ''))
+            
+                                # CSV 정보
+                                csv_key = (name, term)
+                                district = csv_data[csv_key]['constituency']
+                                vote_rate = csv_data[csv_key]['vote_rate']
+                                member.district = district
+                                member.vote_rate = vote_rate
+            
+                                member.update_session_details(term, party or '무소속', district, vote_rate)
+            
+                                print(f"처리: {name} ({term}대) - {party}")
+            
                         total_processed += 1
-                        
-                        # 진행상황 로그
-                        sessions_str = ','.join(map(str, member.get_session_list()))
-                        print(f"처리: {name} ({sessions_str}대) - {party}")
-                    
-                    # 페이지별 커밋
+            
                     db.session.commit()
-                    print(f"{term}대 {page}페이지 완료: {len(rows)}명 처리")
-                    
+                    print(f"{page}페이지 완료: {len(rows)}명 처리")
+            
                     page += 1
                     if len(rows) < page_size:
                         break
-                    
-                    time.sleep(2)  # API 부하 방지
-                    
+            
+                    time.sleep(2)
+            
                 except Exception as e:
-                    print(f"❌ {term}대 {page}페이지 처리 중 오류: {str(e)}")
+                    print(f"❌ {page}페이지 처리 중 오류: {str(e)}")
                     import traceback
                     traceback.print_exc()
                     db.session.rollback()
                     break
             
-            print(f"✅ {term}대 완료")
+            print(f"\n🎉 동기화 완료: 총 {total_processed}명 처리됨")
+
             time.sleep(3)  # 대수간 대기
         
         # 최종 통계
