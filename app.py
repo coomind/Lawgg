@@ -1197,18 +1197,27 @@ def favicon():
     #db.create_all()
 
 @app.route('/sync')
-def run_sync():
-    import sync_data
-    sync_data.sync_members_from_api()
-    sync_data.sync_bills_from_api()
-    return '✅ 데이터 동기화 완료!'
+def sync_route():
+    """웹에서 동기화 실행"""
+    try:
+        with app.app_context():
+            # 샘플 데이터만 추가
+            add_sample_data()
+            
+            # 실제 API 동기화는 Shell에서 실행
+            # sync_members_from_api()
+            
+        return "샘플 데이터 추가 완료! 실제 API 동기화는 Render Shell에서 실행하세요."
+    except Exception as e:
+        return f"오류 발생: {str(e)}"
     
 # 메인 실행
 if __name__ == '__main__':
     with app.app_context():
         # 데이터베이스 테이블 생성
         db.create_all()
-        
+
+        add_sample_data()
         # 데이터가 없으면 동기화 실행
         if Member.query.count() == 0:
             print("데이터베이스가 비어있습니다. 초기 데이터를 로드합니다...")
@@ -1219,5 +1228,13 @@ if __name__ == '__main__':
             sync_bills_from_api()
             
             print("초기 데이터 로드 완료!")
+
+        member_count = Member.query.count()
+        bill_count = Bill.query.count()
+        
+        print(f"\n=== 최종 결과 ===")
+        print(f"총 국회의원 수: {member_count}명")
+        print(f"총 법률안 수: {bill_count}개")
+
         
     app.run(debug=True, host='0.0.0.0', port=5000)
