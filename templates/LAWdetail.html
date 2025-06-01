@@ -1214,6 +1214,12 @@
                 replyItem.style.transition = 'background-color 0.5s';
             }, 2000);
         }
+        
+        function updateVoteCounts() {Add commentMore actions
+            agreeCountEl.textContent = voteCounts.agree.toLocaleString();
+            disagreeCountEl.textContent = voteCounts.disagree.toLocaleString();
+            document.querySelector('.vote-total').textContent = `총원수 : ${(voteCounts.agree + voteCounts.disagree).toLocaleString()}`;
+        }
 
         // 투표 버튼 이벤트
     voteButtons.forEach(button => {
