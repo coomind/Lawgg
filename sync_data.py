@@ -192,34 +192,68 @@ def sync_members_from_api():
                     
                     # 🔥 학력/경력 정보 수집 🔥
                     # API에서 제공되는 다양한 필드들 확인
-                    # 🔥 BRF_HST 필드에서 학력/경력 정보 추출 🔥
-                    brf_hst = row.findtext('BRF_HST', '').strip()
+                    education_career_fields = [
+                        'SCH_NM',          # 학교명
+                        'SCH_ETC',         # 학교 기타정보
+                        'EDUCATION',       # 학력
+                        'EDUCATION_INFO',  # 학력정보
+                        'CAREER',          # 경력
+                        'CAREER_INFO',     # 경력정보
+                        'HIS_NM',          # 이력
+                        'HIS_DETAIL',      # 이력상세
+                        'WORK_HIST',       # 근무이력
+                        'PREV_JOB',        # 이전직업
+                        'ACADEMIC_BG',     # 학술배경
+                        'PROFILE',         # 프로필
+                        'DETAIL_INFO',     # 상세정보
+                        'JOB_HIST',        # 직업이력
+                        'EXPERIENCE'       # 경험
+                    ]
+                    
+                    # 모든 가능한 학력/경력 필드에서 데이터 수집
+                    all_career_data = []
                     education_data = []
                     career_data = []
                     
-                    if brf_hst:
-                        print(f"   📋 {name} BRF_HST: {brf_hst[:100]}...")
+                    # XML의 모든 필드를 확인해서 학력/경력 관련 데이터 찾기
+                    for child in row:
+                        field_name = child.tag
+                        field_value = child.text
                         
-                        # BRF_HST는 보통 줄바꿈이나 특정 구분자로 분리됨
-                        items = []
-                        if '\n' in brf_hst:
-                            items = [item.strip() for item in brf_hst.split('\n') if item.strip()]
-                        elif ',' in brf_hst:
-                            items = [item.strip() for item in brf_hst.split(',') if item.strip()]
-                        else:
-                            items = [brf_hst]
-                        
-                        for item in items:
-                            if len(item) > 3:  # 너무 짧은 항목 제외
-                                # 학력 키워드 체크
-                                education_keywords = ['학교', '학원', '대학교', '고등학교', '중학교', '초등학교', '대학원', '학과', '졸업', '수료', '입학']
-                                
-                                if any(keyword in item for keyword in education_keywords):
-                                    education_data.append(item)
-                                    print(f"   🎓 학력: {item}")
+                        if field_value and field_value.strip():
+                            field_value = field_value.strip()
+                            
+                            # 학력/경력 관련 필드들 확인
+                            career_keywords = ['SCH', 'EDUCATION', 'CAREER', 'HIS', 'WORK', 'JOB', 'ACADEMIC', 'PROFILE', 'EXPERIENCE']
+                            
+                            if any(keyword in field_name.upper() for keyword in career_keywords):
+                                # 쉼표나 줄바꿈으로 분리된 항목들 처리
+                                items = []
+                                if ',' in field_value:
+                                    items = [item.strip() for item in field_value.split(',')]
+                                elif '\n' in field_value:
+                                    items = [item.strip() for item in field_value.split('\n')]
                                 else:
-                                    career_data.append(item)
-                                    print(f"   💼 경력: {item}")
+                                    items = [field_value]
+                                
+                                for item in items:
+                                    if item and len(item) > 3:  # 너무 짧은 항목은 제외
+                                        all_career_data.append(item)
+                                        print(f"   📚 {field_name}: {item[:50]}...")
+                    
+                    # 🎓 학력과 경력 분류 🎓
+                    for item in all_career_data:
+                        # 학력 키워드 체크 (학교, 학원, 대학교, 고등학교, 중학교, 초등학교, 대학원, 학과)
+                        education_keywords = ['학교', '학원', '대학교', '고등학교', '중학교', '초등학교', '대학원', '학과', '졸업', '수료', '입학']
+                        
+                        is_education = any(keyword in item for keyword in education_keywords)
+                        
+                        if is_education:
+                            education_data.append(item)
+                            print(f"   🎓 학력: {item}")
+                        else:
+                            career_data.append(item)
+                            print(f"   💼 경력: {item}")
                     
                     # 생년월일에서 출생연도 추출
                     birth_year = None
@@ -239,47 +273,61 @@ def sync_members_from_api():
 
                     # 🔥 중복 방지 로직 개선 (김문수 중복 문제 해결) 🔥
                     # 1단계: 이름만으로 먼저 찾기
-                    if birth_str:
-                        # 생년월일이 있으면 이름+생년월일로 찾기
-                        existing_member = Member.query.filter_by(name=name, birth_date=birth_str).first()
-                    else:
-                        # 생년월일이 없으면 이름만으로 찾기
-                        existing_member = Member.query.filter_by(name=name).first()
+                    existing_member = Member.query.filter_by(name=name).first()
                     
                     if existing_member:
+                        # 기존 의원이 있으면 업데이트
                         member = existing_member
-                        print(f"🔄 기존 의원 업데이트: {name} (생년월일: {birth_str})")
+                        print(f"🔄 기존 의원 업데이트: {name}")
+                        
+                        # 생년월일이 비어있거나 다르면 업데이트
+                        if not member.birth_date and birth_str:
+                            member.birth_date = birth_str
+                            print(f"   📅 생년월일 업데이트: {birth_str}")
+                        elif member.birth_date != birth_str and birth_str:
+                            print(f"   ⚠️ 생년월일 불일치: 기존({member.birth_date}) vs 새로운({birth_str})")
+                            # 더 완전한 데이터를 선택 (길이가 더 긴 것)
+                            if len(birth_str) > len(member.birth_date or ''):
+                                member.birth_date = birth_str
+                                print(f"   📅 더 완전한 생년월일로 업데이트: {birth_str}")
                     else:
-                        member = Member(name=name, birth_date=birth_str, view_count=0)
+                        # 새로운 의원 생성
+                        member = Member(
+                            name=name, 
+                            birth_date=birth_str, 
+                            view_count=0
+                        )
                         db.session.add(member)
-                        print(f"✨ 신규 의원: {name} (생년월일: {birth_str})")
+                        print(f"✨ 신규 의원: {name}")
                     
                     # 🔥 학력/경력 정보 업데이트 🔥
                     if education_data:
-                        # 기존 데이터와 병합
-                        existing_education = member.education.split(',') if (member.education and member.education.strip()) else []
+                        # 기존 학력 정보와 병합 (중복 제거)
+                        try:
+                            existing_education = member.education.split(',') if (member.education and member.education.strip()) else []
+                            existing_career = member.career.split(',') if (member.career and member.career.strip()) else []
+                        except AttributeError:
+                            existing_education = []
+                            existing_career = []
+                            
                         all_education = existing_education + education_data
-                        
-                        # 중복 제거
+                        # 중복 제거하면서 순서 유지
                         unique_education = []
                         for item in all_education:
                             if item not in unique_education:
                                 unique_education.append(item)
-                        
                         member.education = ','.join(unique_education)
                         print(f"   📚 학력 업데이트: {len(unique_education)}개 항목")
                     
                     if career_data:
-                        # 기존 데이터와 병합
-                        existing_career = member.career.split(',') if (member.career and member.career.strip()) else []
-                        all_career = existing_career + career_data
+                        # 기존 경력 정보와 병합 (중복 제거)
                         
-                        # 중복 제거
+                        all_career = existing_career + career_data
+                        # 중복 제거하면서 순서 유지
                         unique_career = []
                         for item in all_career:
                             if item not in unique_career:
                                 unique_career.append(item)
-                        
                         member.career = ','.join(unique_career)
                         print(f"   💼 경력 업데이트: {len(unique_career)}개 항목")
                     
@@ -455,7 +503,7 @@ def update_missing_education_career():
                 print(f"... 외 {len(members_without_info) - 5}명")
         
         return len(members_without_info)
-        
+
 def fix_duplicate_members():
     """기존 중복된 국회의원 데이터 정리"""
     with app.app_context():
@@ -684,23 +732,6 @@ def sync_bills_from_api():
         # 최종 통계
         total_bills = Bill.query.count()
         print(f"데이터베이스 총 법률안: {total_bills}건")
-
-def sync_all_data():
-    """국회의원 + 법률안 전체 동기화"""
-    print("\n🚀 전체 데이터 동기화 시작!")
-    
-    # 1. 국회의원 동기화
-    print("\n1️⃣ 국회의원 데이터 동기화...")
-    sync_members_from_api()
-    
-    print("\n잠시 대기 중...")
-    time.sleep(5)
-    
-    # 2. 법률안 동기화
-    print("\n2️⃣ 법률안 데이터 동기화...")
-    sync_bills_from_api()
-    
-    print("\n🎉 전체 동기화 완료!")
 
 def cleanup_and_sync():
     """중복 정리 후 전체 동기화"""
