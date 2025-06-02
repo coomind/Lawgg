@@ -309,29 +309,15 @@ def member_detail(member_id):
     education = []
     career = []
     
-    # 1. education 필드에서 학력 추출
+    # education 필드에서 학력 추출
     if member.education:
-        education_items = [item.strip() for item in member.education.split(',') if item.strip()]
-        education.extend(education_items)
+        education = [item.strip() for item in member.education.split(',') if item.strip()]
     
-    # 2. career 필드에서 경력 추출
+    # career 필드에서 경력 추출  
     if member.career:
-        career_items = [item.strip() for item in member.career.split(',') if item.strip()]
-        career.extend(career_items)
+        career = [item.strip() for item in member.career.split(',') if item.strip()]
     
-    # 3. 기존 로직 (career 필드가 학력과 경력이 섞여있는 경우를 위한 fallback)
-    if not education and not career and member.career:
-        items = member.career.split(',')
-        for item in items:
-            item = item.strip()
-            if item:
-                # 학력 키워드 체크 (학교, 학원, 졸업, 수료 등)
-                education_keywords = ['학교', '학원', '대학교', '고등학교', '중학교', '초등학교', '대학원', '학과', '졸업', '수료', '입학']
-                
-                if any(keyword in item for keyword in education_keywords):
-                    education.append(item)
-                else:
-                    career.append(item)
+    print(f"디버그 - {member.name}: 학력 {len(education)}개, 경력 {len(career)}개")
     
     # 중복 제거 (순서 유지)
     def remove_duplicates(items):
