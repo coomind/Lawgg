@@ -176,20 +176,26 @@ def sync_members_from_api():
         
                 if len(rows) == 0:
                     break
-        
+                processed_members = set()
                 for row in rows:
                     name = (row.findtext('HG_NM', '') or 
                             row.findtext('NAAS_NM', '') or 
                             row.findtext('KOR_NM', '')).strip()
-        
+                
                     party = (row.findtext('POLY_NM', '') or 
                              row.findtext('PLPT_NM', '') or 
                              row.findtext('PARTY_NM', '')).strip()
                     
                     birth_str = row.findtext('BIRDY_DT', '').strip()
+                    
                     if not name:
                         continue
-                    
+
+                    member_key = (name, birth_str)
+                    if member_key in processed_members:
+                        print(f"   ⏭️ 이미 처리됨: {name} ({birth_str})")
+                        continue
+                                    
                     # 🔥 학력/경력 정보 수집 🔥
                     # API에서 제공되는 다양한 필드들 확인
                     education_career_fields = [
@@ -270,6 +276,10 @@ def sync_members_from_api():
                                      if csv_name == name and term in [20, 21, 22]]
                     if not matched_terms:
                         continue  # CSV에 없으면 건너뜀
+
+                    processed_members.add(member_key)
+                    print(f"   ✅ 처리: {name} ({birth_str}) - {matched_terms}대")
+
 
                     member = Member(
                         name=name,
