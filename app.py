@@ -296,6 +296,7 @@ def members_list():
                          current_party=party,
                          pagination=pagination_data)
 
+# 기존 함수 전체를 이것으로 교체:
 @app.route('/members/<int:member_id>')
 def member_detail(member_id):
     member = Member.query.get_or_404(member_id)
@@ -305,16 +306,46 @@ def member_detail(member_id):
     # 해당 의원이 발의한 법률안
     bills = Bill.query.filter(Bill.proposer.contains(member.name)).limit(10).all()
     
-    # 학력/경력 분리
+    # 🔥 학력/경력 분리 로직 개선 🔥
     education = []
     career = []
+    
+    # 1. education 필드에서 학력 추출
+    if member.education:
+        education_items = [item.strip() for item in member.education.split(',') if item.strip()]
+        education.extend(education_items)
+    
+    # 2. career 필드에서 경력 추출
     if member.career:
+        career_items = [item.strip() for item in member.career.split(',') if item.strip()]
+        career.extend(career_items)
+    
+    # 3. 기존 로직 (career 필드가 학력과 경력이 섞여있는 경우를 위한 fallback)
+    if not education and not career and member.career:
         items = member.career.split(',')
         for item in items:
-            if '학교' in item or '학원' in item:
-                education.append(item.strip())
-            else:
-                career.append(item.strip())
+            item = item.strip()
+            if item:
+                # 학력 키워드 체크 (학교, 학원, 졸업, 수료 등)
+                education_keywords = ['학교', '학원', '대학교', '고등학교', '중학교', '초등학교', '대학원', '학과', '졸업', '수료', '입학']
+                
+                if any(keyword in item for keyword in education_keywords):
+                    education.append(item)
+                else:
+                    career.append(item)
+    
+    # 중복 제거 (순서 유지)
+    def remove_duplicates(items):
+        seen = set()
+        result = []
+        for item in items:
+            if item not in seen:
+                seen.add(item)
+                result.append(item)
+        return result
+    
+    education = remove_duplicates(education)
+    career = remove_duplicates(career)
     
     member_data = {
         'id': member.id,
@@ -322,8 +353,8 @@ def member_detail(member_id):
         'party': member.party,
         'district_name': member.district,
         'photo_url': member.photo_url,
-        'education': education,
-        'career': career[:5],  # 대표 경력 5개만
+        'education': education,  # 학력 전체
+        'career': career,        # 경력 전체 (길이 제한 제거)
         'phone': member.phone,
         'email': member.email,
         'homepage': member.homepage,
@@ -1328,6 +1359,8 @@ sync_status = {
     'processed_count': 0
 }
 
+# app.py의 background_sync() 함수 수정
+
 def background_sync():
     """백그라운드에서 동기화 실행"""
     global sync_status
@@ -1346,7 +1379,8 @@ def background_sync():
             })
             
             try:
-                from sync_data import test_api_connection, sync_members_from_api, sync_bills_from_api
+                # 🔥 수정된 부분 🔥
+                from sync_data import test_api_connection, cleanup_and_sync
             except ImportError as e:
                 sync_status.update({
                     'running': False,
@@ -1373,19 +1407,11 @@ def background_sync():
             
             sync_status.update({
                 'progress': 30,
-                'message': '국회의원 데이터 동기화 중...'
+                'message': '중복 데이터 정리 및 전체 동기화 시작...'
             })
             
-            # 실제 동기화 실행
-            sync_members_from_api()
-
-            # 법률안 동기화
-            sync_status.update({
-                'progress': 60,
-                'message': '법률안 데이터 동기화 중...'
-            })
-            
-            sync_bills_from_api()
+            # 🔥 실제 동기화 실행 (중복 정리 + 국회의원 + 법률안) 🔥
+            cleanup_and_sync()
             
             sync_status.update({
                 'progress': 90,
@@ -1394,14 +1420,14 @@ def background_sync():
             
             time.sleep(1)
             
-            # 완료 - 여기서 Member.query.count() 사용
+            # 완료 - 최종 결과 확인
             member_count = Member.query.count()
             bill_count = Bill.query.count()
             
             sync_status.update({
                 'running': False,
                 'progress': 100,
-                'message': f'동기화 완료! 국회의원 {member_count}명, 법률안 {bill_count}건 업데이트',
+                'message': f'동기화 완료! 국회의원 {member_count}명, 법률안 {bill_count}건 업데이트 (중복 정리 포함)',
                 'completed': True,
                 'processed_count': member_count + bill_count
             })
