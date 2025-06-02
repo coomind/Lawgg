@@ -383,6 +383,128 @@ def sync_members_from_api():
         if missing_count > 0:
             print(f"⚠️ {missing_count}명의 의원은 학력/경력 정보가 부족합니다.")
 
+def supplement_missing_education_career():
+    """학력/경력이 없는 의원들을 헌정회 API로 보완"""
+    with app.app_context():
+        print("\n=== 학력/경력 누락 의원 헌정회 API로 보완 ===")
+        
+        # 학력/경력이 없는 의원들 찾기
+        members_without_info = Member.query.filter(
+            or_(
+                Member.education.is_(None),
+                Member.education == '',
+                Member.career.is_(None), 
+                Member.career == ''
+            )
+        ).all()
+        
+        print(f"학력/경력 정보가 없는 의원: {len(members_without_info)}명")
+        
+        if len(members_without_info) == 0:
+            print("모든 의원의 학력/경력 정보가 있습니다.")
+            return 0
+        
+        updated_count = 0
+        
+        for member in members_without_info:
+            print(f"\n🔍 {member.name} 헌정회 API 조회 중...")
+            
+            # 헌정회 API 호출
+            url = f"{BASE_URL}/nprlapfmaufmqytet"
+            params = {
+                'KEY': API_KEY,
+                'Type': 'xml',
+                'pIndex': 1,
+                'pSize': 100,
+                'NAME': member.name  # 의원 이름으로 검색
+            }
+            
+            try:
+                response = requests.get(url, params=params, timeout=30)
+                
+                if response.status_code == 200 and 'INFO-000' in response.text:
+                    root = ET.fromstring(response.content)
+                    rows = root.findall('.//row')
+                    
+                    member_updated = False
+                    
+                    for row in rows:
+                        api_name = row.findtext('NAME', '').strip()
+                        
+                        # 이름이 정확히 일치하는지 확인
+                        if api_name == member.name:
+                            print(f"   ✅ {member.name} 헌정회 데이터 발견!")
+                            
+                            # 모든 필드 출력해서 어떤 데이터가 있는지 확인
+                            print("   📋 헌정회 API 응답 필드들:")
+                            for child in row:
+                                field_name = child.tag
+                                field_value = child.text
+                                if field_value and field_value.strip():
+                                    print(f"      {field_name}: {field_value[:50]}...")
+                            
+                            # 학력/경력 정보 추출
+                            education_data = []
+                            career_data = []
+                            
+                            # 가능한 모든 필드에서 학력/경력 정보 찾기
+                            for child in row:
+                                field_name = child.tag
+                                field_value = child.text
+                                
+                                if field_value and field_value.strip() and len(field_value.strip()) > 3:
+                                    field_value = field_value.strip()
+                                    
+                                    # 학력 관련 키워드 체크
+                                    education_keywords = ['학교', '학원', '대학교', '고등학교', '중학교', '초등학교', '대학원', '학과', '졸업', '수료', '입학']
+                                    
+                                    if any(keyword in field_value for keyword in education_keywords):
+                                        education_data.append(field_value)
+                                        print(f"   🎓 학력 발견: {field_value}")
+                                    else:
+                                        # 학력이 아니면 경력으로 분류
+                                        career_data.append(field_value)
+                                        print(f"   💼 경력 발견: {field_value}")
+                            
+                            # 데이터베이스 업데이트 (기존 데이터가 없을 때만)
+                            if education_data and (not member.education or member.education.strip() == ''):
+                                member.education = ','.join(education_data)
+                                print(f"   📚 학력 업데이트: {len(education_data)}개 항목")
+                                member_updated = True
+                            
+                            if career_data and (not member.career or member.career.strip() == ''):
+                                member.career = ','.join(career_data)
+                                print(f"   💼 경력 업데이트: {len(career_data)}개 항목")
+                                member_updated = True
+                            
+                            if member_updated:
+                                updated_count += 1
+                                print(f"   ✅ {member.name} 정보 업데이트 완료!")
+                            else:
+                                print(f"   ⚠️ {member.name} 헌정회에서도 학력/경력 정보 없음")
+                            
+                            break  # 일치하는 의원 찾았으므로 루프 종료
+                    
+                    if not member_updated:
+                        print(f"   ❌ {member.name} 헌정회에서 데이터 없음")
+                
+                else:
+                    print(f"   ❌ {member.name} API 응답 오류: {response.status_code}")
+                
+                # API 부하 방지를 위한 대기
+                time.sleep(2)
+                
+            except Exception as e:
+                print(f"❌ {member.name} 처리 중 오류: {str(e)}")
+                continue
+        
+        # 변경사항 저장
+        db.session.commit()
+        
+        print(f"\n🎉 헌정회 API 보완 완료!")
+        print(f"총 {updated_count}명의 의원 학력/경력 정보 추가됨")
+        
+        return updated_count
 
 def debug_member_api_fields():
     """국회의원 API 응답 필드 디버깅"""
@@ -701,15 +823,22 @@ def sync_all_data():
     """국회의원 + 법률안 전체 동기화"""
     print("\n🚀 전체 데이터 동기화 시작!")
     
-    # 1. 국회의원 동기화
-    print("\n1️⃣ 국회의원 데이터 동기화...")
+    # 1. 국회의원 기본 정보 동기화 (ALLNAMEMBER API)
+    print("\n1️⃣ 국회의원 기본 정보 동기화...")
     sync_members_from_api()
     
     print("\n잠시 대기 중...")
-    time.sleep(5)
+    time.sleep(3)
     
-    # 2. 법률안 동기화
-    print("\n2️⃣ 법률안 데이터 동기화...")
+    # 2. 학력/경력 누락 의원들 헌정회 API로 보완
+    print("\n2️⃣ 학력/경력 누락 정보 보완...")
+    supplement_missing_education_career()
+    
+    print("\n잠시 대기 중...")
+    time.sleep(3)
+    
+    # 3. 법률안 동기화
+    print("\n3️⃣ 법률안 데이터 동기화...")
     sync_bills_from_api()
     
     print("\n🎉 전체 동기화 완료!")
