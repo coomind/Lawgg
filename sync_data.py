@@ -351,12 +351,12 @@ def sync_members_from_api():
         
                         # 최신 정보 업데이트 (가장 높은 대수 기준)
                         if term >= (member.current_session or 0):
-                            # 기본 정보 업데이트
-                            if party:
-                                member.party = party
-                            
-                            member.gender = (row.findtext('SEX_GBN_NM', '') or 
-                                           row.findtext('NTR_DIV', ''))
+                            # 더 최신 대수일 때만 기본 정보 업데이트
+                            if term > (member.current_session or 0):
+                                if party:
+                                    member.party = party
+                                member.gender = (row.findtext('SEX_GBN_NM', '') or 
+                                               row.findtext('NTR_DIV', ''))
                             
                             # 연락처 정보 (기존 값이 없을 때만 업데이트)
                             phone = (row.findtext('TEL_NO', '') or 
