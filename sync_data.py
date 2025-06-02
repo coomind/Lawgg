@@ -351,12 +351,12 @@ def sync_members_from_api():
         
                         # 최신 정보 업데이트 (가장 높은 대수 기준)
                         if term >= (member.current_session or 0):
-                            # 더 최신 대수일 때만 기본 정보 업데이트
-                            if term > (member.current_session or 0):
-                                if party:
-                                    member.party = party
-                                member.gender = (row.findtext('SEX_GBN_NM', '') or 
-                                               row.findtext('NTR_DIV', ''))
+                            # 기본 정보 업데이트
+                            if party:
+                                member.party = party
+                            
+                            member.gender = (row.findtext('SEX_GBN_NM', '') or 
+                                           row.findtext('NTR_DIV', ''))
                             
                             # 연락처 정보 (기존 값이 없을 때만 업데이트)
                             phone = (row.findtext('TEL_NO', '') or 
@@ -701,14 +701,16 @@ def fix_duplicate_members():
         return len(duplicate_names)
 
 def sync_bills_from_api():
-    """국회 OpenAPI에서 법률안 정보 동기화 (20, 21, 22대) - 최적화 버전"""
+    """국회 OpenAPI에서 법률안 정보 동기화 (20, 21, 22대)"""
     with app.app_context():
-        print("\n=== 국회 OpenAPI에서 법률안 정보 가져오기 (최적화) ===")
+        print("\n=== 국회 OpenAPI에서 법률안 정보 가져오기 ===")
         
+        # API 연결 테스트 먼저
         if not test_api_connection():
             print("API 연결 실패! 종료합니다.")
             return
         
+        # 20, 21, 22대 법률안 각각 처리
         terms = [20, 21, 22]
         total_all_count = 0
         
@@ -720,135 +722,136 @@ def sync_bills_from_api():
             term_count = 0
             page = 1
             page_size = 1000  # 최대 1000건
-            batch_bills = []  # 배치 처리용 리스트
             
             while True:
                 print(f"\n--- {term}대 법률안 {page}페이지 처리 중 ---")
                 
+                # 의안정보 API 사용
                 url = f"{BASE_URL}/nzmimeepazxkubdpn"
                 params = {
                     'KEY': API_KEY,
                     'Type': 'xml',
                     'pIndex': page,
                     'pSize': page_size,
-                    'AGE': str(term)
+                    'AGE': str(term)  # 대수 지정
                 }
                 
                 try:
-                    response = requests.get(url, params=params, timeout=30)  # 타임아웃 단축
+                    response = requests.get(url, params=params, timeout=60)
+                    print(f"응답 상태: {response.status_code}")
                     
                     if response.status_code != 200:
                         print(f"HTTP 오류: {response.status_code}")
+                        print(f"응답 내용: {response.text[:500]}")
                         break
                     
                     if 'INFO-000' not in response.text:
                         print(f"{term}대 법률안 API 오류 발생")
+                        print(f"응답 내용: {response.text[:500]}")
                         break
                     
                     root = ET.fromstring(response.content)
+                    
+                    # 총 데이터 수 확인
+                    total_count_elem = root.find('.//list_total_count')
+                    total_available = total_count_elem.text if total_count_elem is not None else "알 수 없음"
+                    print(f"{term}대 총 법률안 수: {total_available}")
+                    
+                    # 데이터 파싱
                     rows = root.findall('.//row')
                     print(f"이번 페이지에서 찾은 데이터: {len(rows)}개")
                     
                     if len(rows) == 0:
+                        print(f"{term}대 더 이상 데이터가 없습니다.")
                         break
                     
-                    # 🚀 배치 처리 최적화 🚀
-                    page_bills = []
-                    
+                    page_count = 0
                     for row in rows:
+                        # API 문서에 따른 필드명 사용
                         bill_id = row.findtext('BILL_ID', '').strip()
+                        bill_no = row.findtext('BILL_NO', '').strip()
                         bill_name = row.findtext('BILL_NAME', '').strip()
                         committee = row.findtext('COMMITTEE', '').strip()
                         propose_dt = row.findtext('PROPOSE_DT', '').strip()
+                        proc_result = row.findtext('PROC_RESULT', '').strip()
+                        age = row.findtext('AGE', '').strip()
                         proposer = row.findtext('PROPOSER', '').strip()
                         member_list = row.findtext('MEMBER_LIST', '').strip()
                         detail_link = row.findtext('DETAIL_LINK', '').strip()
                         
+                        # 필수 필드 확인
                         if not bill_name or not bill_id:
                             continue
                         
+                        # 제안자 정리 (PROPOSER가 없으면 MEMBER_LIST에서 첫 번째 이름 추출)
                         if not proposer and member_list:
+                            # 쉼표로 구분된 경우 첫 번째 이름만
                             proposer = member_list.split(',')[0].strip()
                         
-                        # 🔥 기존 법률안 확인을 한 번에 처리 🔥
-                        page_bills.append({
-                            'bill_id': bill_id,
-                            'bill_name': bill_name,
-                            'proposer': proposer,
-                            'propose_dt': propose_dt,
-                            'committee': committee,
-                            'detail_link': detail_link
-                        })
-                    
-                    # 🚀 배치로 기존 법률안 확인 🚀
-                    existing_bill_ids = [bill['bill_id'] for bill in page_bills]
-                    existing_bills = Bill.query.filter(Bill.number.in_(existing_bill_ids)).all()
-                    existing_bill_numbers = {bill.number for bill in existing_bills}
-                    
-                    # 새로운 법률안만 추가
-                    new_bills = []
-                    update_bills = []
-                    
-                    for bill_data in page_bills:
-                        if bill_data['bill_id'] not in existing_bill_numbers:
-                            # 새로 추가
-                            new_bill = Bill(
-                                number=bill_data['bill_id'],
-                                name=bill_data['bill_name'],
-                                proposer=bill_data['proposer'],
-                                propose_date=bill_data['propose_dt'],
-                                committee=bill_data['committee'],
-                                detail_link=bill_data['detail_link'],
+                        # 기존 법률안 확인 (bill_id로 중복 체크)
+                        existing_bill = Bill.query.filter_by(number=bill_id).first()
+                        
+                        if not existing_bill:
+                            bill = Bill(
+                                number=bill_id,
+                                name=bill_name,
+                                proposer=proposer,
+                                propose_date=propose_dt,
+                                committee=committee,
+                                detail_link=detail_link,
                                 view_count=0
                             )
-                            new_bills.append(new_bill)
+                            db.session.add(bill)
+                            print(f"새로 추가: {bill_name[:50]}... (제안자: {proposer})")
                         else:
-                            # 기존 법률안 업데이트 정보 저장
-                            update_bills.append(bill_data)
+                            # 기존 법률안 정보 업데이트
+                            existing_bill.name = bill_name
+                            existing_bill.proposer = proposer
+                            existing_bill.propose_date = propose_dt
+                            existing_bill.committee = committee
+                            existing_bill.detail_link = detail_link
+                            print(f"업데이트: {bill_name[:50]}... (제안자: {proposer})")
+                        
+                        page_count += 1
+                        term_count += 1
+                        total_all_count += 1
+                        
+                        if page_count % 100 == 0:
+                            print(f"{term}대 처리 중... ({term_count}건)")
                     
-                    # 🚀 대량 삽입 🚀
-                    if new_bills:
-                        db.session.add_all(new_bills)
-                        print(f"   ✨ 새로 추가: {len(new_bills)}건")
-                    
-                    # 🚀 기존 법률안 업데이트 🚀
-                    if update_bills:
-                        for bill_data in update_bills:
-                            existing_bill = next((b for b in existing_bills if b.number == bill_data['bill_id']), None)
-                            if existing_bill:
-                                existing_bill.name = bill_data['bill_name']
-                                existing_bill.proposer = bill_data['proposer']
-                                existing_bill.propose_date = bill_data['propose_dt']
-                                existing_bill.committee = bill_data['committee']
-                                existing_bill.detail_link = bill_data['detail_link']
-                        print(f"   🔄 업데이트: {len(update_bills)}건")
-                    
-                    term_count += len(page_bills)
-                    total_all_count += len(page_bills)
-                    
-                    # 🚀 페이지별 커밋 (배치 처리) 🚀
+                    # 페이지별 커밋
                     db.session.commit()
-                    print(f"{term}대 {page}페이지 완료: {len(page_bills)}건 처리 (총 {term_count}건)")
+                    print(f"{term}대 {page}페이지 완료: {page_count}건 처리")
                     
+                    # 다음 페이지로
                     page += 1
                     
+                    # 데이터가 page_size보다 적으면 마지막 페이지
                     if len(rows) < page_size:
+                        print(f"{term}대 마지막 페이지입니다.")
                         break
                     
-                    # 🚀 API 대기시간 단축 🚀
-                    time.sleep(0.5)  # 2초 → 0.5초
+                    # API 부하 방지
+                    time.sleep(2)
                     
-                    # 🚀 페이지 제한 제거 (필요시) 🚀
-                    # if page > 30:  # 10 → 30으로 확장 또는 제거
-                    #     break
+                    # 안전을 위해 최대 10페이지까지만
+                    if page > 10:
+                        print(f"안전을 위해 {term}대는 10페이지까지만 처리합니다.")
+                        break
                     
                 except Exception as e:
                     print(f"❌ {term}대 {page}페이지 처리 중 오류: {str(e)}")
+                    import traceback
+                    traceback.print_exc()
                     db.session.rollback()
                     break
             
             print(f"\n✅ {term}대 완료: {term_count}건 처리")
-            time.sleep(1)  # 3초 → 1초
+            
+            # 각 대수 처리 후 잠시 대기
+            if term < 22:  # 마지막 대수가 아니면
+                print("다음 대수 처리를 위해 3초 대기...")
+                time.sleep(3)
         
         print(f"\n🎉 전체 법률안 동기화 완료!")
         print(f"총 {total_all_count}건의 법률안 정보를 동기화했습니다.")
