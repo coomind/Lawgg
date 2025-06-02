@@ -239,32 +239,20 @@ def sync_members_from_api():
 
                     # 🔥 중복 방지 로직 개선 (김문수 중복 문제 해결) 🔥
                     # 1단계: 이름만으로 먼저 찾기
-                    existing_member = Member.query.filter_by(name=name).first()
+                    if birth_str:
+                        # 생년월일이 있으면 이름+생년월일로 찾기
+                        existing_member = Member.query.filter_by(name=name, birth_date=birth_str).first()
+                    else:
+                        # 생년월일이 없으면 이름만으로 찾기
+                        existing_member = Member.query.filter_by(name=name).first()
                     
                     if existing_member:
-                        # 기존 의원이 있으면 업데이트
                         member = existing_member
-                        print(f"🔄 기존 의원 업데이트: {name}")
-                        
-                        # 생년월일이 비어있거나 다르면 업데이트
-                        if not member.birth_date and birth_str:
-                            member.birth_date = birth_str
-                            print(f"   📅 생년월일 업데이트: {birth_str}")
-                        elif member.birth_date != birth_str and birth_str:
-                            print(f"   ⚠️ 생년월일 불일치: 기존({member.birth_date}) vs 새로운({birth_str})")
-                            # 더 완전한 데이터를 선택 (길이가 더 긴 것)
-                            if len(birth_str) > len(member.birth_date or ''):
-                                member.birth_date = birth_str
-                                print(f"   📅 더 완전한 생년월일로 업데이트: {birth_str}")
+                        print(f"🔄 기존 의원 업데이트: {name} (생년월일: {birth_str})")
                     else:
-                        # 새로운 의원 생성
-                        member = Member(
-                            name=name, 
-                            birth_date=birth_str, 
-                            view_count=0
-                        )
+                        member = Member(name=name, birth_date=birth_str, view_count=0)
                         db.session.add(member)
-                        print(f"✨ 신규 의원: {name}")
+                        print(f"✨ 신규 의원: {name} (생년월일: {birth_str})")
                     
                     # 🔥 학력/경력 정보 업데이트 🔥
                     if education_data:
