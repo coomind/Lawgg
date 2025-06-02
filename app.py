@@ -305,15 +305,20 @@ def member_detail(member_id):
     # 해당 의원이 발의한 법률안
     bills = Bill.query.filter(Bill.proposer.contains(member.name)).limit(10).all()
     
-    # 🔥 학력/경력 분리 로직 수정 🔥
+    # 🔥 학력/경력 분리 로직 개선 🔥
     education = []
     career = []
     
-    if member.education and member.education.strip():
+    # education 필드에서 학력 추출
+    if member.education:
         education = [item.strip() for item in member.education.split(',') if item.strip()]
     
-    if member.career and member.career.strip():
+    # career 필드에서 경력 추출  
+    if member.career:
         career = [item.strip() for item in member.career.split(',') if item.strip()]
+    
+    print(f"디버그 - {member.name}: 학력 {len(education)}개, 경력 {len(career)}개")
+    
     
     member_data = {
         'id': member.id,
@@ -321,8 +326,8 @@ def member_detail(member_id):
         'party': member.party,
         'district_name': member.district,
         'photo_url': member.photo_url,
-        'education': education,  # 리스트로 전달
-        'career': career,        # 리스트로 전달
+        'education': education,  # 학력 전체
+        'career': career,        # 경력 전체 (길이 제한 제거)
         'phone': member.phone,
         'email': member.email,
         'homepage': member.homepage,
@@ -1596,7 +1601,6 @@ def sync_bills_route():
             "message": f"오류 발생: {str(e)}"
         }), 500
 
-        
 @app.route('/sync/all')
 def sync_all_route():
     """전체 데이터 동기화 (국회의원 + 법률안)"""
@@ -1607,23 +1611,6 @@ def sync_all_route():
         return jsonify({
             "status": "success",
             "message": "전체 데이터 동기화 완료!"
-        })
-    except Exception as e:
-        return jsonify({
-            "status": "error",
-            "message": f"오류 발생: {str(e)}"
-        }), 500
-
-@app.route('/sync/supplement')
-def supplement_route():
-    """학력/경력 누락 정보 보완"""
-    try:
-        from sync_data import supplement_missing_education_career
-        updated_count = supplement_missing_education_career()
-        
-        return jsonify({
-            "status": "success",
-            "message": f"학력/경력 누락 정보 보완 완료! {updated_count}명 업데이트됨"
         })
     except Exception as e:
         return jsonify({
