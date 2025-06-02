@@ -437,14 +437,14 @@
                         <h3 class="info-title">대표 경력</h3>
                         <div class="info-content" id="career-info">
                             {% if member.career and member.career|length > 0 %}
-                                {% for career_item in member.career[:5] %}
+                                {% for career_item in member.career[:8] %}
                                     • {{ career_item }}<br>
                                 {% endfor %}
-                                {% if member.career|length > 5 %}
-                                    <span style="color: #6c757d; font-size: 12px;">외 {{ member.career|length - 5 }}개</span>
+                                {% if member.career|length > 8 %}
+                                    <span style="color: #6c757d; font-size: 12px;">외 {{ member.career|length - 8 }}개</span>
                                 {% endif %}
                             {% else %}
-                                경력 정보가 없습니다.
+                                <span style="color: #6c757d;">경력 정보가 없습니다.</span>
                             {% endif %}
                         </div>
                     </div>
@@ -456,7 +456,7 @@
                                     • {{ edu_item }}<br>
                                 {% endfor %}
                             {% else %}
-                                학력 정보가 없습니다.
+                                <span style="color: #6c757d;">학력 정보가 없습니다.</span>
                             {% endif %}
                         </div>
                     </div>
