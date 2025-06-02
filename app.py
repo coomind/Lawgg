@@ -1635,6 +1635,23 @@ def sync_all_route():
             "status": "error",
             "message": f"오류 발생: {str(e)}"
         }), 500
+
+@app.route('/sync/supplement')
+def supplement_route():
+    """학력/경력 누락 정보 보완"""
+    try:
+        from sync_data import supplement_missing_education_career
+        updated_count = supplement_missing_education_career()
+        
+        return jsonify({
+            "status": "success",
+            "message": f"학력/경력 누락 정보 보완 완료! {updated_count}명 업데이트됨"
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"오류 발생: {str(e)}"
+        }), 500
         
 # 메인 실행
 if __name__ == '__main__':
