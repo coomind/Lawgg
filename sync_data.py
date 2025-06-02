@@ -520,9 +520,9 @@ def update_missing_education_career():
 
 
 def supplement_missing_education_career():
-    """학력/경력이 없는 의원들을 헌정회 API로 보완"""
+    """학력/경력이 없는 의원들을 헌정회 API로 보완 - 최적화 버전"""
     with app.app_context():
-        print("\n=== 학력/경력 누락 의원 헌정회 API로 보완 ===")
+        print("\n=== 학력/경력 누락 의원 헌정회 API로 보완 (최적화) ===")
         
         # 학력/경력이 없는 의원들 찾기
         members_without_info = Member.query.filter(
@@ -541,9 +541,11 @@ def supplement_missing_education_career():
             return 0
         
         updated_count = 0
+        batch_count = 0
+        batch_size = 50  # 50명씩 배치 처리
         
-        for member in members_without_info:
-            print(f"\n🔍 {member.name} 헌정회 API 조회 중...")
+        for i, member in enumerate(members_without_info):
+            print(f"\n🔍 [{i+1}/{len(members_without_info)}] {member.name} 헌정회 API 조회 중...")
             
             # 헌정회 API 호출
             url = f"{BASE_URL}/nprlapfmaufmqytet"
@@ -556,7 +558,7 @@ def supplement_missing_education_career():
             }
             
             try:
-                response = requests.get(url, params=params, timeout=30)
+                response = requests.get(url, params=params, timeout=15)  # 타임아웃 단축
                 
                 if response.status_code == 200 and 'INFO-000' in response.text:
                     root = ET.fromstring(response.content)
@@ -567,22 +569,28 @@ def supplement_missing_education_career():
                     for row in rows:
                         api_name = row.findtext('NAME', '').strip()
                         
-                        # 이름이 정확히 일치하는지 확인
                         if api_name == member.name:
                             print(f"   ✅ {member.name} 헌정회 데이터 발견!")
                             
-                            # 모든 필드에서 데이터 수집
-                            all_text_data = []
+                            # 🔥 HAK 필드 우선 확인 🔥
+                            hak_field = row.findtext('HAK', '').strip()
+                            education_data = []
+                            career_data = []
                             
-                            for child in row:
-                                field_name = child.tag
-                                field_value = child.text
-                                if field_value and field_value.strip() and len(field_value.strip()) > 3:
-                                    all_text_data.append(field_value.strip())
-                                    print(f"      📋 {field_name}: {field_value[:50]}...")
-                            
-                            # 🔥 공통 분류 함수 사용 🔥
-                            education_data, career_data = classify_education_career(all_text_data)
+                            if hak_field:
+                                print(f"      📋 HAK 필드: {hak_field[:100]}...")
+                                education_data, career_data = classify_education_career(hak_field)
+                            else:
+                                print(f"      ❌ HAK 필드 없음, 다른 필드 확인...")
+                                # HAK이 없으면 다른 필드들도 확인
+                                all_text_data = []
+                                for child in row:
+                                    field_value = child.text
+                                    if field_value and field_value.strip() and len(field_value.strip()) > 3:
+                                        all_text_data.append(field_value.strip())
+                                
+                                if all_text_data:
+                                    education_data, career_data = classify_education_career(all_text_data)
                             
                             # 데이터베이스 업데이트 (기존 데이터가 없을 때만)
                             if education_data and (not member.education or member.education.strip() == ''):
@@ -598,28 +606,31 @@ def supplement_missing_education_career():
                             if member_updated:
                                 updated_count += 1
                                 print(f"   ✅ {member.name} 정보 업데이트 완료!")
-                            else:
-                                print(f"   ⚠️ {member.name} 헌정회에서도 학력/경력 정보 없음")
                             
                             break
-                    
-                    if not member_updated:
-                        print(f"   ❌ {member.name} 헌정회에서 데이터 없음")
                 
-                # API 부하 방지를 위한 대기
-                time.sleep(2)
+                # 🚀 배치 커밋 최적화 🚀
+                batch_count += 1
+                if batch_count >= batch_size or i == len(members_without_info) - 1:
+                    db.session.commit()
+                    print(f"   💾 배치 커밋 완료 ({batch_count}명)")
+                    batch_count = 0
+                
+                # API 부하 방지 (대기시간 단축)
+                time.sleep(0.5)  # 2초 → 0.5초로 단축
                 
             except Exception as e:
                 print(f"❌ {member.name} 처리 중 오류: {str(e)}")
                 continue
         
-        # 변경사항 저장
+        # 최종 커밋
         db.session.commit()
         
         print(f"\n🎉 헌정회 API 보완 완료!")
         print(f"총 {updated_count}명의 의원 학력/경력 정보 추가됨")
         
         return updated_count
+        
 def fix_duplicate_members():
     """기존 중복된 국회의원 데이터 정리"""
     with app.app_context():
