@@ -190,12 +190,20 @@ def sync_members_from_api():
                     
                     if not name:
                         continue
-                
-                    # 🔥 CSV 필터링 먼저
+
+                    # 🔥 API 대수 정보로 먼저 필터링
+                    api_age = row.findtext('AGE', '').strip()
+                    if api_age and api_age not in ['20', '21', '22']:
+                        print(f"   ❌ 이전 대수: {name} ({api_age}대)")
+                        continue
+                    
+                    # 🔥 CSV 필터링 (그대로 유지!)
                     matched_terms = [term for (csv_name, term) in csv_data.keys() 
                                      if csv_name == name and term in [20, 21, 22]]
                     if not matched_terms:
                         continue  # CSV에 없으면 건너뜀
+                    
+                    print(f"   ✅ API+CSV 일치: {name} (API: {api_age}대)")
 
                     member_key = (name, birth_str)
                     if member_key in processed_members:
