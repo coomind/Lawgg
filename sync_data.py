@@ -94,7 +94,74 @@ def test_api_connection():
         return False
         
 # sync_data.py 수정 - 학력/경력 정보 수집 개선
-
+def classify_education_career(text_data):
+    """텍스트 데이터를 학력과 경력으로 분류하는 공통 함수"""
+    education_data = []
+    career_data = []
+    
+    # 입력 데이터가 리스트가 아니면 리스트로 변환
+    if isinstance(text_data, str):
+        if '\n' in text_data:
+            items = [item.strip() for item in text_data.split('\n') if item.strip()]
+        elif ',' in text_data:
+            items = [item.strip() for item in text_data.split(',') if item.strip()]
+        else:
+            items = [text_data]
+    else:
+        items = text_data
+    
+    for item in items:
+        if len(item) > 3:  # 너무 짧은 항목 제외
+            # 🎓 학력 키워드 확장
+            education_keywords = [
+                '학교', '학원', '대학교', '고등학교', '중학교', '초등학교', 
+                '대학원', '학과', '졸업', '수료', '입학', '전공', '학부',
+                '석사', '박사', '학위', '대학', '고교', '중학', '초교'
+            ]
+            
+            # 💼 경력 키워드 확장
+            career_keywords = [
+                '대표', '사장', '회장', '이사', '부장', '과장', '팀장',
+                '의원', '장관', '차관', '국장', '실장', '센터장',
+                '연구소', '재단', '협회', '위원회', '위원장', '이사장',
+                '변호사', '의사', '교수', '연구원', '기자', '작가',
+                '대통령', '시장', '도지사', '구청장', '군수', '국회의원',
+                '공무원', '판사', '검사', '경찰', '군인', '소방관'
+            ]
+            
+            # 1차: 명확한 경력 키워드 체크
+            is_career = any(keyword in item for keyword in career_keywords)
+            
+            # 2차: 명확한 학력 키워드 체크
+            is_education = any(keyword in item for keyword in education_keywords)
+            
+            if is_career and not is_education:
+                career_data.append(item)
+                print(f"      💼 경력: {item}")
+            elif is_education and not is_career:
+                education_data.append(item)
+                print(f"      🎓 학력: {item}")
+            elif is_education:
+                # 둘 다 해당하면 학력 우선
+                education_data.append(item)
+                print(f"      🎓 학력 (우선): {item}")
+            else:
+                # 애매한 경우 길이와 패턴으로 판단
+                if any(char in item for char in ['년', '월']) and len(item) > 15:
+                    # 날짜가 포함되고 긴 텍스트는 경력일 가능성
+                    career_data.append(item)
+                    print(f"      💼 경력 (추정): {item}")
+                elif len(item) < 20:
+                    # 짧은 텍스트는 학력일 가능성
+                    education_data.append(item)
+                    print(f"      🎓 학력 (추정): {item}")
+                else:
+                    # 기본적으로 경력으로 분류
+                    career_data.append(item)
+                    print(f"      💼 경력 (기본): {item}")
+    
+    return education_data, career_data
+    
 def sync_members_from_api():
     """국회 OpenAPI에서 국회의원 정보 동기화 (학력/경력 포함)"""
     with app.app_context():
@@ -194,33 +261,16 @@ def sync_members_from_api():
                     # API에서 제공되는 다양한 필드들 확인
                     # 🔥 BRF_HST 필드에서 학력/경력 정보 추출 🔥
                     brf_hst = row.findtext('BRF_HST', '').strip()
-                    education_data = []
-                    career_data = []
-                    
+
                     if brf_hst:
                         print(f"   📋 {name} BRF_HST: {brf_hst[:100]}...")
                         
-                        # BRF_HST는 보통 줄바꿈이나 특정 구분자로 분리됨
-                        items = []
-                        if '\n' in brf_hst:
-                            items = [item.strip() for item in brf_hst.split('\n') if item.strip()]
-                        elif ',' in brf_hst:
-                            items = [item.strip() for item in brf_hst.split(',') if item.strip()]
-                        else:
-                            items = [brf_hst]
-                        
-                        for item in items:
-                            if len(item) > 3:  # 너무 짧은 항목 제외
-                                # 학력 키워드 체크
-                                education_keywords = ['학교', '학원', '대학교', '고등학교', '중학교', '초등학교', '대학원', '학과', '졸업', '수료', '입학']
-                                
-                                if any(keyword in item for keyword in education_keywords):
-                                    education_data.append(item)
-                                    print(f"   🎓 학력: {item}")
-                                else:
-                                    career_data.append(item)
-                                    print(f"   💼 경력: {item}")
-                    
+                        # 🔥 공통 분류 함수 사용 🔥
+                        education_data, career_data = classify_education_career(brf_hst)
+                    else:
+                        education_data = []
+                        career_data = []
+                                        
                     # 생년월일에서 출생연도 추출
                     birth_year = None
                     if birth_str and len(birth_str) >= 4:
@@ -589,7 +639,109 @@ def update_missing_education_career():
                 print(f"... 외 {len(members_without_info) - 5}명")
         
         return len(members_without_info)
+
+
+def supplement_missing_education_career():
+    """학력/경력이 없는 의원들을 헌정회 API로 보완"""
+    with app.app_context():
+        print("\n=== 학력/경력 누락 의원 헌정회 API로 보완 ===")
         
+        # 학력/경력이 없는 의원들 찾기
+        members_without_info = Member.query.filter(
+            or_(
+                Member.education.is_(None),
+                Member.education == '',
+                Member.career.is_(None), 
+                Member.career == ''
+            )
+        ).all()
+        
+        print(f"학력/경력 정보가 없는 의원: {len(members_without_info)}명")
+        
+        if len(members_without_info) == 0:
+            print("모든 의원의 학력/경력 정보가 있습니다.")
+            return 0
+        
+        updated_count = 0
+        
+        for member in members_without_info:
+            print(f"\n🔍 {member.name} 헌정회 API 조회 중...")
+            
+            # 헌정회 API 호출
+            url = f"{BASE_URL}/nprlapfmaufmqytet"
+            params = {
+                'KEY': API_KEY,
+                'Type': 'xml',
+                'pIndex': 1,
+                'pSize': 100,
+                'NAME': member.name
+            }
+            
+            try:
+                response = requests.get(url, params=params, timeout=30)
+                
+                if response.status_code == 200 and 'INFO-000' in response.text:
+                    root = ET.fromstring(response.content)
+                    rows = root.findall('.//row')
+                    
+                    member_updated = False
+                    
+                    for row in rows:
+                        api_name = row.findtext('NAME', '').strip()
+                        
+                        # 이름이 정확히 일치하는지 확인
+                        if api_name == member.name:
+                            print(f"   ✅ {member.name} 헌정회 데이터 발견!")
+                            
+                            # 모든 필드에서 데이터 수집
+                            all_text_data = []
+                            
+                            for child in row:
+                                field_name = child.tag
+                                field_value = child.text
+                                if field_value and field_value.strip() and len(field_value.strip()) > 3:
+                                    all_text_data.append(field_value.strip())
+                                    print(f"      📋 {field_name}: {field_value[:50]}...")
+                            
+                            # 🔥 공통 분류 함수 사용 🔥
+                            education_data, career_data = classify_education_career(all_text_data)
+                            
+                            # 데이터베이스 업데이트 (기존 데이터가 없을 때만)
+                            if education_data and (not member.education or member.education.strip() == ''):
+                                member.education = ','.join(education_data)
+                                print(f"   📚 학력 업데이트: {len(education_data)}개 항목")
+                                member_updated = True
+                            
+                            if career_data and (not member.career or member.career.strip() == ''):
+                                member.career = ','.join(career_data)
+                                print(f"   💼 경력 업데이트: {len(career_data)}개 항목")
+                                member_updated = True
+                            
+                            if member_updated:
+                                updated_count += 1
+                                print(f"   ✅ {member.name} 정보 업데이트 완료!")
+                            else:
+                                print(f"   ⚠️ {member.name} 헌정회에서도 학력/경력 정보 없음")
+                            
+                            break
+                    
+                    if not member_updated:
+                        print(f"   ❌ {member.name} 헌정회에서 데이터 없음")
+                
+                # API 부하 방지를 위한 대기
+                time.sleep(2)
+                
+            except Exception as e:
+                print(f"❌ {member.name} 처리 중 오류: {str(e)}")
+                continue
+        
+        # 변경사항 저장
+        db.session.commit()
+        
+        print(f"\n🎉 헌정회 API 보완 완료!")
+        print(f"총 {updated_count}명의 의원 학력/경력 정보 추가됨")
+        
+        return updated_count
 def fix_duplicate_members():
     """기존 중복된 국회의원 데이터 정리"""
     with app.app_context():
@@ -842,7 +994,7 @@ def sync_all_data():
     sync_bills_from_api()
     
     print("\n🎉 전체 동기화 완료!")
-
+    
 def cleanup_and_sync():
     """중복 정리 후 전체 동기화"""
     print("\n🧹 데이터 정리 및 동기화 시작!")
