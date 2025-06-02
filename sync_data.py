@@ -192,19 +192,30 @@ def sync_members_from_api():
                         continue
 
                     # 🔥 API 대수 정보로 먼저 필터링
-                    api_age = row.findtext('AGE', '').strip()
-                    if api_age and api_age not in ['20', '21', '22']:
-                        print(f"   ❌ 이전 대수: {name} ({api_age}대)")
-                        continue
+                    api_sessions = row.findtext('GTELT_ERACO', '').strip()
+                    if api_sessions:
+                        print(f"   🔍 API 대수 정보: {name} - {api_sessions}")
+                        
+                        # 20, 21, 22대가 포함되어 있는지 확인
+                        has_modern_session = False
+                        if any(session in api_sessions for session in ['제20대', '제21대', '제22대', '20대', '21대', '22대']):
+                            has_modern_session = True
+                            print(f"   ✅ 현재 대수 포함: {name}")
+                        
+                        if not has_modern_session:
+                            print(f"   ❌ 이전 대수만 포함: {name} ({api_sessions})")
+                            continue
+                    else:
+                        print(f"   ⚠️ API 대수 정보 없음: {name} - 일단 통과")
                     
-                    # 🔥 CSV 필터링 (그대로 유지!)
+                    # 🔥 CSV 필터링 (기존 코드 그대로 유지!)
                     matched_terms = [term for (csv_name, term) in csv_data.keys() 
                                      if csv_name == name and term in [20, 21, 22]]
                     if not matched_terms:
                         continue  # CSV에 없으면 건너뜀
                     
-                    print(f"   ✅ API+CSV 일치: {name} (API: {api_age}대)")
-
+                    print(f"   ✅ API+CSV 일치: {name}")
+                    
                     member_key = (name, birth_str)
                     if member_key in processed_members:
                         print(f"   ⏭️ 이미 처리됨: {name} ({birth_str})")
