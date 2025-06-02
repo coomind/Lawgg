@@ -146,7 +146,7 @@ def sync_members_from_api():
         page = 1
         page_size = 1000
         total_processed = 0
-        
+        processed_members = set()
         while True:
             print(f"\n--- {page}페이지 처리 중 ---")
         
@@ -176,7 +176,7 @@ def sync_members_from_api():
         
                 if len(rows) == 0:
                     break
-                processed_members = set()
+                
                 for row in rows:
                     name = (row.findtext('HG_NM', '') or 
                             row.findtext('NAAS_NM', '') or 
