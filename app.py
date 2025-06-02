@@ -319,18 +319,6 @@ def member_detail(member_id):
     
     print(f"디버그 - {member.name}: 학력 {len(education)}개, 경력 {len(career)}개")
     
-    # 중복 제거 (순서 유지)
-    def remove_duplicates(items):
-        seen = set()
-        result = []
-        for item in items:
-            if item not in seen:
-                seen.add(item)
-                result.append(item)
-        return result
-    
-    education = remove_duplicates(education)
-    career = remove_duplicates(career)
     
     member_data = {
         'id': member.id,
