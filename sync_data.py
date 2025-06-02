@@ -271,34 +271,7 @@ def sync_members_from_api():
                     if not matched_terms or (age is not None and age > 90):
                         continue  # CSV에 없으면 건너뜀
 
-                    # 🔥 중복 방지 로직 개선 (김문수 중복 문제 해결) 🔥
-                    # 1단계: 이름만으로 먼저 찾기
-                    existing_member = Member.query.filter_by(name=name).first()
-                    
-                    if existing_member:
-                        # 기존 의원이 있으면 업데이트
-                        member = existing_member
-                        print(f"🔄 기존 의원 업데이트: {name}")
-                        
-                        # 생년월일이 비어있거나 다르면 업데이트
-                        if not member.birth_date and birth_str:
-                            member.birth_date = birth_str
-                            print(f"   📅 생년월일 업데이트: {birth_str}")
-                        elif member.birth_date != birth_str and birth_str:
-                            print(f"   ⚠️ 생년월일 불일치: 기존({member.birth_date}) vs 새로운({birth_str})")
-                            # 더 완전한 데이터를 선택 (길이가 더 긴 것)
-                            if len(birth_str) > len(member.birth_date or ''):
-                                member.birth_date = birth_str
-                                print(f"   📅 더 완전한 생년월일로 업데이트: {birth_str}")
-                    else:
-                        # 새로운 의원 생성
-                        member = Member(
-                            name=name, 
-                            birth_date=birth_str, 
-                            view_count=0
-                        )
-                        db.session.add(member)
-                        print(f"✨ 신규 의원: {name}")
+                    member = find_or_create_member(name, birth_str, matched_terms)
                     
                     # 🔥 학력/경력 정보 업데이트 🔥
                     if education_data:
@@ -364,9 +337,18 @@ def sync_members_from_api():
                             photo_url = (row.findtext('jpgLink', '') or 
                                         row.findtext('NAAS_PIC', ''))
                             if photo_url:
-                                if not member.photo_url or term > (member.current_session or 0):
+                                # 생년월일이 일치하는 경우에만 사진 업데이트
+                                api_birth = row.findtext('BIRDY_DT', '').strip()
+                                
+                                if api_birth and member.birth_date == api_birth:
                                     member.photo_url = photo_url
-                                    print(f"   📸 사진 URL 업데이트: {name}")
+                                    print(f"   📸 사진 URL 업데이트: {name} (생년월일 일치: {api_birth})")
+                                elif not member.photo_url and not api_birth:
+                                    # 생년월일 정보가 없고 기존 사진도 없는 경우만
+                                    member.photo_url = photo_url
+                                    print(f"   📸 사진 URL 업데이트: {name} (생년월일 정보 없음)")
+                                else:
+                                    print(f"   ⚠️ 사진 URL 건너뛰기: {name} (생년월일 불일치 또는 이미 사진 있음)")
                             
                             if birth_year:
                                 member.age = birth_year
@@ -733,6 +715,49 @@ def sync_bills_from_api():
         total_bills = Bill.query.count()
         print(f"데이터베이스 총 법률안: {total_bills}건")
 
+def find_or_create_member(name, birth_str, matched_terms):
+    """이름과 생년월일로 의원을 찾거나 새로 생성"""
+    
+    # 1단계: 이름이 같은 모든 의원 찾기
+    same_name_members = Member.query.filter_by(name=name).all()
+    
+    if not same_name_members:
+        # 새로운 의원 생성
+        member = Member(name=name, birth_date=birth_str, view_count=0)
+        db.session.add(member)
+        print(f"✨ 신규 의원: {name} (생년월일: {birth_str})")
+        return member
+    
+    # 2단계: 생년월일로 매칭 시도
+    if birth_str:
+        for member in same_name_members:
+            if member.birth_date == birth_str:
+                print(f"🔄 기존 의원 매칭: {name} (생년월일: {birth_str})")
+                return member
+    
+    # 3단계: 대수로 매칭 시도 (생년월일이 없는 경우)
+    for member in same_name_members:
+        member_terms = set(member.get_session_list())
+        new_terms = set(matched_terms)
+        
+        # 겹치는 대수가 있으면 같은 사람
+        if member_terms & new_terms:
+            print(f"🔄 대수로 매칭: {name} (공통 대수: {member_terms & new_terms})")
+            # 생년월일 업데이트
+            if birth_str and not member.birth_date:
+                member.birth_date = birth_str
+                print(f"   📅 생년월일 업데이트: {birth_str}")
+            return member
+    
+    # 4단계: 동명이인으로 판단하여 새로 생성
+    print(f"👥 동명이인 발견: {name}")
+    print(f"   기존: {[f'{m.birth_date}({m.get_session_list()})' for m in same_name_members]}")
+    print(f"   신규: {birth_str}({matched_terms})")
+    
+    member = Member(name=name, birth_date=birth_str, view_count=0)
+    db.session.add(member)
+    return member
+    
 def sync_all_data():
     """국회의원 + 법률안 전체 동기화"""
     print("\n🚀 전체 데이터 동기화 시작!")
