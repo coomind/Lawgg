@@ -190,6 +190,12 @@ def sync_members_from_api():
                     
                     if not name:
                         continue
+                
+                    # 🔥 CSV 필터링 먼저
+                    matched_terms = [term for (csv_name, term) in csv_data.keys() 
+                                     if csv_name == name and term in [20, 21, 22]]
+                    if not matched_terms:
+                        continue  # CSV에 없으면 건너뜀
 
                     member_key = (name, birth_str)
                     if member_key in processed_members:
@@ -272,10 +278,7 @@ def sync_members_from_api():
                     age = datetime.now().year - birth_year if birth_year else None
 
                     # CSV에서 매칭되는 대수들 찾기
-                    matched_terms = [term for (csv_name, term) in csv_data.keys() 
-                                     if csv_name == name and term in [20, 21, 22]]
-                    if not matched_terms:
-                        continue  # CSV에 없으면 건너뜀
+                    
 
                     processed_members.add(member_key)
                     print(f"   ✅ 처리: {name} ({birth_str}) - {matched_terms}대")
