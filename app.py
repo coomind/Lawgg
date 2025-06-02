@@ -309,11 +309,9 @@ def member_detail(member_id):
     education = []
     career = []
     
-    # education 필드에서 학력 추출 (문자열을 리스트로 변환)
     if member.education and member.education.strip():
         education = [item.strip() for item in member.education.split(',') if item.strip()]
     
-    # career 필드에서 경력 추출 (문자열을 리스트로 변환)  
     if member.career and member.career.strip():
         career = [item.strip() for item in member.career.split(',') if item.strip()]
     
