@@ -868,10 +868,7 @@
     </main>
 
     <script>
-        // PROPdetail.html의 <script> 태그 안의 전체 내용을 이것으로 교체
-
-        // API 베이스 URL 설정
-        // PROPdetail.html의 <script> 태그 안의 전체 내용을 이것으로 교체
+                // PROPdetail.html의 <script> 태그 안의 전체 내용을 이것으로 교체
 
         // API 베이스 URL 설정
         const proposalId = {{ proposal.id }};
@@ -934,9 +931,8 @@
             initializeLikeStates();
         });
 
-        // ✅ 개선된 좋아요 초기 상태 적용 함수
+        // ✅ 좋아요 초기 상태 적용 함수 추가
         function initializeLikeStates() {
-            // 좋아요 상태 적용
             document.querySelectorAll('.like-btn').forEach(btn => {
                 const commentId = parseInt(btn.dataset.commentId);
                 if (likedComments.has(commentId)) {
@@ -944,18 +940,13 @@
                 }
             });
             
-            // 신고 상태 적용
+            // 신고 상태도 초기화
             document.querySelectorAll('.report-btn').forEach(btn => {
                 const commentId = parseInt(btn.dataset.commentId);
                 if (reportedComments.has(commentId)) {
                     btn.classList.add('reported');
                     btn.textContent = '신고됨';
                 }
-            });
-            
-            console.log('초기 상태 적용 완료:', {
-                likedComments: Array.from(likedComments),
-                reportedComments: Array.from(reportedComments)
             });
         }
 
@@ -1138,7 +1129,7 @@
             }
         }
 
-        // ✅ 개선된 댓글을 리스트에 추가 함수
+        // ✅ 댓글을 리스트에 추가 (답글 구조 개선)
         function addCommentToList(comment, isReply = false) {
             const commentHtml = createCommentHtml(comment, isReply);
             
@@ -1161,11 +1152,6 @@
                     }
                     
                     insertAfter.insertAdjacentElement('afterend', newComment);
-                    
-                    // ✅ 새로 추가된 요소에 이벤트 바로 적용
-                    setTimeout(() => {
-                        initializeLikeStates();
-                    }, 100);
                 }
             } else {
                 // 일반 댓글인 경우: 맨 위에 추가
@@ -1175,23 +1161,16 @@
                 } else {
                     commentsList.innerHTML = commentHtml;
                 }
-                
-                // ✅ 새로 추가된 요소에 이벤트 바로 적용
-                setTimeout(() => {
-                    initializeLikeStates();
-                }, 100);
             }
         }
 
         // 댓글 HTML 생성
-        // ✅ 개선된 댓글 HTML 생성 함수
         function createCommentHtml(comment, isReply = false) {
             const stanceText = comment.stance === 'agree' ? '찬성' : '반대';
             const stanceClass = comment.stance === 'agree' ? 'agree' : 'disagree';
             const replyClass = isReply ? 'reply' : '';
             const underReviewClass = comment.is_under_review ? 'comment-under-review' : '';
             const underReviewBadge = comment.is_under_review ? '<span class="under-review-badge">검토 중</span>' : '';
-            const likedClass = comment.is_liked_by_user ? 'liked' : '';
 
             return `
                 <div class="comment-item ${replyClass} ${underReviewClass}" 
@@ -1207,7 +1186,7 @@
                     <div class="comment-content">${comment.content}</div>
                     <div class="comment-actions">
                         <button class="comment-action-btn reply-btn" data-comment-id="${comment.id}">답글</button>
-                        <button class="comment-action-btn like-btn ${likedClass}" data-comment-id="${comment.id}">
+                        <button class="comment-action-btn like-btn" data-comment-id="${comment.id}">
                             <span class="like-icon">👍</span>
                             <span class="like-count">${comment.like_count || 0}</span>
                         </button>
@@ -1221,58 +1200,31 @@
                 </div>
             `;
         }
+
         // ========== 답글 관련 함수들 ==========
 
-        // ✅ 개선된 좋아요 처리 함수
-        async function handleLikeClick(e) {
-            e.preventDefault();
+        // 답글 버튼 클릭 처리
+        function handleReplyClick(e) {
+            const commentId = e.target.dataset.commentId;
+            const replyForm = document.getElementById(`reply-form-${commentId}`);
             
-            const likeBtn = e.target.closest('.like-btn');
-            const commentId = parseInt(likeBtn.dataset.commentId);
-            const likeCountEl = likeBtn.querySelector('.like-count');
-            
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/comments/${commentId}/like`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                });
-
-                if (response.ok) {
-                    const result = await response.json();
-                    
-                    console.log('좋아요 처리 결과:', result);
-                    
-                    // ✅ 서버 응답에 따라 UI와 상태 모두 업데이트
-                    if (result.liked) {
-                        likeBtn.classList.add('liked');
-                        likedComments.add(commentId);
-                    } else {
-                        likeBtn.classList.remove('liked');
-                        likedComments.delete(commentId);
-                    }
-                    
-                    likeCountEl.textContent = result.like_count;
-                    
-                    console.log('좋아요 상태 업데이트 완료:', {
-                        commentId,
-                        liked: result.liked,
-                        likeCount: result.like_count,
-                        currentLikedComments: Array.from(likedComments)
-                    });
-                    
-                } else {
-                    const error = await response.json();
-                    showMessage(error.message || '좋아요 처리 중 오류가 발생했습니다.', 'error');
+            // 다른 답글 폼들 숨기기
+            document.querySelectorAll('.reply-form').forEach(form => {
+                if (form.id !== `reply-form-${commentId}`) {
+                    form.classList.remove('show');
                 }
-            } catch (error) {
-                console.error('좋아요 오류:', error);
-                showMessage('네트워크 오류가 발생했습니다.', 'error');
+            });
+            
+            // 현재 답글 폼 토글
+            replyForm.classList.toggle('show');
+            
+            if (replyForm.classList.contains('show')) {
+                const textarea = replyForm.querySelector('.reply-input');
+                textarea.focus();
             }
         }
 
-        // ✅ 개선된 답글 작성 처리 함수
+        // 답글 작성 처리
         async function handleReplySubmit(e) {
             const parentId = e.target.dataset.parentId;
             const replyForm = e.target.closest('.reply-form');
@@ -1298,9 +1250,6 @@
 
                 if (response.ok) {
                     const reply = await response.json();
-                    
-                    // ✅ 서버에서 받은 데이터 그대로 사용
-                    console.log('답글 저장 성공:', reply);
                     
                     // 답글 추가
                     addCommentToList(reply, true);
