@@ -245,7 +245,12 @@ def members_list():
     # 🔥 Python에서 한글 가나다순 정렬
     query = Member.query
     if party and party != '전체':
-        query = query.filter(Member.party.contains(party))
+        if party == '기타':
+            # 주요 4개 정당에 속하지 않는 의원들
+            major_parties = ['더불어민주당', '국민의힘', '정의당', '국민의당']
+            query = query.filter(~db.or_(*[Member.party.contains(p) for p in major_parties]))
+        else:
+            query = query.filter(Member.party.contains(party))
     
     all_members = query.all()
     
@@ -273,7 +278,7 @@ def members_list():
         {'code': '국민의힘', 'name': '국민의힘'},
         {'code': '정의당', 'name': '정의당'},
         {'code': '국민의당', 'name': '국민의당'},
-        {'code': '무소속', 'name': '무소속'}
+        {'code': '기타', 'name': '기타'}
     ]
     
     # 페이지네이션 데이터 재구성
