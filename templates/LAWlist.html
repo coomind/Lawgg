@@ -615,6 +615,27 @@
         let currentSearchTerm = PAGE_CONFIG.currentSearchTerm;
         let isLoading = false;
 
+        // 위원회 매핑 객체 (원래 HTML에서 가져온 코드)
+        const COMMITTEE_MAPPING = {
+            'all': '',
+            'legislation': '법제사법위원회',
+            'women': '여성가족위원회', 
+            'intelligence': '정보위원회',
+            'transport': '국토교통위원회',
+            'environment': '환경노동위원회',
+            'health': '보건복지위원회',
+            'industry': '산업통상자원중소벤처기업위원회',
+            'agriculture': '농림축산식품해양수산위원회',
+            'culture': '문화체육관광위원회',
+            'administration': '행정안전위원회',
+            'defense': '국방위원회',
+            'foreign': '외교통일위원회',
+            'science': '과학기술정보방송통신위원회',
+            'education': '교육위원회',
+            'finance': '기획재정위원회',
+            'political': '정무위원회',
+            'operation': '국회운영위원회'
+        };
         // API 호출 (서버사이드 렌더링이 아닌 AJAX 요청이 필요한 경우)
         async function fetchBills(params = {}) {
             const queryParams = new URLSearchParams({
@@ -764,10 +785,13 @@
 
         // 이벤트 리스너 설정
         document.addEventListener('DOMContentLoaded', function() {
+            // 현재 활성 위원회 표시
             const currentCommittee = '{{ current_committee or "" }}';
             document.querySelectorAll('.committee-item').forEach(item => {
-                const itemCommittee = item.getAttribute('data-committee');
-                if (itemCommittee === currentCommittee) {
+                const committeeKey = item.getAttribute('data-committee');
+                const committeeName = COMMITTEE_MAPPING[committeeKey] || '';  // 매핑을 통해 실제 위원회 이름 얻기
+                
+                if (committeeName === currentCommittee) {  // 실제 위원회 이름으로 비교
                     item.classList.add('active');
                 } else {
                     item.classList.remove('active');
@@ -778,7 +802,8 @@
                 item.addEventListener('click', function(e) {
                     e.preventDefault();
                     
-                    const committee = this.getAttribute('data-committee');
+                    const committeeKey = this.getAttribute('data-committee');
+                    const committee = COMMITTEE_MAPPING[committeeKey] || '';
                     
                     // 페이지 로드 (URL 변경)
                     loadPage({
