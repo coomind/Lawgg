@@ -685,6 +685,10 @@
                          <span class="info-label">대표발의자:</span>
                          <span class="info-value">{{ bill.proposer }}</span>
                      </div>
+                     <div class="info-row">
+                         <span class="info-label">본회의심의결과:</span>
+                         <span class="info-value">{{ bill.assembly_result }}</span>
+                     </div>       
               </div>
               <button class="view-detail-btn" onclick="viewBillDetail('{{ bill.detail_link }}')">의안 상세</button>
           </div>
