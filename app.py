@@ -885,9 +885,7 @@ def add_bill_comment(bill_id):
 def crawl_bill_content(bill_number):
     """국회 법률안 상세 페이지에서 제안이유 및 주요내용 크롤링"""
     if not bill_number:
-        return {
-            'content': ''  
-        }
+        return {'content': ''}
     
     url = f"https://likms.assembly.go.kr/bill/billDetail.do?billId={bill_number}"
     
@@ -895,36 +893,25 @@ def crawl_bill_content(bill_number):
         response = requests.get(url, timeout=10)
         soup = BeautifulSoup(response.content, 'html.parser')
         
-        # 제안이유 및 주요내용 섹션 찾기
         content_text = soup.get_text()
         
-        # "제안이유 및 주요내용" 부분 추출
         if "제안이유 및 주요내용" in content_text:
             start_idx = content_text.find("제안이유 및 주요내용")
-            # 적당한 길이로 추출
-            content = content_text[start_idx:start_idx+2000]
+            content = content_text[start_idx:start_idx+5000]
             
-            # 문장 단위로 분리
-            sentences = [s.strip() for s in content.split('.') if s.strip()]
+            # 불필요한 공백과 줄바꿈 정리
+            import re
+            content = re.sub(r'\n+', '\n', content)  # 연속된 줄바꿈을 하나로
+            content = re.sub(r' +', ' ', content)    # 연속된 공백을 하나로
+            content = content.strip()
             
-            # 제안배경과 주요내용 분리
-            mid_point = len(sentences) // 2
-            
-            proposal_reason = '. '.join(sentences[1:mid_point])[:400]  # 첫 문장 제외
-            main_content = '. '.join(sentences[mid_point:])[:400]
-            
-            return {
-                'content': content[:2000] if content else '' 
-            }
+            return {'content': content[:2000] if content else ''}
             
     except Exception as e:
         print(f"크롤링 오류: {e}")
     
-    # 크롤링 실패 시 빈 값 반환
-    return {
-        'content': ''  
-    }
-
+    return {'content': ''}
+    
 @app.route('/api/proposals/<int:proposal_id>/vote', methods=['POST'])
 def vote_proposal(proposal_id):
     data = request.get_json()
