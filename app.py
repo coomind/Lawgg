@@ -380,7 +380,7 @@ def bills_list():
     search = request.args.get('search', '')
     per_page = 20
     
-    query = Bill.query
+    query = Bill.query.order_by(Bill.name.asc())
     
     if committee:
         query = query.filter_by(committee=committee)
