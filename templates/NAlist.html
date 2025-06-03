@@ -19,6 +19,14 @@
             line-height: 1.4;
         }
 
+   .hidden-row {
+           display: none !important;
+       }
+    
+       .party-match {
+           background-color: #e3f2fd !important;
+       }
+
         /* 헤더 */
         .header {
             background: white;
@@ -420,7 +428,13 @@
                         {% endif %}
                     </div>
                     <div class="member-name">{{ member.name or '-' }}</div>
-                    <div class="member-party">{{ member.party or '-' }}</div>
+                    <div class="member-party">
+                {% if member.parties %}
+                    {{ member.parties|join(', ') }}
+                {% else %}
+                    {{ member.party or '-' }}
+                {% endif %}
+         </div>
                     <div class="member-age">
                         {% if member.age %}
                             {{ member.age }}세
@@ -560,19 +574,50 @@
         // 이벤트 리스너 설정
         document.addEventListener('DOMContentLoaded', function() {
             // 정당 탭 클릭 이벤트
-            document.querySelectorAll('.party-tab').forEach(tab => {
-                tab.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    
-                    const party = this.getAttribute('data-party');
-                    
-                    // 페이지 로드 (URL 변경)
-                    loadPage({
-                        party: party,
-                        page: 1
-                    });
-                });
-            });
+            // 정당명 파싱 함수 추가
+      function parsePartyNames(partyString) {
+             if (!partyString || partyString === '-') return [];
+    
+             const separators = ['/', '·', ',', '&', '및'];
+             let parties = [partyString.trim()];
+    
+             separators.forEach(sep => {
+                 const newParties = [];
+                 parties.forEach(party => {
+                       party.split(sep).forEach(p => {
+                            const trimmed = p.trim();
+                            if (trimmed) newParties.push(trimmed);
+                        });
+                 });
+                 parties = newParties;
+             });
+    
+             return parties;
+      }
+
+      // 필터링 함수 추가
+      function filterMembersByParty(selectedParty) {
+             const allRows = document.querySelectorAll('.table-row');
+    
+             allRows.forEach(row => {
+                 const partyElement = row.querySelector('.member-party');
+                 if (!partyElement) return;
+        
+                 const partyText = partyElement.textContent.trim();
+                 const memberParties = parsePartyNames(partyText);
+        
+                 if (selectedParty === '전체' || selectedParty === '') {
+                        row.style.display = '';
+                        return;
+                 }
+        
+                 const isMatch = memberParties.some(party => 
+                        party.includes(selectedParty) || selectedParty.includes(party)
+                 );
+        
+                 row.style.display = isMatch ? '' : 'none';
+             });
+      }
 
             // 테이블 행 클릭 이벤트
             document.querySelectorAll('.table-row').forEach(row => {
