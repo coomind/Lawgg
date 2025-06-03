@@ -243,6 +243,7 @@
             font-size: 12px;
             font-weight: 600;
             box-shadow: 0 2px 4px rgba(52, 152, 219, 0.3);
+            flex-shrink: 0;
         }
 
         .view-count {
@@ -257,10 +258,15 @@
             display: flex;
             flex-direction: column;
             gap: 2px;
+            flex: 1;
+            min-width: 0;
         }
 
         .bill-title, .member-name {
             font-weight: 500;
+            overflow: hidden; /* 🔥 추가 */
+            text-overflow: ellipsis; /* 🔥 추가 */
+            white-space: nowrap;
         }
 
         .bill-status, .member-party {
