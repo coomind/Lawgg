@@ -976,6 +976,11 @@ def crawl_bill_content(bill_number):
                 content = '\n'.join(lines)
                 
                 return {'content': content}
+
+    except Exception as e:
+            print(f"크롤링 오류: {e}")
+        
+    return {'content': ''}
     
 @app.route('/api/proposals/<int:proposal_id>/vote', methods=['POST'])
 def vote_proposal(proposal_id):
