@@ -571,73 +571,88 @@
             return age;
         }
 
-        // 이벤트 리스너 설정
-        document.addEventListener('DOMContentLoaded', function() {
-            // 정당 탭 클릭 이벤트
-            // 정당명 파싱 함수 추가
-      function parsePartyNames(partyString) {
-             if (!partyString || partyString === '-') return [];
+        // 정당명 파싱 함수 (전역 함수로 이동)
+function parsePartyNames(partyString) {
+    if (!partyString || partyString === '-') return [];
     
-             const separators = ['/', '·', ',', '&', '및'];
-             let parties = [partyString.trim()];
+    const separators = ['/', '·', ',', '&', '및'];
+    let parties = [partyString.trim()];
     
-             separators.forEach(sep => {
-                 const newParties = [];
-                 parties.forEach(party => {
-                       party.split(sep).forEach(p => {
-                            const trimmed = p.trim();
-                            if (trimmed) newParties.push(trimmed);
-                        });
-                 });
-                 parties = newParties;
-             });
-    
-             return parties;
-      }
-
-      // 필터링 함수 추가
-      function filterMembersByParty(selectedParty) {
-             const allRows = document.querySelectorAll('.table-row');
-    
-             allRows.forEach(row => {
-                 const partyElement = row.querySelector('.member-party');
-                 if (!partyElement) return;
-        
-                 const partyText = partyElement.textContent.trim();
-                 const memberParties = parsePartyNames(partyText);
-        
-                 if (selectedParty === '전체' || selectedParty === '') {
-                        row.style.display = '';
-                        return;
-                 }
-        
-                 const isMatch = memberParties.some(party => 
-                        party.includes(selectedParty) || selectedParty.includes(party)
-                 );
-        
-                 row.style.display = isMatch ? '' : 'none';
-             });
-      }
-
-            // 테이블 행 클릭 이벤트
-            document.querySelectorAll('.table-row').forEach(row => {
-                row.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const memberId = this.getAttribute('data-member-id');
-                    const memberName = this.querySelector('.member-name').textContent;
-                    viewMemberDetail(memberId, memberName);
-                });
-            });
-
-            // 사진 오류 처리
-            document.querySelectorAll('.member-photo img').forEach(img => {
-                img.addEventListener('error', function() {
-                    const container = this.parentElement;
-                    const memberName = container.closest('.table-row').querySelector('.member-name').textContent;
-                    container.innerHTML = memberName.charAt(0) || '?';
-                });
+    separators.forEach(sep => {
+        const newParties = [];
+        parties.forEach(party => {
+            party.split(sep).forEach(p => {
+                const trimmed = p.trim();
+                if (trimmed) newParties.push(trimmed);
             });
         });
-    </script>
-</body>
-</html>
+        parties = newParties;
+    });
+    
+    return parties;
+}
+
+// 필터링 함수 (전역 함수로 이동)
+function filterMembersByParty(selectedParty) {
+    const allRows = document.querySelectorAll('.table-row');
+    
+    allRows.forEach(row => {
+        const partyElement = row.querySelector('.member-party');
+        if (!partyElement) return;
+        
+        const partyText = partyElement.textContent.trim();
+        const memberParties = parsePartyNames(partyText);
+        
+        if (selectedParty === '전체' || selectedParty === '') {
+            row.style.display = '';
+            return;
+        }
+        
+        const isMatch = memberParties.some(party => 
+            party.includes(selectedParty) || selectedParty.includes(party)
+        );
+        
+        row.style.display = isMatch ? '' : 'none';
+    });
+}
+
+// 이벤트 리스너 설정
+document.addEventListener('DOMContentLoaded', function() {
+    // 정당 탭 클릭 이벤트 (이 부분이 빠져있었습니다!)
+    document.querySelectorAll('.party-tab').forEach(tab => {
+        tab.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const selectedParty = this.getAttribute('data-party');
+            
+            // 활성 탭 업데이트
+            document.querySelectorAll('.party-tab').forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            
+            // 멤버 필터링 (이게 핵심!)
+            filterMembersByParty(selectedParty);
+            
+            // 전역 변수 업데이트
+            currentParty = selectedParty;
+        });
+    });
+
+    // 테이블 행 클릭 이벤트
+    document.querySelectorAll('.table-row').forEach(row => {
+        row.addEventListener('click', function(e) {
+            e.preventDefault();
+            const memberId = this.getAttribute('data-member-id');
+            const memberName = this.querySelector('.member-name').textContent;
+            viewMemberDetail(memberId, memberName);
+        });
+    });
+
+    // 사진 오류 처리
+    document.querySelectorAll('.member-photo img').forEach(img => {
+        img.addEventListener('error', function() {
+            const container = this.parentElement;
+            const memberName = container.closest('.table-row').querySelector('.member-name').textContent;
+            container.innerHTML = memberName.charAt(0) || '?';
+        });
+    });
+});
