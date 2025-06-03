@@ -365,7 +365,7 @@
     <!-- 헤더 -->
     <header class="header">
         <div class="logo" onclick="goToHome()">
-            <div class="logo-icon">⚖️</div>
+            <div class="logo-icon"⚖️</div>
             <span>LAW.GG</span>
         </div>
         <nav class="nav">
@@ -384,8 +384,8 @@
         <section class="party-section">
             <div class="party-tabs">
                 {% for party in parties %}
-                <a href="#" class="party-tab {% if party.code == current_party %}active{% endif %}" 
-                   data-party="{{ party.code }}">{{ party.name }}</a>
+                <a href="#" class="party-tab {% if current_party in party.related_parties or party.code == current_party %}active{% endif %}" 
+            data-party="{{ party.code }}">{{ party.name }}</a>
                 {% endfor %}
             </div>
         </section>
