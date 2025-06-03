@@ -637,6 +637,12 @@
                 font-size: 14px;
             }
         }
+   .full-width-proposal {
+            grid-column: 1 / -1;
+            margin-top: 20px;
+            border-top: 1px solid #e9ecef;
+            padding-top: 30px;
+        }
     </style>
 </head>
 <body>
@@ -659,67 +665,67 @@
         <div class="unified-content">
             <div class="content-grid">
                <!-- 왼쪽 메인 콘텐츠 -->
-      <div class="main-content">
-             <h1 class="bill-title">{{ bill.name }}</h1>
-    
-             <!-- 법률안 정보 -->
-             <div class="bill-info">
-                 <div class="info-row">
-                        <span class="info-label">의안 번호:</span>
-                        <span class="info-value">{{ bill.number }}</span>
-                 </div>
-                   <div class="info-row">
-                        <span class="info-label">위원회:</span>
-                        <span class="info-value">{{ bill.committee }}</span>
-                 </div>
-                 <div class="info-row">
-                        <span class="info-label">발의연월일:</span>
-                        <span class="info-value">{{ bill.propose_date }}</span>
-                 </div>
-                 <div class="info-row">
-                        <span class="info-label">대표발의자:</span>
-                        <span class="info-value">{{ bill.proposer }}</span>
-                 </div>
-             </div>
+              <div class="main-content">
+              <h1 class="bill-title">{{ bill.name }}</h1>
+              <!-- 법률안 정보 -->
+              <div class="bill-info">
+                     <div class="info-row">
+                         <span class="info-label">의안 번호:</span>
+                         <span class="info-value">{{ bill.number }}</span>
+                     </div>
+                     <div class="info-row">
+                         <span class="info-label">위원회:</span>
+                         <span class="info-value">{{ bill.committee }}</span>
+                     </div>
+                     <div class="info-row">
+                         <span class="info-label">발의연월일:</span>
+                         <span class="info-value">{{ bill.propose_date }}</span>
+                     </div>
+                     <div class="info-row">
+                         <span class="info-label">대표발의자:</span>
+                         <span class="info-value">{{ bill.proposer }}</span>
+                     </div>
+              </div>
+              <button class="view-detail-btn" onclick="viewBillDetail('{{ bill.detail_link }}')">의안 상세</button>
+          </div>
 
-             <button class="view-detail-btn" onclick="viewBillDetail('{{ bill.detail_link }}')">의안 상세</button>
-    
-             <!-- 제안이유 및 주요내용을 여기로 이동 -->
-             <div class="bill-summary">
-                 <div class="summary-title">제안이유 및 주요내용</div>
-                 <div class="summary-section">
-                        <div class="summary-content">
+          <!-- 오른쪽 사이드바 -->
+          <div class="sidebar">
+              <!-- 관련 법률안 -->
+              <div class="bill-summary">
+                     <div class="summary-section">
+                         <div class="summary-section-title">관련 법률안</div>
+                         {% if related_bills %}
+                         <ul class="summary-list">
+                                {% for related_bill in related_bills %}
+                                <li onclick="goToBillDetail({{ related_bill.id }})">{{ related_bill.name }}</li>
+                                {% endfor %}
+                         </ul>
+                         {% else %}
+                         <div class="summary-content" style="text-align: center; color: #6c757d; font-style: italic;">
+                                관련 법률안이 없습니다.
+                         </div>
+                         {% endif %}
+                     </div>
+              </div>
+          </div>
+
+          <!-- 제안이유 및 주요내용을 전체 너비로 (새로 추가) -->
+          <div class="full-width-proposal">
+              <div class="bill-summary">
+                  <div class="summary-title">제안이유 및 주요내용</div>
+                     <div class="summary-section">
+                         <div class="summary-content">
                             {% if bill.content %}
                                 {{ bill.content | replace('\n', '<br>') | safe }}
                             {% else %}
                                 <p style="color: #666; font-style: italic;">제안이유 및 주요내용 정보를 불러올 수 없습니다.</p>
                             {% endif %}
                         </div>
-                 </div>
-             </div>
-      </div>
-
-      <!-- 오른쪽 사이드바 -->
-      <div class="sidebar">
-             <!-- 관련 법률안을 여기로 이동 -->
-             <div class="bill-summary">
-                 <div class="summary-section">
-                        <div class="summary-section-title">관련 법률안</div>
-                       {% if related_bills %}
-                        <ul class="summary-list">
-                            {% for related_bill in related_bills %}
-                            <li onclick="goToBillDetail({{ related_bill.id }})">{{ related_bill.name }}</li>
-                            {% endfor %}
-                        </ul>
-                        {% else %}
-                        <div class="summary-content" style="text-align: center; color: #6c757d; font-style: italic;">
-                            관련 법률안이 없습니다.
-                        </div>
-                        {% endif %}
-                 </div>
-             </div>
-      </div>
-
+                     </div>
+              </div>
+          </div>
+   </div>
             <!-- 찬성/반대 투표 (중앙 배치) -->
             <div class="vote-section-centered">
                 <div class="vote-buttons">
