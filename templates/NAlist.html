@@ -618,24 +618,23 @@ function filterMembersByParty(selectedParty) {
 
 // 이벤트 리스너 설정
 document.addEventListener('DOMContentLoaded', function() {
-    // 정당 탭 클릭 이벤트 (이 부분이 빠져있었습니다!)
     document.querySelectorAll('.party-tab').forEach(tab => {
-        tab.addEventListener('click', function(e) {
-            e.preventDefault();
-            
-            const selectedParty = this.getAttribute('data-party');
-            
-            // 활성 탭 업데이트
-            document.querySelectorAll('.party-tab').forEach(t => t.classList.remove('active'));
-            this.classList.add('active');
-            
-            // 멤버 필터링 (이게 핵심!)
-            filterMembersByParty(selectedParty);
-            
-            // 전역 변수 업데이트
-            currentParty = selectedParty;
-        });
+    tab.addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        const selectedParty = this.getAttribute('data-party');
+        const currentUrl = new URL(window.location);
+        
+        if (selectedParty === '전체') {
+            currentUrl.searchParams.delete('party');
+        } else {
+            currentUrl.searchParams.set('party', selectedParty);
+        }
+        
+        currentUrl.searchParams.delete('page'); // 페이지 1로 리셋
+        window.location.href = currentUrl.toString();
     });
+});
 
     // 테이블 행 클릭 이벤트
     document.querySelectorAll('.table-row').forEach(row => {
