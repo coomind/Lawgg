@@ -578,7 +578,7 @@ def bill_detail(bill_id):
         'propose_date': bill.propose_date,
         'committee': bill.committee,
         'detail_link': bill.detail_link,
-        'content': bill_content.get('content', '')
+        'content': bill_content.get('content', ''),
         'assembly_result': bill.assembly_result
     }
     
