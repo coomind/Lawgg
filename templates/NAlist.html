@@ -384,8 +384,10 @@
         <section class="party-section">
             <div class="party-tabs">
                 {% for party in parties %}
-                <a href="#" class="party-tab {% if party.code == current_party %}active{% endif %}" 
-                   data-party="{{ party.code }}">{{ party.name }}</a>
+                <a href="?{% if party.code != '전체' %}party={{ party.code }}{% endif %}" 
+                   class="party-tab {% if party.code == current_party %}active{% endif %}">
+                    {{ party.name }}
+                </a>
                 {% endfor %}
             </div>
         </section>
@@ -626,53 +628,53 @@
                   return age;
            }
 
-           // 이벤트 리스너 설정
            document.addEventListener('DOMContentLoaded', function() {
-                  // 정당 탭 클릭 이벤트 (수정됨)
-                  document.querySelectorAll('.party-tab').forEach(tab => {
-                      tab.addEventListener('click', function(e) {
-                             e.preventDefault();
+               // 정당 탭 클릭 이벤트 (서버 사이드로 수정됨)
+               document.querySelectorAll('.party-tab').forEach(tab => {
+                   tab.addEventListener('click', function(e) {
+                       e.preventDefault();
+                        
+                       const party = this.getAttribute('data-party');
+                        
+                       // 서버로 새로운 요청 보내기
+                       const url = new URL(window.location);
+                       if (party === '전체') {
+                           url.searchParams.delete('party');
+                       } else {
+                           url.searchParams.set('party', party);
+                       }
+                        
+                       url.searchParams.delete('page'); // 페이지는 1로 리셋
+                        
+                        
+                       // 페이지 리로드하여 서버에서 필터링된 데이터 받기
+                        
+                       window.location.href = url.toString();
                     
-                             const party = this.getAttribute('data-party');
-                    
-                             // 클라이언트 사이드 필터링 (새로운 방식)
-                             filterMembersByParty(party);
-                             updateActiveTab(party);
-                    
-                             // URL 업데이트 (페이지 리로드 없이)
-                             const url = new URL(window.location);
-                             if (party === '전체') {
-                                 url.searchParams.delete('party');
-                             } else {
-                                 url.searchParams.set('party', party);
-                             }
-                             url.searchParams.delete('page'); // 페이지는 1로 리셋
-                             window.history.pushState({}, '', url);
-                    
-                             // 전역 변수 업데이트
-                             currentParty = party;
-                      });
-                  });
-
-                  // URL 파라미터에 따른 초기 필터링 (새로 추가됨)
-                  const urlParams = new URLSearchParams(window.location.search);
-                 const initialParty = urlParams.get('party') || '전체';
+                   });
+                
+               });
             
-                  // 페이지 로드 시 필터링 적용
-                  filterMembersByParty(initialParty);
-                  updateActiveTab(initialParty);
-                  currentParty = initialParty;
-
-                  // 테이블 행 클릭 이벤트 (기존 코드)
-                  document.querySelectorAll('.table-row').forEach(row => {
-                      row.addEventListener('click', function(e) {
-                             e.preventDefault();
-                             const memberId = this.getAttribute('data-member-id');
-                             const memberName = this.querySelector('.member-name').textContent;
-                             viewMemberDetail(memberId, memberName);
-                      });
-                  });
-
+   
+               // 테이블 행 클릭 이벤트 (기존 코드 유지)
+               
+               document.querySelectorAll('.table-row').forEach(row => {
+               
+                   row.addEventListener('click', function(e) {
+                   
+                       e.preventDefault();
+                       
+                       const memberId = this.getAttribute('data-member-id');
+                       
+                       const memberName = this.querySelector('.member-name').textContent;
+                       
+                       viewMemberDetail(memberId, memberName);
+                    
+                   });
+               
+               });
+            
+           });
                   // 사진 오류 처리 (기존 코드)
                   document.querySelectorAll('.member-photo img').forEach(img => {
                       img.addEventListener('error', function() {
