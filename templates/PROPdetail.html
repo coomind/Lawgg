@@ -19,7 +19,7 @@
             line-height: 1.5;
         }
 
-        /* 헤더 - 다른 페이지와 동일한 스타일로 수정 */
+        /* 헤더 */
         .header {
             background: white;
             border-bottom: 1px solid #e9ecef;
@@ -178,7 +178,7 @@
             margin-bottom: 0;
         }
 
-        /* 찬성/반대 투표 - 첫 번째 페이지와 동일한 스타일 */
+        /* 찬성/반대 투표 */
         .vote-section-centered {
             display: flex;
             flex-direction: column;
@@ -280,25 +280,30 @@
             color: #666;
         }
 
+        /* 댓글 섹션 - Bill 스타일로 통일 */
         .comments-section {
             margin-top: 40px;
         }
 
-        .comment-form {
-            background-color: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
+        .comments-title {
+            font-size: 18px;
+            font-weight: 600;
             margin-bottom: 20px;
+            color: #333;
+        }
+
+        .comment-form {
+            margin-bottom: 30px;
         }
 
         .comment-input {
             width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+            min-height: 100px;
+            padding: 15px;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
             font-size: 14px;
             resize: vertical;
-            min-height: 80px;
             margin-bottom: 10px;
         }
 
@@ -338,17 +343,32 @@
             font-size: 14px;
         }
 
+        .comments-list {
+            clear: both;
+        }
+
         .comment-item {
-            background-color: white;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            border: 1px solid #e9ecef;
+            padding: 15px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .comment-item:last-child {
+            border-bottom: none;
         }
 
         .comment-item.comment-under-review {
             background-color: #fff3cd !important;
             border-left: 4px solid #ffc107 !important;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+        }
+
+        .comment-item.reply {
+            margin-left: 40px;
+            padding-left: 20px;
+            border-left: 3px solid #e9ecef;
+            background-color: #f8f9fa;
         }
 
         .comment-header {
@@ -358,22 +378,9 @@
             margin-bottom: 8px;
         }
 
-        .comment-avatar {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background-color: #e9ecef;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
-            color: #666;
-        }
-
         .comment-author {
-            font-size: 14px;
             font-weight: 600;
-            color: #333;
+            color: #495057;
         }
 
         .comment-stance {
@@ -393,9 +400,9 @@
             color: #721c24;
         }
 
-        .comment-date {
+        .comment-time {
+            color: #6c757d;
             font-size: 12px;
-            color: #666;
         }
 
         .under-review-badge {
@@ -409,41 +416,123 @@
         }
 
         .comment-content {
-            font-size: 14px;
             color: #333;
             line-height: 1.5;
-            margin-left: 42px;
+            margin-bottom: 10px;
         }
 
         .comment-actions {
-            margin-left: 42px;
-            margin-top: 10px;
+            display: flex;
+            gap: 15px;
         }
 
-        .comment-action {
+        .comment-action-btn {
+            background: none;
+            border: none;
+            color: #6c757d;
             font-size: 12px;
-            color: #666;
-            text-decoration: none;
-            margin-right: 15px;
             cursor: pointer;
+            padding: 0;
             transition: color 0.2s;
         }
 
-        .comment-action:hover {
-            color: #333;
+        .comment-action-btn:hover {
+            color: #495057;
         }
 
-        .comment-action.report-btn {
+        .comment-action-btn.report-btn {
             color: #dc3545;
         }
 
-        .comment-action.report-btn:hover {
+        .comment-action-btn.report-btn:hover {
             color: #bd2130;
         }
 
-        .comment-action.report-btn.reported {
+        .comment-action-btn.report-btn.reported {
             color: #6c757d;
             cursor: not-allowed;
+        }
+
+        .comment-action-btn.like-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .comment-action-btn.like-btn.liked {
+            color: #3498db;
+        }
+
+        .like-icon {
+            font-size: 12px;
+        }
+
+        .like-count {
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .reply-form {
+            margin-top: 15px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            display: none;
+        }
+
+        .reply-form.show {
+            display: block;
+        }
+
+        .reply-input {
+            width: 100%;
+            min-height: 60px;
+            padding: 10px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            font-size: 13px;
+            resize: vertical;
+            margin-bottom: 10px;
+        }
+
+        .reply-input:focus {
+            outline: none;
+            border-color: #495057;
+            box-shadow: 0 0 0 2px rgba(73, 80, 87, 0.1);
+        }
+
+        .reply-submit {
+            background-color: #495057;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+            margin-right: 10px;
+            transition: background-color 0.2s;
+        }
+
+        .reply-submit:hover {
+            background-color: #343a40;
+        }
+
+        .reply-submit:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .reply-cancel {
+            background: none;
+            border: none;
+            color: #6c757d;
+            font-size: 13px;
+            cursor: pointer;
+            padding: 8px 16px;
+        }
+
+        .reply-cancel:hover {
+            color: #495057;
         }
 
         /* 입법제안 신고 버튼 스타일 */
@@ -518,6 +607,10 @@
             .header {
                 padding: 16px 15px;
             }
+
+            .comment-item.reply {
+                margin-left: 20px;
+            }
         }
 
         @media (max-width: 480px) {
@@ -527,6 +620,10 @@
             
             .nav-item {
                 font-size: 14px;
+            }
+
+            .comment-item.reply {
+                margin-left: 15px;
             }
         }
     </style>
@@ -649,120 +746,116 @@
                 </div>
             </div>
 
-            <!-- 댓글 섹션 (전체 너비) -->
-            <div class="full-width-section">
-                <div class="comments-section">
-                    <h2 class="comments-title">법안 토론</h2>
+            <!-- 댓글 섹션 -->
+            <div class="comments-section">
+                <h2 class="comments-title">입법제안 토론</h2>
+                
+                <div class="comment-form">
+                    <div class="vote-required-message" id="vote-message" style="{% if user_vote %}display: none;{% endif %}">
+                        댓글을 작성하려면 먼저 찬성 또는 반대를 선택해주세요.
+                    </div>
+                    <textarea 
+                        class="comment-input" 
+                        id="comment-input" 
+                        placeholder="입법제안에 대한 의견을 작성해주세요..."
+                        {% if not user_vote %}disabled{% endif %}
+                    ></textarea>
+                    <button class="comment-submit" id="comment-submit" {% if not user_vote %}disabled{% endif %}>댓글 작성</button>
+                </div>
+
+                <div class="comments-list" id="comments-list">
+                    {% for comment in comments %}
+                    {% if not comment.parent_id %}
+                    <div class="comment-item {% if comment.is_under_review %}comment-under-review{% endif %}" 
+                         data-comment-id="{{ comment.id }}" 
+                         data-report-count="{{ comment.report_count|default(0) }}">
+                        <div class="comment-header">
+                            <span class="comment-author">{{ comment.author|default('익명' ~ comment.id) }}</span>
+                            <span class="comment-stance {{ 'agree' if comment.stance == 'agree' else 'disagree' }}">
+                                {{ '찬성' if comment.stance == 'agree' else '반대' }}
+                            </span>
+                            <span class="comment-date">{{ comment.time_ago|default('방금 전') }}</span>
+                            {% if comment.is_under_review %}
+                            <span class="under-review-badge">검토 중</span>
+                            {% endif %}
+                        </div>
+                        <div class="comment-content">{{ comment.content }}</div>
+                        <div class="comment-actions">
+                            <button class="comment-action-btn reply-btn" data-comment-id="{{ comment.id }}">답글</button>
+                            <button class="comment-action-btn like-btn {% if comment.is_liked_by_user %}liked{% endif %}" data-comment-id="{{ comment.id }}">
+                                <span class="like-icon">👍</span>
+                                <span class="like-count">{{ comment.like_count|default(0) }}</span>
+                            </button>
+                            <button class="comment-action-btn report-btn {% if comment.is_reported_by_user %}reported{% endif %}" 
+                                    data-comment-id="{{ comment.id }}">
+                                {% if comment.is_reported_by_user %}
+                                    신고됨
+                                {% elif comment.report_count and comment.report_count > 0 %}
+                                    신고 ({{ comment.report_count }})
+                                {% else %}
+                                    신고
+                                {% endif %}
+                            </button>
+                        </div>
+                        <div class="reply-form" id="reply-form-{{ comment.id }}">
+                            <textarea class="reply-input" placeholder="답글을 작성해주세요..."></textarea>
+                            <button class="reply-submit" data-parent-id="{{ comment.id }}">답글 작성</button>
+                            <button class="reply-cancel">취소</button>
+                        </div>
+                    </div>
                     
-                    <div class="comment-form">
-                        <div class="vote-required-message" id="vote-message" style="{% if user_vote %}display: none;{% endif %}">
-                            댓글을 작성하려면 먼저 찬성 또는 반대를 선택해주세요.
+                    <!-- 해당 댓글의 답글들 -->
+                    {% for reply in comments %}
+                    {% if reply.parent_id == comment.id %}
+                    <div class="comment-item reply {% if reply.is_under_review %}comment-under-review{% endif %}" 
+                         data-comment-id="{{ reply.id }}" 
+                         data-parent-id="{{ reply.parent_id }}"
+                         data-report-count="{{ reply.report_count|default(0) }}">
+                        <div class="comment-header">
+                            <span class="comment-author">{{ reply.author|default('익명' ~ reply.id) }}</span>
+                            <span class="comment-stance {{ 'agree' if reply.stance == 'agree' else 'disagree' }}">
+                                {{ '찬성' if reply.stance == 'agree' else '반대' }}
+                            </span>
+                            <span class="comment-date">{{ reply.time_ago|default('방금 전') }}</span>
+                            {% if reply.is_under_review %}
+                            <span class="under-review-badge">검토 중</span>
+                            {% endif %}
                         </div>
-                        <textarea 
-                            class="comment-input" 
-                            id="comment-input" 
-                            placeholder="법안에 대한 의견을 작성해주세요..."
-                            {% if not user_vote %}disabled{% endif %}
-                        ></textarea>
-                        <button class="comment-submit" id="comment-submit" {% if not user_vote %}disabled{% endif %}>댓글 작성</button>
-                    </div>
-
-                    <div class="comments-list" id="comments-list">
-                        {% for comment in comments %}
-                        {% if not comment.parent_id %}
-                        <div class="comment-item {% if comment.is_under_review %}comment-under-review{% endif %}" 
-                             data-comment-id="{{ comment.id }}" 
-                             data-report-count="{{ comment.report_count|default(0) }}">
-                            <div class="comment-header">
-                                <span class="comment-author">{{ comment.author|default('익명' ~ comment.id) }}</span>
-                                <span class="comment-stance {{ 'agree' if comment.stance == 'agree' else 'disagree' }}">
-                                    {{ '찬성' if comment.stance == 'agree' else '반대' }}
-                                </span>
-                                <span class="comment-time">{{ comment.time_ago|default('방금 전') }}</span>
-                                {% if comment.is_under_review %}
-                                <span class="under-review-badge">검토 중</span>
+                        <div class="comment-content">{{ reply.content }}</div>
+                        <div class="comment-actions">
+                            <button class="comment-action-btn reply-btn" data-comment-id="{{ reply.id }}">답글</button>
+                            <button class="comment-action-btn like-btn {% if reply.is_liked_by_user %}liked{% endif %}" data-comment-id="{{ reply.id }}">
+                                <span class="like-icon">👍</span>
+                                <span class="like-count">{{ reply.like_count|default(0) }}</span>
+                            </button>
+                            <button class="comment-action-btn report-btn {% if reply.is_reported_by_user %}reported{% endif %}" 
+                                    data-comment-id="{{ reply.id }}">
+                                {% if reply.is_reported_by_user %}
+                                    신고됨
+                                {% elif reply.report_count and reply.report_count > 0 %}
+                                    신고 ({{ reply.report_count }})
+                                {% else %}
+                                    신고
                                 {% endif %}
-                            </div>
-                            <div class="comment-content">{{ comment.content }}</div>
-                            <div class="comment-actions">
-                                <button class="comment-action-btn reply-btn" data-comment-id="{{ comment.id }}">답글</button>
-                                <button class="comment-action-btn like-btn {% if comment.is_liked_by_user %}liked{% endif %}" data-comment-id="{{ comment.id }}">
-                                    <span class="like-icon">👍</span>
-                                    <span class="like-count">{{ comment.like_count|default(0) }}</span>
-                                </button>
-                                <button class="comment-action-btn report-btn {% if comment.is_reported_by_user %}reported{% endif %}" 
-                                        data-comment-id="{{ comment.id }}">
-                                    {% if comment.is_reported_by_user %}
-                                        신고됨
-                                    {% elif comment.report_count and comment.report_count > 0 %}
-                                        신고 ({{ comment.report_count }})
-                                    {% else %}
-                                        신고
-                                    {% endif %}
-                                </button>
-                            </div>
-                            <div class="reply-form" id="reply-form-{{ comment.id }}">
-                                <textarea class="reply-input" placeholder="답글을 작성해주세요..."></textarea>
-                                <button class="reply-submit" data-parent-id="{{ comment.id }}">답글 작성</button>
-                                <button class="reply-cancel">취소</button>
-                            </div>
+                            </button>
                         </div>
-                        
-                        <!-- 해당 댓글의 답글들 -->
-                        {% for reply in comments %}
-                        {% if reply.parent_id == comment.id %}
-                        <div class="comment-item reply {% if reply.is_under_review %}comment-under-review{% endif %}" 
-                             data-comment-id="{{ reply.id }}" 
-                             data-parent-id="{{ reply.parent_id }}"
-                             data-report-count="{{ reply.report_count|default(0) }}">
-                            <div class="comment-header">
-                                <span class="comment-author">{{ reply.author|default('익명' ~ reply.id) }}</span>
-                                <span class="comment-stance {{ 'agree' if reply.stance == 'agree' else 'disagree' }}">
-                                    {{ '찬성' if reply.stance == 'agree' else '반대' }}
-                                </span>
-                                <span class="comment-time">{{ reply.time_ago|default('방금 전') }}</span>
-                                {% if reply.is_under_review %}
-                                <span class="under-review-badge">검토 중</span>
-                                {% endif %}
-                            </div>
-                            <div class="comment-content">{{ reply.content }}</div>
-                            <div class="comment-actions">
-                                <button class="comment-action-btn reply-btn" data-comment-id="{{ reply.id }}">답글</button>
-                                <button class="comment-action-btn like-btn {% if reply.is_liked_by_user %}liked{% endif %}" data-comment-id="{{ reply.id }}">
-                                    <span class="like-icon">👍</span>
-                                    <span class="like-count">{{ reply.like_count|default(0) }}</span>
-                                </button>
-                                <button class="comment-action-btn report-btn {% if reply.is_reported_by_user %}reported{% endif %}" 
-                                        data-comment-id="{{ reply.id }}">
-                                    {% if reply.is_reported_by_user %}
-                                        신고됨
-                                    {% elif reply.report_count and reply.report_count > 0 %}
-                                        신고 ({{ reply.report_count }})
-                                    {% else %}
-                                        신고
-                                    {% endif %}
-                                </button>
-                            </div>
-                            <div class="reply-form" id="reply-form-{{ reply.id }}">
-                                <textarea class="reply-input" placeholder="답글을 작성해주세요..."></textarea>
-                                <button class="reply-submit" data-parent-id="{{ comment.id }}">답글 작성</button>
-                                <button class="reply-cancel">취소</button>
-                            </div>
+                        <div class="reply-form" id="reply-form-{{ reply.id }}">
+                            <textarea class="reply-input" placeholder="답글을 작성해주세요..."></textarea>
+                            <button class="reply-submit" data-parent-id="{{ comment.id }}">답글 작성</button>
+                            <button class="reply-cancel">취소</button>
                         </div>
-                        {% endif %}
-                        {% endfor %}
-                        {% endif %}
-                        {% else %}
-                        
-                        {% endfor %}
-
-                        <!-- 더보기 버튼 -->
-                        {% if has_more_comments %}
-                        <div style="text-align: center; margin-top: 20px;">
-                            <button onclick="loadMoreComments()" style="background-color: #495057; color: white; border: none; padding: 10px 30px; border-radius: 6px; cursor: pointer;">더보기</button>
-                        </div>
-                        {% endif %}
                     </div>
+                    {% endif %}
+                    {% endfor %}
+                    {% endif %}
+                    {% endfor %}
+
+                    <!-- 더보기 버튼 -->
+                    {% if has_more_comments %}
+                    <div style="text-align: center; margin-top: 20px;">
+                        <button onclick="loadMoreComments()" style="background-color: #495057; color: white; border: none; padding: 10px 30px; border-radius: 6px; cursor: pointer;">더보기</button>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -774,12 +867,24 @@
         const API_BASE_URL = window.location.origin;
 
         // 전역 상태 - 안전한 JSON 파싱
-        let userVote = {% if user_vote %}'{{ user_vote }}'{% else %}null{% endif %};
-        let commentCounter = {{ comments|length + 1 }};
+        let userVote = null;
+        let commentCounter = 1;
         let voteCounts = {
-            agree: {{ vote_stats.agree_count|default(0) }},
-            disagree: {{ vote_stats.disagree_count|default(0) }}
+            agree: 0,
+            disagree: 0
         };
+
+        // 서버 데이터 안전하게 로드
+        try {
+            userVote = {% if user_vote %}'{{ user_vote }}'{% else %}null{% endif %};
+            commentCounter = {{ comments|length + 1 if comments else 1 }};
+            voteCounts = {
+                agree: {{ vote_stats.agree_count|default(0) }},
+                disagree: {{ vote_stats.disagree_count|default(0) }}
+            };
+        } catch(e) {
+            console.error('데이터 로드 중 오류:', e);
+        }
 
         // 신고 관련 상태 - 안전한 초기화
         let reportedComments = new Set();
@@ -798,7 +903,7 @@
             commentReports = {{ comment_reports|tojson|safe }};
             {% endif %}
         } catch(e) {
-            console.log('데이터 로드 중 오류:', e);
+            console.warn('신고/좋아요 데이터 로드 중 오류:', e);
         }
 
         // DOM 요소들
@@ -810,125 +915,132 @@
         const agreeCountEl = document.getElementById('agree-count');
         const disagreeCountEl = document.getElementById('disagree-count');
 
-        // 네비게이션 함수들
-        function goToHome() {
-            window.location.href = `${API_BASE_URL}/`;
-        }
-
-        function goToMembersPage() {
-            window.location.href = `${API_BASE_URL}/members`;
-        }
-
-        function goToBillsPage() {
-            window.location.href = `${API_BASE_URL}/bills`;
-        }
-
-        function goToProposalsPage() {
-            window.location.href = `${API_BASE_URL}/proposals`;
-        }
-
-        function viewBillDetail(detailLink) {
-            if (detailLink) {
-                window.open(detailLink, '_blank');
-            }
-        }
-
-        function goToBillDetail(billId) {
-            window.location.href = `${API_BASE_URL}/bills/${billId}`;
-        }
-
-        function loadMoreComments() {
-            // TODO: 서버에서 추가 댓글 로드 구현
-            alert('더 많은 댓글을 로드합니다.');
-        }
-
-        // 투표 카운트 업데이트
-        function updateVoteCounts() {
-            agreeCountEl.textContent = voteCounts.agree.toLocaleString();
-            disagreeCountEl.textContent = voteCounts.disagree.toLocaleString();
-        }
-
-        // 댓글 기능 활성화
-        function enableComments() {
-            commentInput.disabled = false;
-            commentSubmit.disabled = false;
-            voteMessage.style.display = 'none';
-            commentInput.placeholder = "법안에 대한 의견을 작성해주세요...";
-        }
-
-        // 댓글 기능 비활성화
-        function disableComments() {
-            commentInput.disabled = true;
-            commentSubmit.disabled = true;
-            voteMessage.style.display = 'block';
-            commentInput.placeholder = "댓글을 작성하려면 먼저 찬성 또는 반대를 선택해주세요.";
-            commentInput.value = '';
-        }
-
-        // 투표 버튼 이벤트
-        voteButtons.forEach(button => {
-            button.addEventListener('click', async function() {
-                const vote = this.getAttribute('data-vote');
-                
-                try {
-                    const response = await fetch(`${API_BASE_URL}/api/proposals/${proposalId}/vote`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({ vote: vote })
-                    });
-                    
-                    const data = await response.json();
-                    
-                    if (!response.ok) {
-                        throw new Error(data.error || '투표 실패');
-                    }
-                    
-                    // 이전 투표가 있다면 카운트 감소 (클라이언트 측)
-                    if (userVote && userVote !== vote) {
-                        voteCounts[userVote]--;
-                    }
-                    
-                    // 같은 버튼을 다시 누르면 투표 취소
-                    if (userVote === vote) {
-                        userVote = null;
-                        voteButtons.forEach(btn => btn.classList.remove('active'));
-                        disableComments();
-                    } else {
-                        // 새로운 투표 설정
-                        userVote = vote;
-                        voteCounts[vote]++;
-                        
-                        voteButtons.forEach(btn => btn.classList.remove('active'));
-                        this.classList.add('active');
-                        enableComments();
-                    }
-                    
-                    // 서버에서 받은 정확한 카운트로 업데이트
-                    voteCounts.agree = data.agree_count;
-                    voteCounts.disagree = data.disagree_count;
-                    updateVoteCounts();
-                    
-                } catch (error) {
-                    console.error('투표 오류:', error);
-                    alert('투표 처리 중 오류가 발생했습니다: ' + error.message);
-                }
-            });
+        // 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            updateVoteUI();
+            setupEventListeners();
         });
 
-        // 댓글 작성 이벤트
-        commentSubmit.addEventListener('click', async function() {
+        // 이벤트 리스너 설정
+        function setupEventListeners() {
+            // 투표 버튼 이벤트
+            voteButtons.forEach(button => {
+                button.addEventListener('click', handleVote);
+            });
+
+            // 댓글 작성 버튼
+            if (commentSubmit) {
+                commentSubmit.addEventListener('click', handleCommentSubmit);
+            }
+
+            // 댓글 입력 엔터키
+            if (commentInput) {
+                commentInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' && e.ctrlKey) {
+                        handleCommentSubmit();
+                    }
+                });
+            }
+
+            // 답글, 좋아요, 신고 버튼들
+            document.addEventListener('click', function(e) {
+                if (e.target.classList.contains('reply-btn')) {
+                    handleReplyClick(e);
+                } else if (e.target.classList.contains('like-btn') || e.target.closest('.like-btn')) {
+                    handleLikeClick(e);
+                } else if (e.target.classList.contains('report-btn')) {
+                    handleReportClick(e);
+                } else if (e.target.classList.contains('reply-submit')) {
+                    handleReplySubmit(e);
+                } else if (e.target.classList.contains('reply-cancel')) {
+                    handleReplyCancel(e);
+                }
+            });
+
+            // 입법제안 신고 버튼
+            const proposalReportBtn = document.getElementById('proposal-report-btn');
+            if (proposalReportBtn) {
+                proposalReportBtn.addEventListener('click', handleProposalReport);
+            }
+        }
+
+        // 투표 처리
+        async function handleVote(e) {
+            const voteType = e.target.dataset.vote;
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/proposals/${proposalId}/vote`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ vote: voteType })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    
+                    // 투표 상태 업데이트
+                    userVote = voteType;
+                    voteCounts = result.vote_counts;
+                    
+                    // UI 업데이트
+                    updateVoteUI();
+                    enableCommentForm();
+                    
+                    showMessage('투표가 완료되었습니다.', 'success');
+                } else {
+                    const error = await response.json();
+                    showMessage(error.message || '투표 중 오류가 발생했습니다.', 'error');
+                }
+            } catch (error) {
+                console.error('투표 오류:', error);
+                showMessage('네트워크 오류가 발생했습니다.', 'error');
+            }
+        }
+
+        // 투표 UI 업데이트
+        function updateVoteUI() {
+            // 버튼 상태 업데이트
+            voteButtons.forEach(button => {
+                button.classList.remove('active');
+                if (button.dataset.vote === userVote) {
+                    button.classList.add('active');
+                }
+            });
+
+            // 투표 수 업데이트
+            if (agreeCountEl) agreeCountEl.textContent = voteCounts.agree.toLocaleString();
+            if (disagreeCountEl) disagreeCountEl.textContent = voteCounts.disagree.toLocaleString();
+        }
+
+        // 댓글 폼 활성화
+        function enableCommentForm() {
+            if (commentInput) {
+                commentInput.disabled = false;
+                commentInput.placeholder = '입법제안에 대한 의견을 작성해주세요...';
+            }
+            if (commentSubmit) {
+                commentSubmit.disabled = false;
+            }
+            if (voteMessage) {
+                voteMessage.style.display = 'none';
+            }
+        }
+
+        // 댓글 작성 처리
+        async function handleCommentSubmit() {
+            if (!userVote) {
+                showMessage('먼저 찬성 또는 반대를 선택해주세요.', 'warning');
+                return;
+            }
+
             const content = commentInput.value.trim();
             if (!content) {
-                alert('댓글 내용을 입력해주세요.');
+                showMessage('댓글 내용을 입력해주세요.', 'warning');
                 return;
             }
-            if (!userVote) {
-                alert('먼저 찬성 또는 반대를 선택해주세요.');
-                return;
-            }
-            
+
             try {
                 const response = await fetch(`${API_BASE_URL}/api/proposals/${proposalId}/comments`, {
                     method: 'POST',
@@ -940,149 +1052,228 @@
                         stance: userVote
                     })
                 });
-                
-                if (!response.ok) {
-                    throw new Error('댓글 작성 실패');
+
+                if (response.ok) {
+                    const comment = await response.json();
+                    
+                    // 댓글 추가
+                    addCommentToList(comment);
+                    
+                    // 입력 폼 초기화
+                    commentInput.value = '';
+                    
+                    showMessage('댓글이 작성되었습니다.', 'success');
+                } else {
+                    const error = await response.json();
+                    showMessage(error.message || '댓글 작성 중 오류가 발생했습니다.', 'error');
                 }
-                
-                const commentData = await response.json();
-                addComment(commentData);
-                commentInput.value = '';
-                
             } catch (error) {
                 console.error('댓글 작성 오류:', error);
-                alert('댓글 작성 중 오류가 발생했습니다.');
+                showMessage('네트워크 오류가 발생했습니다.', 'error');
             }
-        });
-
-        // 엔터키로 댓글 작성
-        commentInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && e.ctrlKey) {
-                commentSubmit.click();
-            }
-        });
-
-        // 댓글 추가 함수
-        function addComment(commentData) {
-            const commentItem = document.createElement('div');
-            commentItem.className = 'comment-item';
-            commentItem.setAttribute('data-comment-id', commentData.id);
-            commentItem.setAttribute('data-report-count', '0');
-            
-            const stanceClass = commentData.stance === 'agree' ? 'agree' : 'disagree';
-            const stanceText = commentData.stance === 'agree' ? '찬성' : '반대';
-            
-            commentItem.innerHTML = `
-                <div class="comment-header">
-                    <span class="comment-author">${commentData.author}</span>
-                    <span class="comment-stance ${stanceClass}">${stanceText}</span>
-                    <span class="comment-time">${commentData.time_ago}</span>
-                </div>
-                <div class="comment-content">${commentData.content}</div>
-                <div class="comment-actions">
-                    <button class="comment-action-btn reply-btn" data-comment-id="${commentData.id}">답글</button>
-                    <button class="comment-action-btn like-btn" data-comment-id="${commentData.id}">
-                        <span class="like-icon">👍</span>
-                        <span class="like-count">0</span>
-                    </button>
-                    <button class="comment-action-btn report-btn" data-comment-id="${commentData.id}">신고</button>
-                </div>
-                <div class="reply-form" id="reply-form-${commentData.id}">
-                    <textarea class="reply-input" placeholder="답글을 작성해주세요..."></textarea>
-                    <button class="reply-submit" data-parent-id="${commentData.id}">답글 작성</button>
-                    <button class="reply-cancel">취소</button>
-                </div>
-            `;
-            
-            // 첫 번째 댓글 앞에 새 댓글 추가
-            commentsList.insertBefore(commentItem, commentsList.firstChild);
-            
-            // 이벤트 리스너 다시 추가
-            initializeEventListeners();
-            
-            // 강조 효과
-            commentItem.style.backgroundColor = '#e3f2fd';
-            setTimeout(() => {
-                commentItem.style.backgroundColor = '';
-                commentItem.style.transition = 'background-color 0.5s';
-            }, 2000);
         }
 
-        // 답글 추가 함수
-        function addReply(parentId, content, stance) {
-            const stanceText = stance === 'agree' ? '찬성' : '반대';
-            const stanceClass = stance === 'agree' ? 'agree' : 'disagree';
+        // 댓글을 리스트에 추가
+        function addCommentToList(comment, isReply = false) {
+            const commentHtml = createCommentHtml(comment, isReply);
             
-            const replyItem = document.createElement('div');
-            replyItem.className = 'comment-item reply';
-            replyItem.setAttribute('data-comment-id', commentCounter);
-            replyItem.setAttribute('data-parent-id', parentId);
-            replyItem.setAttribute('data-report-count', '0');
-            
-            replyItem.innerHTML = `
-                <div class="comment-header">
-                    <span class="comment-author">익명${commentCounter}</span>
-                    <span class="comment-stance ${stanceClass}">${stanceText}</span>
-                    <span class="comment-time">방금 전</span>
-                </div>
-                <div class="comment-content">${content}</div>
-                <div class="comment-actions">
-                    <button class="comment-action-btn reply-btn" data-comment-id="${commentCounter}">답글</button>
-                    <button class="comment-action-btn like-btn" data-comment-id="${commentCounter}">
-                        <span class="like-icon">👍</span>
-                        <span class="like-count">0</span>
-                    </button>
-                    <button class="comment-action-btn report-btn" data-comment-id="${commentCounter}">신고</button>
-                </div>
-                <div class="reply-form" id="reply-form-${commentCounter}">
-                    <textarea class="reply-input" placeholder="답글을 작성해주세요..."></textarea>
-                    <button class="reply-submit" data-parent-id="${parentId}">답글 작성</button>
-                    <button class="reply-cancel">취소</button>
-                </div>
-            `;
-            
-            // 부모 댓글 찾기
-            const parentComment = document.querySelector(`[data-comment-id="${parentId}"]`);
-            let insertAfter = parentComment;
-            
-            // 해당 부모의 마지막 대댓글 찾기
-            let nextSibling = parentComment.nextElementSibling;
-            while (nextSibling && nextSibling.getAttribute('data-parent-id') === String(parentId)) {
-                insertAfter = nextSibling;
-                nextSibling = nextSibling.nextElementSibling;
-            }
-            
-            // 답글 삽입
-            if (insertAfter.nextElementSibling) {
-                insertAfter.parentNode.insertBefore(replyItem, insertAfter.nextElementSibling);
+            if (isReply && comment.parent_id) {
+                // 답글인 경우 부모 댓글 다음에 추가
+                const parentComment = document.querySelector(`[data-comment-id="${comment.parent_id}"]`);
+                if (parentComment) {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = commentHtml;
+                    const newComment = tempDiv.firstElementChild;
+                    
+                    // 부모 댓글의 마지막 답글 다음에 삽입
+                    let insertAfter = parentComment;
+                    let nextSibling = parentComment.nextElementSibling;
+                    while (nextSibling && nextSibling.classList.contains('reply') && 
+                           nextSibling.dataset.parentId === comment.parent_id.toString()) {
+                        insertAfter = nextSibling;
+                        nextSibling = nextSibling.nextElementSibling;
+                    }
+                    
+                    insertAfter.insertAdjacentElement('afterend', newComment);
+                }
             } else {
-                insertAfter.parentNode.appendChild(replyItem);
+                // 일반 댓글인 경우 맨 위에 추가
+                const firstComment = commentsList.querySelector('.comment-item');
+                if (firstComment) {
+                    firstComment.insertAdjacentHTML('beforebegin', commentHtml);
+                } else {
+                    commentsList.innerHTML = commentHtml;
+                }
             }
-            
-            commentCounter++;
-            
-            // 이벤트 리스너 다시 추가
-            initializeEventListeners();
-            
-            // 강조 효과
-            replyItem.style.backgroundColor = '#e3f2fd';
-            setTimeout(() => {
-                replyItem.style.backgroundColor = '';
-                replyItem.style.transition = 'background-color 0.5s';
-            }, 2000);
         }
 
-        // 신고 기능
-        async function reportComment(commentId) {
-            if (reportedComments.has(commentId)) {
-                alert('이미 신고한 댓글입니다.');
+        // 댓글 HTML 생성
+        function createCommentHtml(comment, isReply = false) {
+            const stanceText = comment.stance === 'agree' ? '찬성' : '반대';
+            const stanceClass = comment.stance === 'agree' ? 'agree' : 'disagree';
+            const replyClass = isReply ? 'reply' : '';
+            const underReviewClass = comment.is_under_review ? 'comment-under-review' : '';
+            const underReviewBadge = comment.is_under_review ? '<span class="under-review-badge">검토 중</span>' : '';
+
+            return `
+                <div class="comment-item ${replyClass} ${underReviewClass}" 
+                     data-comment-id="${comment.id}" 
+                     ${isReply ? `data-parent-id="${comment.parent_id}"` : ''}
+                     data-report-count="0">
+                    <div class="comment-header">
+                        <span class="comment-author">${comment.author || '익명' + comment.id}</span>
+                        <span class="comment-stance ${stanceClass}">${stanceText}</span>
+                        <span class="comment-date">방금 전</span>
+                        ${underReviewBadge}
+                    </div>
+                    <div class="comment-content">${comment.content}</div>
+                    <div class="comment-actions">
+                        <button class="comment-action-btn reply-btn" data-comment-id="${comment.id}">답글</button>
+                        <button class="comment-action-btn like-btn" data-comment-id="${comment.id}">
+                            <span class="like-icon">👍</span>
+                            <span class="like-count">0</span>
+                        </button>
+                        <button class="comment-action-btn report-btn" data-comment-id="${comment.id}">신고</button>
+                    </div>
+                    <div class="reply-form" id="reply-form-${comment.id}">
+                        <textarea class="reply-input" placeholder="답글을 작성해주세요..."></textarea>
+                        <button class="reply-submit" data-parent-id="${isReply ? comment.parent_id : comment.id}">답글 작성</button>
+                        <button class="reply-cancel">취소</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 답글 버튼 클릭 처리
+        function handleReplyClick(e) {
+            const commentId = e.target.dataset.commentId;
+            const replyForm = document.getElementById(`reply-form-${commentId}`);
+            
+            // 다른 답글 폼들 숨기기
+            document.querySelectorAll('.reply-form').forEach(form => {
+                if (form.id !== `reply-form-${commentId}`) {
+                    form.classList.remove('show');
+                }
+            });
+            
+            // 현재 답글 폼 토글
+            replyForm.classList.toggle('show');
+            
+            if (replyForm.classList.contains('show')) {
+                const textarea = replyForm.querySelector('.reply-input');
+                textarea.focus();
+            }
+        }
+
+        // 답글 작성 처리
+        async function handleReplySubmit(e) {
+            const parentId = e.target.dataset.parentId;
+            const replyForm = e.target.closest('.reply-form');
+            const content = replyForm.querySelector('.reply-input').value.trim();
+            
+            if (!content) {
+                showMessage('답글 내용을 입력해주세요.', 'warning');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/proposals/${proposalId}/comments`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        content: content,
+                        stance: userVote,
+                        parent_id: parentId
+                    })
+                });
+
+                if (response.ok) {
+                    const reply = await response.json();
+                    
+                    // 답글 추가
+                    addCommentToList(reply, true);
+                    
+                    // 답글 폼 초기화 및 숨기기
+                    replyForm.querySelector('.reply-input').value = '';
+                    replyForm.classList.remove('show');
+                    
+                    showMessage('답글이 작성되었습니다.', 'success');
+                } else {
+                    const error = await response.json();
+                    showMessage(error.message || '답글 작성 중 오류가 발생했습니다.', 'error');
+                }
+            } catch (error) {
+                console.error('답글 작성 오류:', error);
+                showMessage('네트워크 오류가 발생했습니다.', 'error');
+            }
+        }
+
+        // 답글 취소 처리
+        function handleReplyCancel(e) {
+            const replyForm = e.target.closest('.reply-form');
+            replyForm.querySelector('.reply-input').value = '';
+            replyForm.classList.remove('show');
+        }
+
+        // 좋아요 처리
+        async function handleLikeClick(e) {
+            e.preventDefault();
+            
+            const likeBtn = e.target.closest('.like-btn');
+            const commentId = likeBtn.dataset.commentId;
+            const likeCountEl = likeBtn.querySelector('.like-count');
+            const isLiked = likeBtn.classList.contains('liked');
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/comments/${commentId}/like`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ action: isLiked ? 'unlike' : 'like' })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    
+                    // UI 업데이트
+                    likeBtn.classList.toggle('liked');
+                    likeCountEl.textContent = result.like_count;
+                    
+                    // 상태 업데이트
+                    if (isLiked) {
+                        likedComments.delete(parseInt(commentId));
+                    } else {
+                        likedComments.add(parseInt(commentId));
+                    }
+                } else {
+                    const error = await response.json();
+                    showMessage(error.message || '좋아요 처리 중 오류가 발생했습니다.', 'error');
+                }
+            } catch (error) {
+                console.error('좋아요 오류:', error);
+                showMessage('네트워크 오류가 발생했습니다.', 'error');
+            }
+        }
+
+        // 댓글 신고 처리
+        async function handleReportClick(e) {
+            e.preventDefault();
+            
+            const reportBtn = e.target;
+            const commentId = reportBtn.dataset.commentId;
+            
+            if (reportBtn.classList.contains('reported')) {
+                showMessage('이미 신고한 댓글입니다.', 'warning');
                 return;
             }
             
-            if (!confirm('이 댓글을 신고하시겠습니까?\n부적절한 내용이 포함된 댓글만 신고해주세요.')) {
+            if (!confirm('이 댓글을 신고하시겠습니까?')) {
                 return;
             }
-            
+
             try {
                 const response = await fetch(`${API_BASE_URL}/api/comments/${commentId}/report`, {
                     method: 'POST',
@@ -1090,211 +1281,179 @@
                         'Content-Type': 'application/json',
                     }
                 });
-                
-                const data = await response.json();
-                
-                if (!response.ok) {
-                    if (data.error === 'Already reported') {
-                        alert('이미 신고한 댓글입니다.');
-                        return;
-                    }
-                    throw new Error(data.error || '신고 실패');
-                }
-                
-                // 신고 성공
-                reportedComments.add(commentId);
-                
-                // 버튼 상태 업데이트
-                const reportBtn = document.querySelector(`[data-comment-id="${commentId}"].report-btn`);
-                if (reportBtn) {
+
+                if (response.ok) {
+                    const result = await response.json();
+                    
+                    // UI 업데이트
                     reportBtn.classList.add('reported');
                     reportBtn.textContent = '신고됨';
-                    reportBtn.disabled = true;
+                    
+                    // 상태 업데이트
+                    reportedComments.add(parseInt(commentId));
+                    
+                    showMessage('신고가 접수되었습니다.', 'success');
+                } else {
+                    const error = await response.json();
+                    showMessage(error.message || '신고 처리 중 오류가 발생했습니다.', 'error');
                 }
-                
-                // 신고 수 업데이트
-                if (data.is_under_review) {
-                    const commentItem = document.querySelector(`[data-comment-id="${commentId}"]`);
-                    if (commentItem) {
-                        commentItem.classList.add('comment-under-review');
-                        const header = commentItem.querySelector('.comment-header');
-                        if (!header.querySelector('.under-review-badge')) {
-                            const badge = document.createElement('span');
-                            badge.className = 'under-review-badge';
-                            badge.textContent = '검토 중';
-                            header.appendChild(badge);
-                        }
-                    }
-                }
-                
-                alert('신고가 접수되었습니다.');
-                
             } catch (error) {
                 console.error('신고 오류:', error);
-                alert('신고 처리 중 오류가 발생했습니다: ' + error.message);
+                showMessage('네트워크 오류가 발생했습니다.', 'error');
             }
         }
 
-        // 좋아요 기능
-        async function toggleLike(commentId) {
+        // 입법제안 신고 처리
+        async function handleProposalReport() {
+            const reportBtn = document.getElementById('proposal-report-btn');
+            
+            if (reportBtn.classList.contains('reported')) {
+                showMessage('이미 신고한 입법제안입니다.', 'warning');
+                return;
+            }
+            
+            if (!confirm('이 입법제안을 신고하시겠습니까?')) {
+                return;
+            }
+
             try {
-                const response = await fetch(`${API_BASE_URL}/api/comments/${commentId}/like`, {
+                const response = await fetch(`${API_BASE_URL}/api/proposals/${proposalId}/report`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     }
                 });
-                
-                const data = await response.json();
-                
-                if (!response.ok) {
-                    throw new Error(data.error || '좋아요 실패');
-                }
-                
-                // UI 업데이트
-                const likeBtn = document.querySelector(`[data-comment-id="${commentId}"].like-btn`);
-                const likeCountSpan = likeBtn.querySelector('.like-count');
-                
-                if (data.liked) {
-                    likeBtn.classList.add('liked');
-                    likedComments.add(commentId);
+
+                if (response.ok) {
+                    reportBtn.classList.add('reported');
+                    reportBtn.textContent = '신고됨';
+                    showMessage('신고가 접수되었습니다.', 'success');
                 } else {
-                    likeBtn.classList.remove('liked');
-                    likedComments.delete(commentId);
+                    const error = await response.json();
+                    showMessage(error.message || '신고 처리 중 오류가 발생했습니다.', 'error');
                 }
-                
-                likeCountSpan.textContent = data.like_count;
-                
             } catch (error) {
-                console.error('좋아요 오류:', error);
-                alert('좋아요 처리 중 오류가 발생했습니다.');
+                console.error('신고 오류:', error);
+                showMessage('네트워크 오류가 발생했습니다.', 'error');
             }
         }
 
-        // 이벤트 리스너 초기화
-        function initializeEventListeners() {
-            // 답글 버튼 이벤트
-            document.querySelectorAll('.reply-btn').forEach(btn => {
-                btn.removeEventListener('click', handleReplyClick);
-                btn.addEventListener('click', handleReplyClick);
-            });
-
-            // 답글 작성 버튼 이벤트
-            document.querySelectorAll('.reply-submit').forEach(btn => {
-                btn.removeEventListener('click', handleReplySubmit);
-                btn.addEventListener('click', handleReplySubmit);
-            });
+        // 더보기 댓글 로드
+        async function loadMoreComments() {
+            const existingComments = document.querySelectorAll('.comment-item:not(.reply)').length;
             
-            // 답글 취소 버튼 이벤트
-            document.querySelectorAll('.reply-cancel').forEach(btn => {
-                btn.removeEventListener('click', handleReplyCancel);
-                btn.addEventListener('click', handleReplyCancel);
-            });
-
-            // 신고 버튼 이벤트
-            document.querySelectorAll('.report-btn').forEach(btn => {
-                btn.removeEventListener('click', handleReportClick);
-                btn.addEventListener('click', handleReportClick);
-            });
-
-            // 좋아요 버튼 이벤트
-            document.querySelectorAll('.like-btn').forEach(btn => {
-                btn.removeEventListener('click', handleLikeClick);
-                btn.addEventListener('click', handleLikeClick);
-            });
-        }
-
-        // 이벤트 핸들러 함수들
-        function handleReplyClick() {
-            const commentId = this.getAttribute('data-comment-id');
-            const replyForm = document.getElementById(`reply-form-${commentId}`);
-            
-            // 다른 답글 폼들 숨기기
-            document.querySelectorAll('.reply-form').forEach(form => {
-                form.classList.remove('show');
-            });
-            
-            // 현재 답글 폼 토글
-            replyForm.classList.toggle('show');
-            
-            if (replyForm.classList.contains('show')) {
-                replyForm.querySelector('.reply-input').focus();
-            }
-        }
-
-        async function handleReplySubmit() {
-            if (!userVote) {
-                alert('먼저 찬성 또는 반대를 선택해주세요.');
-                return;
-            }
-
-            const parentId = this.getAttribute('data-parent-id');
-            const replyForm = this.closest('.reply-form');
-            const replyInput = replyForm.querySelector('.reply-input');
-            const content = replyInput.value.trim();
-
-            if (!content) {
-                alert('답글 내용을 입력해주세요.');
-                return;
-            }
-
             try {
-                const response = await fetch(`${API_BASE_URL}/api/comments/${parentId}/reply`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        content: content,
-                        stance: userVote
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error('답글 저장 실패');
+                const response = await fetch(`${API_BASE_URL}/api/proposals/${proposalId}/comments?offset=${existingComments}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // 새 댓글들 추가
+                    data.comments.forEach(comment => {
+                        if (!comment.parent_id) {
+                            const commentHtml = createCommentHtml(comment);
+                            commentsList.insertAdjacentHTML('beforeend', commentHtml);
+                            
+                            // 해당 댓글의 답글들도 추가
+                            data.comments.forEach(reply => {
+                                if (reply.parent_id === comment.id) {
+                                    const replyHtml = createCommentHtml(reply, true);
+                                    commentsList.insertAdjacentHTML('beforeend', replyHtml);
+                                }
+                            });
+                        }
+                    });
+                    
+                    // 더보기 버튼 처리
+                    if (!data.has_more) {
+                        const moreBtn = document.querySelector('button[onclick="loadMoreComments()"]');
+                        if (moreBtn) {
+                            moreBtn.style.display = 'none';
+                        }
+                    }
+                } else {
+                    showMessage('댓글을 불러오는 중 오류가 발생했습니다.', 'error');
                 }
-
-                const data = await response.json();
-                addReply(parseInt(parentId), data.content, data.stance);
-                replyInput.value = '';
-                replyForm.classList.remove('show');
-
             } catch (error) {
-                console.error('답글 오류:', error);
-                alert('답글 저장에 실패했습니다.');
+                console.error('댓글 로드 오류:', error);
+                showMessage('네트워크 오류가 발생했습니다.', 'error');
             }
         }
 
-        function handleReplyCancel() {
-            const replyForm = this.closest('.reply-form');
-            replyForm.classList.remove('show');
-            replyForm.querySelector('.reply-input').value = '';
-        }
-
-        function handleReportClick() {
-            const commentId = parseInt(this.getAttribute('data-comment-id'));
-            reportComment(commentId);
-        }
-
-        function handleLikeClick() {
-            const commentId = parseInt(this.getAttribute('data-comment-id'));
-            toggleLike(commentId);
-        }
-
-        // 초기 상태 설정
-        document.addEventListener('DOMContentLoaded', function() {
-            // 투표 상태에 따라 댓글 활성화/비활성화
-            if (userVote) {
-                enableComments();
-            } else {
-                disableComments();
+        // 메시지 표시
+        function showMessage(message, type = 'info') {
+            // 기존 메시지 제거
+            const existingMessage = document.querySelector('.message-toast');
+            if (existingMessage) {
+                existingMessage.remove();
             }
             
-            // 이벤트 리스너 초기화
-            initializeEventListeners();
+            // 새 메시지 생성
+            const messageEl = document.createElement('div');
+            messageEl.className = `message-toast message-${type}`;
+            messageEl.textContent = message;
             
-            console.log('LAW.GG 법률안 상세 페이지가 로드되었습니다.');
-        });
+            // 스타일 적용
+            Object.assign(messageEl.style, {
+                position: 'fixed',
+                top: '20px',
+                right: '20px',
+                padding: '12px 20px',
+                borderRadius: '6px',
+                color: 'white',
+                fontWeight: '500',
+                zIndex: '1000',
+                animation: 'slideIn 0.3s ease'
+            });
+            
+            // 타입별 색상
+            const colors = {
+                success: '#28a745',
+                error: '#dc3545',
+                warning: '#ffc107',
+                info: '#17a2b8'
+            };
+            messageEl.style.backgroundColor = colors[type] || colors.info;
+            
+            document.body.appendChild(messageEl);
+            
+            // 3초 후 제거
+            setTimeout(() => {
+                messageEl.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => messageEl.remove(), 300);
+            }, 3000);
+        }
+
+        // 네비게이션 함수들
+        function goToHome() {
+            window.location.href = '/';
+        }
+
+        function goToMembersPage() {
+            window.location.href = '/members';
+        }
+
+        function goToBillsPage() {
+            window.location.href = '/bills';
+        }
+
+        function goToProposalsPage() {
+            window.location.href = '/proposals';
+        }
+
+        // CSS 애니메이션 추가
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
     </script>
 </body>
 </html>
