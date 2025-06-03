@@ -898,7 +898,7 @@ def add_bill_comment(bill_id):
     data = request.get_json()
     content = data.get('content', '').strip()
     stance = data.get('stance')
-    parent_id = data.get('parent_id')
+    parent_id = data.get('parent_id')  # 🔥 추가: 답글 지원
     ip_address = get_client_ip()
     
     if not content or stance not in ['agree', 'disagree']:
@@ -908,6 +908,16 @@ def add_bill_comment(bill_id):
     user_vote = BillVote.query.filter_by(bill_id=bill_id, ip_address=ip_address).first()
     if not user_vote:
         return jsonify({'error': 'Vote required'}), 403
+    
+    # 🔥 개선: parent_id가 있는 경우 부모 댓글 확인
+    if parent_id:
+        parent_comment = Comment.query.get(parent_id)
+        if not parent_comment or parent_comment.bill_id != bill_id:
+            return jsonify({'error': 'Invalid parent comment'}), 400
+        
+        # 🔥 답글의 답글인 경우, 최상위 부모로 설정 (깊이 제한)
+        if parent_comment.parent_id:
+            parent_id = parent_comment.parent_id
     
     comment = Comment(
         bill_id=bill_id,
@@ -921,12 +931,25 @@ def add_bill_comment(bill_id):
     db.session.add(comment)
     db.session.commit()
     
+    # 🔥 개선: 생성된 댓글의 좋아요 정보도 함께 반환
+    like_count = CommentLike.query.filter_by(comment_id=comment.id).count()
+    is_liked_by_user = CommentLike.query.filter_by(
+        comment_id=comment.id, 
+        ip_address=ip_address
+    ).first() is not None
+    
     return jsonify({
         'id': comment.id,
         'author': comment.author,
         'content': comment.content,
         'stance': comment.stance,
-        'time_ago': '방금 전'
+        'time_ago': '방금 전',
+        'parent_id': comment.parent_id,
+        'like_count': like_count,
+        'report_count': 0,
+        'is_under_review': False,
+        'is_liked_by_user': is_liked_by_user,
+        'is_reported_by_user': False
     })
     
 def crawl_bill_content(bill_number):
@@ -1831,106 +1854,4 @@ def debug_api():
         # 기본 연결 테스트
         test_url = "https://open.assembly.go.kr/portal/openapi/ALLNAMEMBER"
         params = {
-            'KEY': 'a3fada8210244129907d945abe2beada',
-            'Type': 'xml',
-            'pIndex': 1,
-            'pSize': 1
-        }
-        
-        response = requests.get(test_url, params=params, timeout=30)
-        
-        return jsonify({
-            'status': 'debug',
-            'url': test_url,
-            'params': params,
-            'status_code': response.status_code,
-            'response_text': response.text[:1000],
-            'headers': dict(response.headers)
-        })
-        
-    except Exception as e:
-        return jsonify({
-            'status': 'debug_error',
-            'error': str(e),
-            'error_type': type(e).__name__
-        })
-
-@app.route('/admin/reset-db')
-def reset_database():
-    """데이터베이스 초기화 (주의: 모든 데이터 삭제)"""
-    try:
-        # 모든 테이블 삭제 후 재생성
-        db.drop_all()
-        db.create_all()
-        
-        return jsonify({
-            'status': 'success',
-            'message': '데이터베이스가 초기화되었습니다. 모든 데이터가 삭제되었습니다.'
-        })
-    except Exception as e:
-        return jsonify({
-            'status': 'error', 
-            'message': f'초기화 실패: {str(e)}'
-        }), 500
-
-@app.route('/sync/bills')
-def sync_bills_route():
-    """법률안 데이터 동기화"""
-    try:
-        from sync_data import sync_bills_from_api
-        sync_bills_from_api()
-        
-        return jsonify({
-            "status": "success",
-            "message": "20, 21, 22대 법률안 데이터 동기화 완료!"
-        })
-    except Exception as e:
-        return jsonify({
-            "status": "error",
-            "message": f"오류 발생: {str(e)}"
-        }), 500
-
-@app.route('/sync/all')
-def sync_all_route():
-    """전체 데이터 동기화 (국회의원 + 법률안)"""
-    try:
-        from sync_data import sync_all_data
-        sync_all_data()
-        
-        return jsonify({
-            "status": "success",
-            "message": "전체 데이터 동기화 완료!"
-        })
-    except Exception as e:
-        return jsonify({
-            "status": "error",
-            "message": f"오류 발생: {str(e)}"
-        }), 500
-        
-# 메인 실행
-if __name__ == '__main__':
-    with app.app_context():
-        # 데이터베이스 테이블 생성
-        db.create_all()
-
-        
-        # 데이터가 없으면 동기화 실행
-        if Member.query.count() == 0:
-            print("데이터베이스가 비어있습니다. 초기 데이터를 로드합니다...")
-            from sync_data import sync_members_from_api, sync_bills_from_api
-            
-            # API에서 데이터 가져오기
-            sync_members_from_api()
-            sync_bills_from_api()
-            
-            print("초기 데이터 로드 완료!")
-
-        member_count = Member.query.count()
-        bill_count = Bill.query.count()
-        
-        print(f"\n=== 최종 결과 ===")
-        print(f"총 국회의원 수: {member_count}명")
-        print(f"총 법률안 수: {bill_count}개")
-
-        
-    app.run(debug=True, host='0.0.0.0', port=5000)
+            'KEY': 'a3fada82
