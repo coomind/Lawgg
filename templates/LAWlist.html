@@ -240,12 +240,6 @@
             background-color: #f8f9fa;
         }
 
-        .bill-number {
-            font-weight: 600;
-            color: #495057;
-            font-size: 14px;
-        }
-
         .bill-title {
             font-size: 14px;
             font-weight: 500;
@@ -375,7 +369,7 @@
             }
             
             .table-header, .table-row {
-                grid-template-columns: 120px 1fr 120px 120px 140px;
+                grid-template-columns: 1fr 120px 120px 140px;
                 padding: 15px 20px;
             }
 
@@ -395,7 +389,7 @@
             }
             
             .table-header, .table-row {
-                grid-template-columns: 100px 1fr 100px;
+                grid-template-columns: 1fr 100px;
                 gap: 10px;
                 padding: 12px 15px;
             }
@@ -454,7 +448,7 @@
     <!-- 헤더 -->
     <header class="header">
         <div class="logo" onclick="goToHome()">
-            <div class="logo-icon">⚖️</div>
+            <div class="logo-icon"⚖️</div>
             <span>LAW.GG</span>
         </div>
         <nav class="nav">
@@ -478,12 +472,28 @@
         <!-- 위원회 카테고리 -->
         <section class="committee-section">
             <div class="committee-grid">
-                {% for committee in committees %}
-                <button class="committee-item {% if committee.code == current_committee %}active{% endif %}" 
-                        data-committee="{{ committee.code }}">
-                    {{ committee.display_name }}
-                </button>
-                {% endfor %}
+                <button class="committee-item active" data-committee="all">전체</button>
+                <button class="committee-item" data-committee="legislation">법제사법위원회</button>
+                <button class="committee-item" data-committee="women">여성가족위원회</button>
+                <button class="committee-item" data-committee="intelligence">정보위원회</button>
+                <button class="committee-item" data-committee="transport">국토교통위원회</button>
+                <button class="committee-item" data-committee="environment">환경노동위원회</button>
+            </div>
+            <div class="committee-grid">
+                <button class="committee-item" data-committee="health">보건복지위원회</button>
+                <button class="committee-item" data-committee="industry">산업통상자원 중소벤처기업위원회</button>
+                <button class="committee-item" data-committee="agriculture">농림축산식품해양수산위원회</button>
+                <button class="committee-item" data-committee="culture">문화체육관광위원회</button>
+                <button class="committee-item" data-committee="administration">행정안전위원회</button>
+                <button class="committee-item" data-committee="defense">국방위원회</button>
+            </div>
+            <div class="committee-grid">
+                <button class="committee-item" data-committee="foreign">외교통일위원회</button>
+                <button class="committee-item" data-committee="science">과학기술정보방송통신위원회</button>
+                <button class="committee-item" data-committee="education">교육위원회</button>
+                <button class="committee-item" data-committee="finance">기획재정위원회</button>
+                <button class="committee-item" data-committee="political">정무위원회</button>
+                <button class="committee-item" data-committee="operation">국회운영위원회</button>
             </div>
         </section>
 
@@ -502,7 +512,6 @@
         <!-- 법률안 테이블 -->
         <section class="bills-section">
             <div class="table-header">
-                
                 <div>의안명</div>
                 <div>제안일자</div>
                 <div>제안자</div>
@@ -512,7 +521,6 @@
             {% if bills %}
                 {% for bill in bills %}
                 <a href="#" class="table-row" data-bill-id="{{ bill.id }}">
-                    
                     <div class="bill-title">{{ bill.name or '-' }}</div>
                     <div class="bill-date">{{ bill.propose_date or '-' }}</div>
                     <div class="bill-court">{{ bill.proposer or '-' }}</div>
@@ -630,7 +638,6 @@
             
             let tableHTML = `
                 <div class="table-header">
-                    
                     <div>의안명</div>
                     <div>제안일자</div>
                     <div>제안자</div>
@@ -640,7 +647,6 @@
 
             if (bills && bills.length > 0) {
                 bills.forEach(bill => {
-                    const billNo = bill.number || '-';
                     const billName = bill.name || '-';
                     const proposeDate = bill.propose_date || '-';
                     const proposer = bill.proposer || '-';
@@ -648,7 +654,6 @@
                     
                     tableHTML += `
                         <a href="#" class="table-row" data-bill-id="${bill.id}">
-                            
                             <div class="bill-title">${billName}</div>
                             <div class="bill-date">${proposeDate}</div>
                             <div class="bill-court">${proposer}</div>
@@ -719,7 +724,6 @@
             const billsSection = document.querySelector('.bills-section');
             billsSection.innerHTML = `
                 <div class="table-header">
-                    <div>의안번호</div>
                     <div>의안명</div>
                     <div>제안일자</div>
                     <div>제안자</div>
