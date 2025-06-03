@@ -226,7 +226,7 @@
 
         .table-row {
             display: grid;
-            grid-template-columns: 1fr 140px 140px 160px;
+            grid-template-columns: 140px 1fr 140px 140px 160px;
             padding: 18px 30px;
             border-top: 1px solid #e9ecef;
             cursor: pointer;
@@ -238,6 +238,8 @@
 
         .table-row:hover {
             background-color: #f8f9fa;
+        }
+
         }
 
         .bill-title {
@@ -448,7 +450,7 @@
     <!-- 헤더 -->
     <header class="header">
         <div class="logo" onclick="goToHome()">
-            <div class="logo-icon"⚖️</div>
+            <div class="logo-icon">⚖️</div>
             <span>LAW.GG</span>
         </div>
         <nav class="nav">
@@ -647,6 +649,7 @@
 
             if (bills && bills.length > 0) {
                 bills.forEach(bill => {
+                    const billNo = bill.number || '-';
                     const billName = bill.name || '-';
                     const proposeDate = bill.propose_date || '-';
                     const proposer = bill.proposer || '-';
