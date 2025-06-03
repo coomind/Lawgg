@@ -903,7 +903,7 @@ def add_bill_comment(bill_id):
     })
     
 def crawl_bill_content(bill_number):
-    """국회 법률안 상세 페이지에서 제안이유 및 주요내용 크롤링"""
+    """국회 법률안 상세 페이지에서 제안이유 및 주요내용 크롤링 (개선된 버전)"""
     if not bill_number:
         return {'content': ''}
     
@@ -916,28 +916,57 @@ def crawl_bill_content(bill_number):
         content_text = soup.get_text()
         
         if "▶ 제안이유 및 주요내용" in content_text:
-            start_idx = content_text.find("▶ 제안이유 및 주요내용")
-            content = content_text[start_idx:]  # 🔥 끝까지 다 가져오기
+            # "▶ 제안이유 및 주요내용" 다음부터 시작
+            start_marker = "▶ 제안이유 및 주요내용"
+            start_idx = content_text.find(start_marker)
             
-            # 🎯 구조적 끝점으로만 자르기
-            end_markers = ['위원회 심사', '심사경과', '검토보고', '전문위원 검토보고']
-            end_idx = len(content)
-            
-            for marker in end_markers:
-                marker_idx = content.find(marker)
-                if marker_idx != -1 and marker_idx < end_idx:
-                    end_idx = marker_idx
-            
-            content = content[:end_idx]
-            
-            # 정리
-            import re
-            content = re.sub(r'\n+', '\n', content)
-            content = re.sub(r' +', ' ', content)
-            content = content.strip()
-            
-            return {'content': content}  # 🔥 글자 수 제한 완전 제거
-            
+            if start_idx != -1:
+                # 시작 마커 이후부터 추출 (마커 제외)
+                start_idx += len(start_marker)
+                content = content_text[start_idx:]
+                
+                # 🎯 구조적 끝점으로만 자르기
+                end_markers = [
+                    '위원회 심사', '심사경과', '검토보고', '전문위원 검토보고',
+                    '◎ 검토의견', '◎ 위원회 심사', '◎ 심사경과',
+                    '▶ 검토의견', '▶ 위원회 심사', '▶ 심사경과',
+                    '○ 검토의견', '○ 위원회 심사', '○ 심사경과'
+                ]
+                
+                end_idx = len(content)
+                
+                for marker in end_markers:
+                    marker_idx = content.find(marker)
+                    if marker_idx != -1 and marker_idx < end_idx:
+                        end_idx = marker_idx
+                
+                content = content[:end_idx]
+                
+                # 정리
+                import re
+                
+                # 여러 개의 연속된 공백/탭을 하나로 통합
+                content = re.sub(r'[ \t]+', ' ', content)
+                
+                # 여러 개의 연속된 줄바꿈을 최대 2개로 제한
+                content = re.sub(r'\n{3,}', '\n\n', content)
+                
+                # 앞뒤 공백 제거
+                content = content.strip()
+                
+                # 시작 부분이 줄바꿈으로 시작하면 제거
+                while content.startswith('\n'):
+                    content = content[1:]
+                
+                # 빈 줄들로만 이루어진 시작 부분 제거
+                lines = content.split('\n')
+                while lines and not lines[0].strip():
+                    lines.pop(0)
+                
+                content = '\n'.join(lines)
+                
+                return {'content': content}
+                
     except Exception as e:
         print(f"크롤링 오류: {e}")
     
