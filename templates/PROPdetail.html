@@ -770,7 +770,7 @@
                     {% set displayed_parent_ids = [] %}
                     {% for comment in comments %}
                         {% if not comment.parent_id and comment.id not in displayed_parent_ids %}
-                            {% do displayed_parent_ids.append(comment.id) %}
+                            {% set _ = displayed_parent_ids.append(comment.id) %}
                             <!-- 부모 댓글 -->
                             <div class="comment-item {% if comment.is_under_review %}comment-under-review{% endif %}" 
                                 data-comment-id="{{ comment.id }}" 
