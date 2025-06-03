@@ -690,21 +690,19 @@
                     <!-- 조문의 의안 요약 -->
                     <div class="bill-summary">
                         <div class="summary-title">제안이유 및 주요내용</div>
-                        <div class="summary-subtitle">(법률안 상세 정보)</div>
                         
                         <div class="summary-section">
-                            <div class="summary-section-title">제안배경</div>
-                            <div class="summary-content">
-                                {{ bill.proposal_reason }}
-                            </div>
-                        </div>
-                        
-                        <div class="summary-section">
-                            <div class="summary-section-title">주요내용</div>
-                            <div class="summary-content">
-                                {{ bill.main_content }}
-                            </div>
-                        </div>
+                <div class="summary-content">
+                    <div style="margin-bottom: 15px;">
+                           <div style="font-weight: 600; color: #333; margin-bottom: 8px; font-size: 13px;"></div>
+                           {{ bill.proposal_reason }}
+                    </div>
+                    <div>
+                           <div style="font-weight: 600; color: #333; margin-bottom: 8px; font-size: 13px;"></div>
+                           {{ bill.main_content }}
+                    </div>
+                </div>
+         </div>
                         
                         <div class="summary-section">
                             <div class="summary-section-title">관련 법률안</div>
