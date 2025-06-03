@@ -965,6 +965,7 @@
         }
 
         // 투표 처리
+        // 투표 처리
         async function handleVote(e) {
             const voteType = e.target.dataset.vote;
             
@@ -982,7 +983,12 @@
                     
                     // 투표 상태 업데이트
                     userVote = voteType;
-                    voteCounts = result.vote_counts;
+                    
+                    // ✅ 서버 응답 형식에 맞게 수정
+                    voteCounts = {
+                        agree: result.agree_count,
+                        disagree: result.disagree_count
+                    };
                     
                     // UI 업데이트
                     updateVoteUI();
