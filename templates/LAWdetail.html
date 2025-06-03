@@ -1205,11 +1205,11 @@
                 // 신고 성공
                 reportedComments.add(commentId);
                 
-                // 버튼 상태 업데이트
+                // 버튼 상태 업데이트 - 신고수 포함
                 const reportBtn = document.querySelector(`[data-comment-id="${commentId}"].report-btn`);
                 if (reportBtn) {
                     reportBtn.classList.add('reported');
-                    reportBtn.textContent = '신고됨';
+                    reportBtn.textContent = data.new_report_text || '신고됨';
                     reportBtn.disabled = true;
                 }
                 
@@ -1235,6 +1235,7 @@
                 alert('신고 처리 중 오류가 발생했습니다: ' + error.message);
             }
         }
+        
 
         // 좋아요 기능
         async function toggleLike(commentId) {
@@ -1365,6 +1366,24 @@
                 alert('답글 저장에 실패했습니다.');
             }
         }
+        function initializeLikeStates() {
+            document.querySelectorAll('.like-btn').forEach(btn => {
+                const commentId = parseInt(btn.dataset.commentId);
+                if (likedComments.has(commentId)) {
+                    btn.classList.add('liked');
+                }
+            });
+            
+            // 신고 상태도 초기화
+            document.querySelectorAll('.report-btn').forEach(btn => {
+                const commentId = parseInt(btn.dataset.commentId);
+                if (reportedComments.has(commentId)) {
+                    btn.classList.add('reported');
+                    btn.textContent = '신고됨';
+                }
+            });
+        }
+
 
         function handleReplyCancel() {
             const replyForm = this.closest('.reply-form');
@@ -1381,6 +1400,118 @@
             const commentId = parseInt(this.getAttribute('data-comment-id'));
             toggleLike(commentId);
         }
+        function addReplyToDOM(parentId, replyData) {
+            const stanceText = replyData.stance === 'agree' ? '찬성' : '반대';
+            const stanceClass = replyData.stance === 'agree' ? 'agree' : 'disagree';
+            
+            const replyItem = document.createElement('div');
+            replyItem.className = 'comment-item reply';
+            replyItem.setAttribute('data-comment-id', replyData.id);
+            replyItem.setAttribute('data-parent-id', parentId);
+            replyItem.setAttribute('data-report-count', '0');
+            
+            replyItem.innerHTML = `
+                <div class="comment-header">
+                    <span class="comment-author">${replyData.author}</span>
+                    <span class="comment-stance ${stanceClass}">${stanceText}</span>
+                    <span class="comment-time">${replyData.time_ago}</span>
+                </div>
+                <div class="comment-content">${replyData.content}</div>
+                <div class="comment-actions">
+                    <button class="comment-action-btn reply-btn" data-comment-id="${replyData.id}">답글</button>
+                    <button class="comment-action-btn like-btn" data-comment-id="${replyData.id}">
+                        <span class="like-icon">👍</span>
+                        <span class="like-count">${replyData.like_count || 0}</span>
+                    </button>
+                    <button class="comment-action-btn report-btn" data-comment-id="${replyData.id}">신고</button>
+                </div>
+                <div class="reply-form" id="reply-form-${replyData.id}">
+                    <textarea class="reply-input" placeholder="답글을 작성해주세요..."></textarea>
+                    <button class="reply-submit" data-parent-id="${parentId}">답글 작성</button>
+                    <button class="reply-cancel">취소</button>
+                </div>
+            `;
+            
+            // 부모 댓글 찾기
+            const parentComment = document.querySelector(`[data-comment-id="${parentId}"]`);
+            let insertAfter = parentComment;
+            
+            // 해당 부모의 마지막 답글 찾기
+            let nextSibling = parentComment.nextElementSibling;
+            while (nextSibling && nextSibling.getAttribute('data-parent-id') === String(parentId)) {
+                insertAfter = nextSibling;
+                nextSibling = nextSibling.nextElementSibling;
+            }
+            
+            // 답글 삽입
+            if (insertAfter.nextElementSibling) {
+                insertAfter.parentNode.insertBefore(replyItem, insertAfter.nextElementSibling);
+            } else {
+                insertAfter.parentNode.appendChild(replyItem);
+            }
+            
+            // 이벤트 리스너 다시 추가
+            initializeEventListeners();
+            
+            // 강조 효과
+            replyItem.style.backgroundColor = '#e3f2fd';
+            setTimeout(() => {
+                replyItem.style.backgroundColor = '';
+                replyItem.style.transition = 'background-color 0.5s';
+            }, 2000);
+        }
+
+        
+        // handleReplySubmit 함수 수정 (답글 저장 개선)
+        async function handleReplySubmit() {
+            if (!userVote) {
+                alert('먼저 찬성 또는 반대를 선택해주세요.');
+                return;
+            }
+        
+            const parentId = this.getAttribute('data-parent-id');
+            const replyForm = this.closest('.reply-form');
+            const replyInput = replyForm.querySelector('.reply-input');
+            const content = replyInput.value.trim();
+        
+            if (!content) {
+                alert('답글 내용을 입력해주세요.');
+                return;
+            }
+        
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/bills/${billId}/comments`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        content: content,
+                        stance: userVote,
+                        parent_id: parseInt(parentId)
+                    })
+                });
+        
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || '답글 저장 실패');
+                }
+        
+                const data = await response.json();
+                
+                // 답글을 DOM에 추가
+                addReplyToDOM(parseInt(parentId), data);
+                
+                // 폼 초기화 및 숨기기
+                replyInput.value = '';
+                replyForm.classList.remove('show');
+        
+            } catch (error) {
+                console.error('답글 오류:', error);
+                alert('답글 저장에 실패했습니다: ' + error.message);
+            }
+        }
+
 
         // 초기 상태 설정
         document.addEventListener('DOMContentLoaded', function() {
@@ -1393,6 +1524,9 @@
             
             // 이벤트 리스너 초기화
             initializeEventListeners();
+            
+            // 좋아요/신고 초기 상태 적용
+            initializeLikeStates();
             
             console.log('LAW.GG 법률안 상세 페이지가 로드되었습니다.');
         });
