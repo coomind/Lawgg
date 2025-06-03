@@ -540,7 +540,7 @@
         </div>
         <nav class="nav">
             <div class="nav-item" onclick="goToMembersPage()">국회의원</div>
-            <div class="nav-item" onclick="geToBillsPage()">법률안</div>
+            <div class="nav-item" onclick="goToBillsPage()">법률안</div>
             <div class="nav-item" onclick="goToProposalsPage()">입법제안</div>
         </nav>
     </header>
@@ -591,7 +591,7 @@
 
             {% if proposal.proposal_reasons %}
             <div class="content-section">
-                <div class="section-title">제안사유</div>
+                <div class="section-title">제안내용</div>
                 {% if proposal.proposal_reasons is string %}
                     <div class="section-content">
                         {{ proposal.proposal_reasons }}
@@ -726,7 +726,7 @@
             window.location.href = `${API_BASE_URL}/members`;
         }
 
-        function geToBillsPage() {
+        function goToBillsPage() {
             window.location.href = `${API_BASE_URL}/bills`;
         }
 
@@ -777,12 +777,19 @@
 
         // 신고 시스템 초기화
         function initializeReportSystem() {
-        // 댓글 신고 버튼 이벤트
-            document.querySelectorAll('.report-btn').forEach(btn => {
-                btn.removeEventListener('click', reportComment); // 기존 이벤트 제거
-                btn.addEventListener('click', reportComment);
-            });
-        }    
+            // 댓글 섹션에서 이벤트 위임으로 신고 버튼 처리
+            const commentsSection = document.querySelector('.comments-section');
+            if (commentsSection) {
+                commentsSection.addEventListener('click', function(event) {
+                    if (event.target.classList.contains('report-btn')) {
+                        const commentId = parseInt(event.target.getAttribute('data-comment-id'));
+                        if (commentId) {
+                            reportComment(commentId);
+                        }
+                    }
+                });
+            }
+        } 
 
             // 입법제안 신고 버튼 이벤트
         const proposalReportBtn = document.getElementById('proposal-report-btn');{
@@ -1113,23 +1120,159 @@
 
         // 초기 상태 설정
         document.addEventListener('DOMContentLoaded', function() {
-            // 투표 상태에 따라 댓글 활성화/비활성화
+            console.log('DOM 로드 시작');
+            
+            // 네비게이션 이벤트 리스너 추가 (onclick 대신 addEventListener 사용)
+            const logoElement = document.querySelector('.logo');
+            if (logoElement) {
+                logoElement.addEventListener('click', goToHome);
+            }
+            
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach((item, index) => {
+                switch(index) {
+                    case 0: // 국회의원
+                        item.addEventListener('click', goToMembersPage);
+                        break;
+                    case 1: // 법률안
+                        item.addEventListener('click', goToBillsPage);  // 수정된 함수명
+                        break;
+                    case 2: // 입법제안
+                        item.addEventListener('click', goToProposalsPage);
+                        break;
+                }
+            });
+            
+            // 투표 버튼 이벤트 (기존 코드는 유지하되 확실히 초기화)
+            const voteButtons = document.querySelectorAll('.vote-btn');
+            voteButtons.forEach(button => {
+                button.addEventListener('click', async function() {
+                    const vote = this.getAttribute('data-vote');
+                    console.log('투표 버튼 클릭:', vote);
+                    
+                    try {
+                        const response = await fetch(`${API_BASE_URL}/api/proposals/${proposalId}/vote`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ vote: vote })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (!response.ok) {
+                            throw new Error(data.error || '투표 실패');
+                        }
+                        
+                        // 이전 투표가 있다면 카운트 감소
+                        if (userVote && userVote !== vote) {
+                            voteCounts[userVote]--;
+                        }
+                        
+                        // 같은 버튼을 다시 누르면 투표 취소
+                        if (userVote === vote) {
+                            userVote = null;
+                            voteButtons.forEach(btn => btn.classList.remove('active'));
+                            disableComments();
+                        } else {
+                            userVote = vote;
+                            voteCounts[vote]++;
+                            
+                            voteButtons.forEach(btn => btn.classList.remove('active'));
+                            this.classList.add('active');
+                            enableComments();
+                        }
+                        
+                        voteCounts.agree = data.agree_count;
+                        voteCounts.disagree = data.disagree_count;
+                        updateVoteCounts();
+                        
+                    } catch (error) {
+                        console.error('투표 오류:', error);
+                        alert('투표 처리 중 오류가 발생했습니다: ' + error.message);
+                    }
+                });
+            });
+            
+            // 댓글 작성 버튼
+            const commentSubmit = document.getElementById('comment-submit');
+            if (commentSubmit) {
+                commentSubmit.addEventListener('click', async function() {
+                    const content = commentInput.value.trim();
+                    
+                    if (!content) {
+                        alert('댓글 내용을 입력해주세요.');
+                        return;
+                    }
+                    
+                    if (!userVote) {
+                        alert('먼저 찬성 또는 반대를 선택해주세요.');
+                        return;
+                    }
+                    
+                    try {
+                        const response = await fetch(`${API_BASE_URL}/api/proposals/${proposalId}/comments`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                content: content,
+                                stance: userVote
+                            })
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error('댓글 작성 실패');
+                        }
+                        
+                        const commentData = await response.json();
+                        addComment(commentData);
+                        commentInput.value = '';
+                    } catch (error) {
+                        console.error('댓글 작성 오류:', error);
+                        alert('댓글 작성 중 오류가 발생했습니다.');
+                    }
+                });
+            }
+            
+            // 입법제안 신고 버튼
+            const proposalReportBtn = document.getElementById('proposal-report-btn');
+            if (proposalReportBtn) {
+                proposalReportBtn.addEventListener('click', function() {
+                    reportProposal();
+                });
+            }
+            
+            // 댓글 신고 이벤트 위임
+            const commentsSection = document.querySelector('.comments-section');
+            if (commentsSection) {
+                commentsSection.addEventListener('click', function(event) {
+                    if (event.target.classList.contains('report-btn')) {
+                        const commentId = parseInt(event.target.getAttribute('data-comment-id'));
+                        if (commentId) {
+                            reportComment(commentId);
+                        }
+                    }
+                });
+            }
+            
+            // 초기 상태 설정
             if (userVote) {
                 enableComments();
+                const activeBtn = document.querySelector(`[data-vote="${userVote}"]`);
+                if (activeBtn) {
+                    activeBtn.classList.add('active');
+                }
             } else {
                 disableComments();
             }
             
-            initializeReportSystem();
-            maintainReportStates();
-
-            {% if user_vote %}
-            userVote = '{{ user_vote }}';
-            document.querySelector(`[data-vote="${userVote}"]`).classList.add('active');
-            enableComments();
-            {% endif %}
+            // 기존 신고 버튼 상태 설정
+            initializeReportButtons();
             
-            console.log('입법제안 상세보기 페이지 로드 완료');
+            console.log('모든 이벤트 리스너 초기화 완료');
         });
     </script>
 </body>
