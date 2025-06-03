@@ -770,7 +770,7 @@
 
     <script>
         // API 베이스 URL 설정
-        const billId = {{ bill.id }};
+        const proposalId = {{ proposal.id }};
         const API_BASE_URL = window.location.origin;
 
         // 전역 상태 - 안전한 JSON 파싱
@@ -871,7 +871,7 @@
                 const vote = this.getAttribute('data-vote');
                 
                 try {
-                    const response = await fetch(`${API_BASE_URL}/api/bills/${billId}/vote`, {
+                    const response = await fetch(`${API_BASE_URL}/api/proposals/${proposalId}/vote`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -930,7 +930,7 @@
             }
             
             try {
-                const response = await fetch(`${API_BASE_URL}/api/bills/${billId}/comments`, {
+                const response = await fetch(`${API_BASE_URL}/api/proposals/${proposalId}/comments`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
