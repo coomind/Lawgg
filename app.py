@@ -112,6 +112,7 @@ class Bill(db.Model):
     detail_link = db.Column(db.String(200))
     summary = db.Column(db.Text)
     view_count = db.Column(db.Integer, default=0)
+    assembly_result = db.Column(db.String(100))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class BillVote(db.Model):
@@ -578,6 +579,7 @@ def bill_detail(bill_id):
         'committee': bill.committee,
         'detail_link': bill.detail_link,
         'content': bill_content.get('content', '')
+        'assembly_result': bill.assembly_result
     }
     
     return render_template('LAWdetail.html',
