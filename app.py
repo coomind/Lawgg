@@ -929,12 +929,11 @@ def crawl_bill_content(bill_number):
             # "▶ 제안이유 및 주요내용" 다음부터 시작
             start_marker = "▶ 제안이유 및 주요내용"
             start_idx = content_text.find(start_marker)
+            
             if start_idx != -1:
+                # 시작 마커 이후부터 추출 (마커 제외)
                 start_idx += len(start_marker)
                 content = content_text[start_idx:]
-                
-                # ⛔ 크롤링된 내용에서 "제안이유 및 주요내용"이 다시 등장하면 제거
-                content = content.replace("제안이유 및 주요내용", "", 1).strip()
                 
                 # 🎯 구조적 끝점으로만 자르기
                 end_markers = [
@@ -977,11 +976,6 @@ def crawl_bill_content(bill_number):
                 content = '\n'.join(lines)
                 
                 return {'content': content}
-                
-    except Exception as e:
-        print(f"크롤링 오류: {e}")
-    
-    return {'content': ''}
     
 @app.route('/api/proposals/<int:proposal_id>/vote', methods=['POST'])
 def vote_proposal(proposal_id):
