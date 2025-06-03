@@ -746,6 +746,7 @@
                 </div>
             </div>
 
+            <!-- PROPdetail.html의 댓글 섹션을 이것으로 교체 -->
             <!-- 댓글 섹션 -->
             <div class="comments-section">
                 <h2 class="comments-title">입법제안 토론</h2>
@@ -766,15 +767,16 @@
                 <div class="comments-list" id="comments-list">
                     {% for comment in comments %}
                     {% if not comment.parent_id %}
+                    <!-- 부모 댓글 -->
                     <div class="comment-item {% if comment.is_under_review %}comment-under-review{% endif %}" 
-                         data-comment-id="{{ comment.id }}" 
-                         data-report-count="{{ comment.report_count|default(0) }}">
+                        data-comment-id="{{ comment.id }}" 
+                        data-report-count="{{ comment.report_count|default(0) }}">
                         <div class="comment-header">
                             <span class="comment-author">{{ comment.author|default('익명' ~ comment.id) }}</span>
                             <span class="comment-stance {{ 'agree' if comment.stance == 'agree' else 'disagree' }}">
                                 {{ '찬성' if comment.stance == 'agree' else '반대' }}
                             </span>
-                            <span class="comment-date">{{ comment.time_ago|default('방금 전') }}</span>
+                            <span class="comment-time">{{ comment.time_ago|default('방금 전') }}</span>
                             {% if comment.is_under_review %}
                             <span class="under-review-badge">검토 중</span>
                             {% endif %}
@@ -808,15 +810,15 @@
                     {% for reply in comments %}
                     {% if reply.parent_id == comment.id %}
                     <div class="comment-item reply {% if reply.is_under_review %}comment-under-review{% endif %}" 
-                         data-comment-id="{{ reply.id }}" 
-                         data-parent-id="{{ reply.parent_id }}"
-                         data-report-count="{{ reply.report_count|default(0) }}">
+                        data-comment-id="{{ reply.id }}" 
+                        data-parent-id="{{ reply.parent_id }}"
+                        data-report-count="{{ reply.report_count|default(0) }}">
                         <div class="comment-header">
                             <span class="comment-author">{{ reply.author|default('익명' ~ reply.id) }}</span>
                             <span class="comment-stance {{ 'agree' if reply.stance == 'agree' else 'disagree' }}">
                                 {{ '찬성' if reply.stance == 'agree' else '반대' }}
                             </span>
-                            <span class="comment-date">{{ reply.time_ago|default('방금 전') }}</span>
+                            <span class="comment-time">{{ reply.time_ago|default('방금 전') }}</span>
                             {% if reply.is_under_review %}
                             <span class="under-review-badge">검토 중</span>
                             {% endif %}
@@ -862,6 +864,9 @@
     </main>
 
     <script>
+        // PROPdetail.html의 <script> 태그 안의 전체 내용을 이것으로 교체
+
+        // API 베이스 URL 설정
         // PROPdetail.html의 <script> 태그 안의 전체 내용을 이것으로 교체
 
         // API 베이스 URL 설정
@@ -921,7 +926,28 @@
         document.addEventListener('DOMContentLoaded', function() {
             updateVoteUI();
             setupEventListeners();
+            // ✅ 좋아요 초기 상태 적용
+            initializeLikeStates();
         });
+
+        // ✅ 좋아요 초기 상태 적용 함수 추가
+        function initializeLikeStates() {
+            document.querySelectorAll('.like-btn').forEach(btn => {
+                const commentId = parseInt(btn.dataset.commentId);
+                if (likedComments.has(commentId)) {
+                    btn.classList.add('liked');
+                }
+            });
+            
+            // 신고 상태도 초기화
+            document.querySelectorAll('.report-btn').forEach(btn => {
+                const commentId = parseInt(btn.dataset.commentId);
+                if (reportedComments.has(commentId)) {
+                    btn.classList.add('reported');
+                    btn.textContent = '신고됨';
+                }
+            });
+        }
 
         // 이벤트 리스너 설정
         function setupEventListeners() {
@@ -968,7 +994,7 @@
 
         // ========== 투표 관련 함수들 ==========
 
-        // 투표 처리 (완전 수정)
+        // 투표 처리
         async function handleVote(e) {
             const voteType = e.target.dataset.vote;
             
@@ -1102,21 +1128,22 @@
             }
         }
 
-        // 댓글을 리스트에 추가
+        // ✅ 댓글을 리스트에 추가 (답글 구조 개선)
         function addCommentToList(comment, isReply = false) {
             const commentHtml = createCommentHtml(comment, isReply);
             
             if (isReply && comment.parent_id) {
-                // 답글인 경우 부모 댓글 다음에 추가
-                const parentComment = document.querySelector(`[data-comment-id="${comment.parent_id}"]`);
+                // 답글인 경우: 부모 댓글의 마지막 답글 다음에 추가
+                const parentComment = document.querySelector(`[data-comment-id="${comment.parent_id}"]:not(.reply)`);
                 if (parentComment) {
                     const tempDiv = document.createElement('div');
                     tempDiv.innerHTML = commentHtml;
                     const newComment = tempDiv.firstElementChild;
                     
-                    // 부모 댓글의 마지막 답글 다음에 삽입
+                    // 부모 댓글의 마지막 답글 찾기
                     let insertAfter = parentComment;
                     let nextSibling = parentComment.nextElementSibling;
+                    
                     while (nextSibling && nextSibling.classList.contains('reply') && 
                         nextSibling.dataset.parentId === comment.parent_id.toString()) {
                         insertAfter = nextSibling;
@@ -1126,7 +1153,7 @@
                     insertAfter.insertAdjacentElement('afterend', newComment);
                 }
             } else {
-                // 일반 댓글인 경우 맨 위에 추가
+                // 일반 댓글인 경우: 맨 위에 추가
                 const firstComment = commentsList.querySelector('.comment-item');
                 if (firstComment) {
                     firstComment.insertAdjacentHTML('beforebegin', commentHtml);
@@ -1152,7 +1179,7 @@
                     <div class="comment-header">
                         <span class="comment-author">${comment.author || '익명' + comment.id}</span>
                         <span class="comment-stance ${stanceClass}">${stanceText}</span>
-                        <span class="comment-date">방금 전</span>
+                        <span class="comment-time">방금 전</span>
                         ${underReviewBadge}
                     </div>
                     <div class="comment-content">${comment.content}</div>
@@ -1269,7 +1296,7 @@
                 if (response.ok) {
                     const result = await response.json();
                     
-                    // 서버 응답에 따라 UI 업데이트
+                    // ✅ 서버 응답에 따라 UI 업데이트
                     if (result.liked) {
                         likeBtn.classList.add('liked');
                         likedComments.add(parseInt(commentId));
@@ -1292,7 +1319,7 @@
 
         // ========== 신고 관련 함수들 ==========
 
-        // 댓글 신고 처리
+        // ✅ 댓글 신고 처리 (신고수 표시 개선)
         async function handleReportClick(e) {
             e.preventDefault();
             
@@ -1319,9 +1346,9 @@
                 if (response.ok) {
                     const result = await response.json();
                     
-                    // UI 업데이트
+                    // ✅ UI 업데이트 - 신고수 포함
                     reportBtn.classList.add('reported');
-                    reportBtn.textContent = '신고됨';
+                    reportBtn.textContent = result.new_report_text || '신고됨';
                     
                     // 상태 업데이트
                     reportedComments.add(parseInt(commentId));
@@ -1352,7 +1379,7 @@
             }
         }
 
-        // 입법제안 신고 처리
+        // ✅ 입법제안 신고 처리 (신고수 표시 개선)
         async function handleProposalReport() {
             const reportBtn = document.getElementById('proposal-report-btn');
             
@@ -1374,8 +1401,12 @@
                 });
 
                 if (response.ok) {
+                    const result = await response.json();
+                    
+                    // ✅ UI 업데이트 - 신고수 포함
                     reportBtn.classList.add('reported');
-                    reportBtn.textContent = '신고됨';
+                    reportBtn.textContent = result.new_report_text || '신고됨';
+                    
                     showMessage('신고가 접수되었습니다.', 'success');
                 } else {
                     const error = await response.json();
@@ -1414,6 +1445,9 @@
                             });
                         }
                     });
+                    
+                    // 새로 추가된 요소들에 좋아요/신고 상태 적용
+                    initializeLikeStates();
                     
                     // 더보기 버튼 처리
                     if (!data.has_more) {
