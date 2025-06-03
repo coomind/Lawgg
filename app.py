@@ -1165,12 +1165,13 @@ def report_proposal(proposal_id):
     
     db.session.commit()
     
+    # ✅ 신고수 정보 포함하여 반환
     return jsonify({
         'success': True,
         'report_count': proposal.report_count,
-        'message': 'Report submitted successfully'
+        'message': 'Report submitted successfully',
+        'new_report_text': f'신고됨 ({proposal.report_count})' if proposal.report_count > 1 else '신고됨'
     })
-
 
 @app.route('/api/autocomplete/bills')
 def autocomplete_bills():
@@ -1525,12 +1526,15 @@ def report_comment(comment_id):
     
     db.session.commit()
     
+    # ✅ 신고수와 상태 정보 모두 반환
     return jsonify({
         'success': True,
         'report_count': comment.report_count,
         'is_under_review': comment.is_under_review,
-        'message': 'Report submitted successfully'
+        'message': 'Report submitted successfully',
+        'new_report_text': f'신고됨 ({comment.report_count})' if comment.report_count > 1 else '신고됨'
     })
+
 
 # 미들웨어로 차단된 IP 확인
 @app.before_request
