@@ -241,11 +241,29 @@ def members_list():
     party = request.args.get('party', '전체')
     per_page = 20
     
-    query = Member.query.order_by(Member.name.asc())
+    # 🔥 Python에서 한글 가나다순 정렬
+    query = Member.query
     if party and party != '전체':
         query = query.filter_by(party=party)
     
-    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    all_members = query.all()
+    
+    # 한글 가나다순 정렬
+    import locale
+    try:
+        locale.setlocale(locale.LC_COLLATE, 'ko_KR.UTF-8')
+        sorted_members = sorted(all_members, key=lambda x: locale.strxfrm(x.name or ''))
+    except:
+        # fallback: 기본 정렬
+        sorted_members = sorted(all_members, key=lambda x: x.name or '')
+    
+    # 수동 페이지네이션
+    start_idx = (page - 1) * per_page
+    end_idx = start_idx + per_page
+    page_members = sorted_members[start_idx:end_idx]
+    
+    total_count = len(sorted_members)
+    total_pages = (total_count + per_page - 1) // per_page
     
     # 정당 목록
     parties = [
@@ -257,19 +275,18 @@ def members_list():
         {'code': '무소속', 'name': '무소속'}
     ]
     
-    # 페이지네이션 데이터
+    # 페이지네이션 데이터 재구성
     pagination_data = {
         'current_page': page,
-        'total_pages': pagination.pages,
-        'has_prev': pagination.has_prev,
-        'has_next': pagination.has_next,
-        'page_range': get_page_range(page, pagination.pages),
-        'prev_url_params': f"page={page-1}&party={party}" if pagination.has_prev else '',
-        'next_url_params': f"page={page+1}&party={party}" if pagination.has_next else '',
+        'total_pages': total_pages,
+        'has_prev': page > 1,
+        'has_next': page < total_pages,
+        'page_range': get_page_range(page, total_pages),
+        'prev_url_params': f"page={page-1}&party={party}" if page > 1 else '',
+        'next_url_params': f"page={page+1}&party={party}" if page < total_pages else '',
         'page_size': per_page
     }
     
-    # URL 파라미터 생성 함수
     def get_url_params(page_num):
         params = []
         if page_num > 1:
@@ -280,6 +297,7 @@ def members_list():
     
     pagination_data['get_url_params'] = get_url_params
     
+    # 🔥 page_members 사용 (pagination.items 대신)
     members_data = [{
         'id': m.id,
         'name': m.name,
@@ -287,7 +305,7 @@ def members_list():
         'age': calculate_age(m.age) if m.age else None,
         'gender': m.gender,
         'photo_url': m.photo_url
-    } for m in pagination.items]
+    } for m in page_members]
     
     return render_template('NAlist.html',
                          page_title='국회의원 목록',
@@ -295,7 +313,7 @@ def members_list():
                          parties=parties,
                          current_party=party,
                          pagination=pagination_data)
-
+    
 # 기존 함수 전체를 이것으로 교체:
 @app.route('/members/<int:member_id>')
 def member_detail(member_id):
