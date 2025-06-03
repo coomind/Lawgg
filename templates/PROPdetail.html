@@ -449,6 +449,11 @@
             cursor: not-allowed;
         }
 
+        .comment-action.liked {
+            color: #007bff;
+            font-weight: 600;
+        }
+
         /* 입법제안 신고 버튼 스타일 */
         .proposal-report-btn {
             background: none;
@@ -589,7 +594,7 @@
             </div>
 
             <div class="content-section">
-                <div class="section-title">제안사유</div>
+                <div class="section-title">제안내용</div>
                 <div class="proposal-list">
                     <ol>
                         <li>스마트폰 과의존자에 대한 체계적인 보호 방안 마련 필요</li>
@@ -640,39 +645,7 @@
                 </div>
 
                 <div id="comments-list">
-                    <div class="comment-item" data-comment-id="1">
-                        <div class="comment-header">
-                            <div class="comment-avatar">👤</div>
-                            <span class="comment-author">김민수</span>
-                            <span class="comment-stance agree">찬성</span>
-                            <span class="comment-date">2시간 전</span>
-                        </div>
-                        <div class="comment-content">
-                            스마트폰 과의존 문제는 정말 심각합니다. 특히 청소년들에게 미치는 영향을 생각하면 이런 법안이 꼭 필요하다고 생각해요.
-                        </div>
-                        <div class="comment-actions">
-                            <button class="comment-action">좋아요 · 5</button>
-                            <button class="comment-action">답글</button>
-                            <button class="comment-action report-btn" data-comment-id="1">신고</button>
-                        </div>
-                    </div>
-
-                    <div class="comment-item" data-comment-id="2">
-                        <div class="comment-header">
-                            <div class="comment-avatar">👤</div>
-                            <span class="comment-author">이영희</span>
-                            <span class="comment-stance disagree">반대</span>
-                            <span class="comment-date">5시간 전</span>
-                        </div>
-                        <div class="comment-content">
-                            개인의 자유를 제한하는 법안은 신중해야 합니다. 교육과 인식 개선이 우선이라고 생각해요.
-                        </div>
-                        <div class="comment-actions">
-                            <button class="comment-action">좋아요 · 3</button>
-                            <button class="comment-action">답글</button>
-                            <button class="comment-action report-btn" data-comment-id="2">신고</button>
-                        </div>
-                    </div>
+                    <!-- 댓글은 사용자가 작성하면 동적으로 추가됨 -->
                 </div>
             </div>
         </div>
@@ -685,7 +658,8 @@
         
         // 전역 상태
         let userVote = null; // 'agree', 'disagree', null
-        let commentCounter = 3;
+        let commentCounter = 1; // 익명1부터 시작
+        let userNumber = null; // 현재 사용자의 번호
         let voteCounts = {
             agree: 237,
             disagree: 89
@@ -696,6 +670,10 @@
         let commentReports = {};
         let proposalReported = false;
         let proposalReportCount = 0;
+
+        // 좋아요 시스템
+        let commentLikes = {}; // commentId: Set of userNumbers who liked
+        let userLikes = new Set(); // 현재 사용자가 좋아요한 댓글들
 
         // DOM 요소들
         const voteButtons = document.querySelectorAll('.vote-btn');
@@ -708,25 +686,21 @@
         // 네비게이션 함수들
         function goToHome() {
             console.log('홈으로 이동');
-            // window.location.href = `${API_BASE_URL}/`;
             alert('홈으로 이동');
         }
 
         function goToMembersPage() {
             console.log('국회의원 페이지로 이동');
-            // window.location.href = `${API_BASE_URL}/members`;
             alert('국회의원 페이지로 이동');
         }
 
         function goToBillsPage() {
             console.log('법률안 페이지로 이동');
-            // window.location.href = `${API_BASE_URL}/bills`;
             alert('법률안 페이지로 이동');
         }
 
         function goToProposalsPage() {
             console.log('입법제안 페이지로 이동');
-            // window.location.href = `${API_BASE_URL}/proposals`;
             alert('입법제안 페이지로 이동');
         }
 
@@ -743,6 +717,11 @@
             commentSubmit.disabled = false;
             voteMessage.style.display = 'none';
             commentInput.placeholder = "제안에 대한 의견을 작성해주세요...";
+            
+            // 사용자 번호 할당 (처음 투표할 때)
+            if (!userNumber) {
+                userNumber = commentCounter;
+            }
         }
 
         // 댓글 기능 비활성화
@@ -805,16 +784,16 @@
             
             // 새 댓글 추가
             const commentData = {
-                id: commentCounter,
-                author: '새로운사용자',
+                id: Date.now(), // 고유 ID 생성
+                author: `익명${userNumber}`,
                 content: content,
                 stance: userVote,
-                time_ago: '방금 전'
+                time_ago: '방금 전',
+                likes: 0
             };
             
             addComment(commentData);
             commentInput.value = '';
-            commentCounter++;
         });
 
         // 엔터키로 댓글 작성
@@ -834,6 +813,9 @@
             const stanceClass = commentData.stance === 'agree' ? 'agree' : 'disagree';
             const stanceText = commentData.stance === 'agree' ? '찬성' : '반대';
             
+            // 댓글 좋아요 초기화
+            commentLikes[commentData.id] = new Set();
+            
             commentItem.innerHTML = `
                 <div class="comment-header">
                     <div class="comment-avatar">👤</div>
@@ -843,8 +825,10 @@
                 </div>
                 <div class="comment-content">${commentData.content}</div>
                 <div class="comment-actions">
-                    <button class="comment-action">좋아요 · 0</button>
-                    <button class="comment-action">답글</button>
+                    <button class="comment-action like-btn" data-comment-id="${commentData.id}">
+                        좋아요 · <span class="like-count">${commentData.likes}</span>
+                    </button>
+                    <button class="comment-action reply-btn" data-comment-id="${commentData.id}">답글</button>
                     <button class="comment-action report-btn" data-comment-id="${commentData.id}">신고</button>
                 </div>
             `;
@@ -859,31 +843,75 @@
                 commentItem.style.transition = 'background-color 0.5s';
             }, 2000);
             
-            // 신고 버튼 이벤트 추가
-            initializeReportSystem();
+            // 이벤트 리스너 추가
+            initializeCommentEvents();
+            
+            // 다음 댓글을 위해 카운터 증가
+            commentCounter++;
+            
             console.log('새 댓글 추가됨:', commentData);
         }
 
-        // 신고 시스템 초기화
-        function initializeReportSystem() {
-            // 댓글 신고 버튼 이벤트
+        // 댓글 이벤트 초기화
+        function initializeCommentEvents() {
+            // 좋아요 버튼 이벤트
+            document.querySelectorAll('.like-btn').forEach(btn => {
+                btn.removeEventListener('click', handleLike);
+                btn.addEventListener('click', handleLike);
+            });
+            
+            // 답글 버튼 이벤트
+            document.querySelectorAll('.reply-btn').forEach(btn => {
+                btn.removeEventListener('click', handleReply);
+                btn.addEventListener('click', handleReply);
+            });
+            
+            // 신고 버튼 이벤트
             document.querySelectorAll('.report-btn').forEach(btn => {
                 btn.removeEventListener('click', handleCommentReport);
                 btn.addEventListener('click', handleCommentReport);
             });
-            
-            // 입법제안 신고 버튼 이벤트
-            const proposalReportBtn = document.getElementById('proposal-report-btn');
-            if (proposalReportBtn) {
-                proposalReportBtn.removeEventListener('click', handleProposalReport);
-                proposalReportBtn.addEventListener('click', handleProposalReport);
-            }
         }
 
-       // 댓글 신고 처리
+        // 좋아요 처리
+        function handleLike(event) {
+            const commentId = parseInt(event.target.getAttribute('data-comment-id'));
+            const likeCountSpan = event.target.querySelector('.like-count');
+            
+            if (!commentLikes[commentId]) {
+                commentLikes[commentId] = new Set();
+            }
+            
+            if (userLikes.has(commentId)) {
+                // 좋아요 취소
+                userLikes.delete(commentId);
+                commentLikes[commentId].delete(userNumber);
+                event.target.classList.remove('liked');
+            } else {
+                // 좋아요 추가
+                userLikes.add(commentId);
+                commentLikes[commentId].add(userNumber);
+                event.target.classList.add('liked');
+            }
+            
+            // 좋아요 수 업데이트
+            const likeCount = commentLikes[commentId].size;
+            likeCountSpan.textContent = likeCount;
+            
+            console.log('좋아요 토글:', commentId, '현재 수:', likeCount);
+        }
+
+       // 답글 처리
+        function handleReply(event) {
+            const commentId = event.target.getAttribute('data-comment-id');
+            console.log('답글 버튼 클릭:', commentId);
+            alert(`댓글 ${commentId}에 답글 기능은 개발 중입니다.`);
+        }
+
+        // 댓글 신고 처리
         function handleCommentReport(event) {
             const commentId = parseInt(event.target.getAttribute('data-comment-id'));
-            console.log('댓글 신고 클릭:', commentId);
+            const button = event.target;
             
             if (reportedComments.has(commentId)) {
                 alert('이미 신고한 댓글입니다.');
@@ -892,33 +920,34 @@
             
             if (confirm('이 댓글을 신고하시겠습니까?')) {
                 reportedComments.add(commentId);
+                
+                // 신고 카운트 증가
                 commentReports[commentId] = (commentReports[commentId] || 0) + 1;
                 
-                // 신고 버튼 비활성화
-                event.target.textContent = '신고됨';
-                event.target.classList.add('reported');
+                button.textContent = '신고됨';
+                button.classList.add('reported');
+                button.disabled = true;
                 
-                // 신고 수 3개 이상이면 검토 중 표시
-                if (commentReports[commentId] >= 3) {
+                console.log('댓글 신고:', commentId, '신고 수:', commentReports[commentId]);
+                
+                // 신고가 5개 이상이면 검토 중 표시
+                if (commentReports[commentId] >= 5) {
                     const commentItem = document.querySelector(`[data-comment-id="${commentId}"]`);
                     commentItem.classList.add('comment-under-review');
                     
                     const commentHeader = commentItem.querySelector('.comment-header');
-                    const underReviewBadge = document.createElement('span');
-                    underReviewBadge.className = 'under-review-badge';
-                    underReviewBadge.textContent = '검토중';
-                    commentHeader.appendChild(underReviewBadge);
+                    const reviewBadge = document.createElement('span');
+                    reviewBadge.className = 'under-review-badge';
+                    reviewBadge.textContent = '검토중';
+                    commentHeader.appendChild(reviewBadge);
                 }
                 
                 alert('신고가 접수되었습니다.');
-                console.log('댓글 신고 완료:', commentId);
             }
         }
 
         // 입법제안 신고 처리
-        function handleProposalReport(event) {
-            console.log('입법제안 신고 클릭');
-            
+        function handleProposalReport() {
             if (proposalReported) {
                 alert('이미 신고한 제안입니다.');
                 return;
@@ -928,30 +957,83 @@
                 proposalReported = true;
                 proposalReportCount++;
                 
-                // 신고 버튼 비활성화
-                event.target.textContent = '신고됨';
-                event.target.classList.add('reported');
+                const reportBtn = document.getElementById('proposal-report-btn');
+                reportBtn.textContent = '신고됨';
+                reportBtn.classList.add('reported');
+                reportBtn.disabled = true;
                 
+                console.log('입법제안 신고됨, 총 신고 수:', proposalReportCount);
                 alert('신고가 접수되었습니다.');
-                console.log('입법제안 신고 완료');
             }
         }
 
-        // 페이지 로드 시 초기화
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('페이지 로드됨');
+        // 초기화
+        function initialize() {
+            console.log('페이지 초기화 시작');
+            
+            // 투표 수 초기 업데이트
             updateVoteCounts();
-            initializeReportSystem();
-        });
-
-        // 페이지 새로고침 방지 (개발 중에만 사용)
-        window.addEventListener('beforeunload', function(e) {
-            if (userVote || commentInput.value.trim()) {
-                e.preventDefault();
-                e.returnValue = '';
+            
+            // 입법제안 신고 버튼 이벤트
+            const proposalReportBtn = document.getElementById('proposal-report-btn');
+            if (proposalReportBtn) {
+                proposalReportBtn.addEventListener('click', handleProposalReport);
             }
-        });
+            
+            // 댓글 이벤트 초기화
+            initializeCommentEvents();
+            
+            console.log('페이지 초기화 완료');
+        }
 
+        // 페이지 로드 완료 시 초기화
+        document.addEventListener('DOMContentLoaded', initialize);
+
+        // 디버깅용 전역 함수들
+        window.debugInfo = function() {
+            console.log('=== 디버그 정보 ===');
+            console.log('사용자 투표:', userVote);
+            console.log('사용자 번호:', userNumber);
+            console.log('투표 수:', voteCounts);
+            console.log('신고된 댓글:', Array.from(reportedComments));
+            console.log('댓글 신고 수:', commentReports);
+            console.log('제안 신고 여부:', proposalReported);
+            console.log('사용자 좋아요:', Array.from(userLikes));
+            console.log('댓글 좋아요:', commentLikes);
+        };
+
+        // 모든 데이터 초기화 (개발용)
+        window.resetAll = function() {
+            if (confirm('모든 데이터를 초기화하시겠습니까?')) {
+                userVote = null;
+                userNumber = null;
+                voteCounts = { agree: 237, disagree: 89 };
+                reportedComments.clear();
+                commentReports = {};
+                proposalReported = false;
+                proposalReportCount = 0;
+                commentLikes = {};
+                userLikes.clear();
+                
+                // UI 초기화
+                voteButtons.forEach(btn => btn.classList.remove('active'));
+                disableComments();
+                updateVoteCounts();
+                
+                // 댓글 목록 초기화
+                document.getElementById('comments-list').innerHTML = '';
+                commentCounter = 1;
+                
+                // 신고 버튼 초기화
+                const proposalReportBtn = document.getElementById('proposal-report-btn');
+                proposalReportBtn.textContent = '신고';
+                proposalReportBtn.classList.remove('reported');
+                proposalReportBtn.disabled = false;
+                
+                console.log('모든 데이터가 초기화되었습니다.');
+                alert('초기화 완료!');
+            }
+        };
     </script>
 </body>
 </html>
