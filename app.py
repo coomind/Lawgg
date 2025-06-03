@@ -241,7 +241,7 @@ def members_list():
     party = request.args.get('party', '전체')
     per_page = 20
     
-    query = Member.query
+    query = Member.query.order_by(Member.name.asc())
     if party and party != '전체':
         query = query.filter_by(party=party)
     
