@@ -34,6 +34,15 @@
             z-index: 100;
         }
 
+        .header-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
         .logo {
             display: flex;
             align-items: center;
@@ -384,10 +393,8 @@
         <section class="party-section">
             <div class="party-tabs">
                 {% for party in parties %}
-                <a href="?{% if party.code != '전체' %}party={{ party.code }}{% endif %}" 
-                   class="party-tab {% if party.code == current_party %}active{% endif %}">
-                    {{ party.name }}
-                </a>
+                <a href="#" class="party-tab {% if current_party in party.related_parties or party.code == current_party %}active{% endif %}" 
+            data-party="{{ party.code }}">{{ party.name }}</a>
                 {% endfor %}
             </div>
         </section>
@@ -469,221 +476,123 @@
     </main>
 
     <script>
-             // API 베이스 URL 설정 (배포 시 변경)
-           const API_BASE_URL = 'https://lawgg-backend.onrender.com';
+       // API 베이스 URL 설정 (배포 시 변경)
+        const API_BASE_URL = 'https://lawgg-backend.onrender.com';
 
-           function goToHome() {
-                  window.location.href = `${API_BASE_URL}/`;
-             }
+        function goToHome() {
+            window.location.href = `${API_BASE_URL}/`;
+        }
 
-           function goToMembersPage() {
-                  window.location.href = `${API_BASE_URL}/members`;
-           }
+        function goToMembersPage() {
+            window.location.href = `${API_BASE_URL}/members`;
+        }
 
-           function geToBillsPage() {
-                 window.location.href = `${API_BASE_URL}/bills`;
-           }
+        function geToBillsPage() {
+            window.location.href = `${API_BASE_URL}/bills`;
+        }
 
-           function goToProposalsPage() {
-                 window.location.href = `${API_BASE_URL}/proposals`;
-           }
+        function goToProposalsPage() {
+           window.location.href = `${API_BASE_URL}/proposals`;
+        }
 
-           function viewBillDetail(billId, billTitle) {
-                  window.location.href = `${API_BASE_URL}/bills/${billId}`;
-           }
+        function viewBillDetail(billId, billTitle) {
+            window.location.href = `${API_BASE_URL}/bills/${billId}`;
+        }
 
-           function viewMemberDetail(memberId, memberName) {
-                  window.location.href = `${API_BASE_URL}/members/${memberId}`;
-           }
+        function viewMemberDetail(memberId, memberName) {
+            window.location.href = `${API_BASE_URL}/members/${memberId}`;
+        }
 
-           // 서버에서 전달받은 설정
-           const PAGE_CONFIG = {
-                  currentParty: '{{ current_party or "전체" }}',
-                  currentPage: {{ pagination.current_page if pagination else 1 }},
-                  totalPages: {{ pagination.total_pages if pagination else 1 }},
-                  pageSize: {{ pagination.page_size if pagination else 20 }}
-           };
+        // 서버에서 전달받은 설정
+        const PAGE_CONFIG = {
+            currentParty: '{{ current_party or "전체" }}',
+            currentPage: {{ pagination.current_page if pagination else 1 }},
+            totalPages: {{ pagination.total_pages if pagination else 1 }},
+            pageSize: {{ pagination.page_size if pagination else 20 }}
+        };
 
-           // 전역 변수
-           let currentParty = PAGE_CONFIG.currentParty;
-           let currentPage = PAGE_CONFIG.currentPage;
+        // 전역 변수
+        let currentParty = PAGE_CONFIG.currentParty;
+        let currentPage = PAGE_CONFIG.currentPage;
 
-           // ===== 새로 추가된 함수들 =====
-        
-           // 정당 정보 파싱 함수
-           function parseParties(partyString) {
-                  if (!partyString) return [];
-                  return partyString.split('/').map(party => party.trim());
-             }
-
-           // 멤버가 특정 정당에 속하는지 확인
-           function isMemberInParty(memberParty, targetParty) {
-                  if (!memberParty || !targetParty || targetParty === '전체') {
-                      return true;
-                  }
+        // 페이지 로드 (URL 변경 방식 - SEO 친화적)
+        function loadPage(params = {}) {
+            const queryParams = new URLSearchParams(window.location.search);
             
-                  const memberParties = parseParties(memberParty);
-                  return memberParties.some(party => party.includes(targetParty) || targetParty.includes(party));
-           }
+            if (params.page !== undefined) {
+                if (params.page === 1) {
+                    queryParams.delete('page');
+                } else {
+                    queryParams.set('page', params.page);
+                }
+            }
+            
+            if (params.party !== undefined) {
+                if (params.party === '전체' || params.party === '') {
+                    queryParams.delete('party');
+                } else {
+                    queryParams.set('party', params.party);
+                }
+            }
+            
+            // URL 변경하여 페이지 리로드 (서버사이드 렌더링)
+            const newUrl = window.location.pathname + 
+                          (queryParams.toString() ? '?' + queryParams.toString() : '');
+            window.location.href = newUrl;
+        }
 
-           // 클라이언트 사이드 필터링 함수
-           function filterMembersByParty(targetParty) {
-                  const allRows = document.querySelectorAll('.table-row');
-                  let visibleCount = 0;
+        // 나이 계산 함수 (클라이언트에서 필요한 경우)
+        function calculateAge(birthDate) {
+            if (!birthDate) return '';
             
-                  allRows.forEach(row => {
-                      const memberPartyElement = row.querySelector('.member-party');
-                      if (!memberPartyElement) return;
-                
-                      const memberParty = memberPartyElement.textContent.trim();
-                      const shouldShow = isMemberInParty(memberParty, targetParty);
-                
-                      if (shouldShow) {
-                             row.style.display = 'grid';
-                             visibleCount++;
-                      } else {
-                             row.style.display = 'none';
-                      }
-                  });
+            const birth = new Date(birthDate);
+            const today = new Date();
+            let age = today.getFullYear() - birth.getFullYear();
+            const monthDiff = today.getMonth() - birth.getMonth();
+            
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+                age--;
+            }
+            
+            return age;
+        }
 
-                  // 결과가 없을 때 메시지 표시
-                  showNoResultsMessage(visibleCount === 0, targetParty);
-            
-                  return visibleCount;
-           }
-
-           // 결과 없음 메시지 표시
-           function showNoResultsMessage(show, party) {
-                  let noResultsDiv = document.querySelector('.no-results-dynamic');
-            
-                  if (show) {
-                      if (!noResultsDiv) {
-                             noResultsDiv = document.createElement('div');
-                             noResultsDiv.className = 'no-results no-results-dynamic';
-                             noResultsDiv.style.gridColumn = '1 / -1';
-                             document.querySelector('.members-table').appendChild(noResultsDiv);
-                      }
-                      noResultsDiv.textContent = party === '전체' ? 
-                             '국회의원이 없습니다.' : 
-                             `${party} 정당의 국회의원이 없습니다.`;
-                      noResultsDiv.style.display = 'block';
-                  } else {
-                      if (noResultsDiv) {
-                             noResultsDiv.style.display = 'none';
-                      }
-                 }
-           }
-
-           // 정당 탭 활성화 상태 업데이트
-           function updateActiveTab(selectedParty) {
-                  document.querySelectorAll('.party-tab').forEach(tab => {
-                      const tabParty = tab.getAttribute('data-party');
-                      if (tabParty === selectedParty) {
-                             tab.classList.add('active');
-                      } else {
-                             tab.classList.remove('active');
-                      }
-                  });
-           }
-
-           // 페이지 로드 (기존 함수 - 필요시 유지)
-           function loadPage(params = {}) {
-                  const queryParams = new URLSearchParams(window.location.search);
-            
-                  if (params.page !== undefined) {
-                      if (params.page === 1) {
-                             queryParams.delete('page');
-                      } else {
-                             queryParams.set('page', params.page);
-                      }
-                  }
-            
-                  if (params.party !== undefined) {
-                      if (params.party === '전체' || params.party === '') {
-                             queryParams.delete('party');
-                      } else {
-                             queryParams.set('party', params.party);
-                      }
-                  }
-            
-                  // URL 변경하여 페이지 리로드 (서버사이드 렌더링)
-                  const newUrl = window.location.pathname + 
-                                   (queryParams.toString() ? '?' + queryParams.toString() : '');
-                  window.location.href = newUrl;
-           }
-
-           // 나이 계산 함수 (클라이언트에서 필요한 경우)
-           function calculateAge(birthDate) {
-                  if (!birthDate) return '';
-            
-                  const birth = new Date(birthDate);
-                  const today = new Date();
-                  let age = today.getFullYear() - birth.getFullYear();
-                  const monthDiff = today.getMonth() - birth.getMonth();
-            
-                  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-                      age--;
-                  }
-            
-                  return age;
-           }
-
-           document.addEventListener('DOMContentLoaded', function() {
-               // 정당 탭 클릭 이벤트 (서버 사이드로 수정됨)
-               document.querySelectorAll('.party-tab').forEach(tab => {
-                   tab.addEventListener('click', function(e) {
-                       e.preventDefault();
-                        
-                       const party = this.getAttribute('data-party');
-                        
-                       // 서버로 새로운 요청 보내기
-                       const url = new URL(window.location);
-                       if (party === '전체') {
-                           url.searchParams.delete('party');
-                       } else {
-                           url.searchParams.set('party', party);
-                       }
-                        
-                       url.searchParams.delete('page'); // 페이지는 1로 리셋
-                        
-                        
-                       // 페이지 리로드하여 서버에서 필터링된 데이터 받기
-                        
-                       window.location.href = url.toString();
+        // 이벤트 리스너 설정
+        document.addEventListener('DOMContentLoaded', function() {
+            // 정당 탭 클릭 이벤트
+            document.querySelectorAll('.party-tab').forEach(tab => {
+                tab.addEventListener('click', function(e) {
+                    e.preventDefault();
                     
-                   });
-                
-               });
-            
-   
-               // 테이블 행 클릭 이벤트 (기존 코드 유지)
-               
-               document.querySelectorAll('.table-row').forEach(row => {
-               
-                   row.addEventListener('click', function(e) {
-                   
-                       e.preventDefault();
-                       
-                       const memberId = this.getAttribute('data-member-id');
-                       
-                       const memberName = this.querySelector('.member-name').textContent;
-                       
-                       viewMemberDetail(memberId, memberName);
+                    const party = this.getAttribute('data-party');
                     
-                   });
-               
-               });
-            
-           });
-                  // 사진 오류 처리 (기존 코드)
-                  document.querySelectorAll('.member-photo img').forEach(img => {
-                      img.addEventListener('error', function() {
-                             const container = this.parentElement;
-                             const memberName = container.closest('.table-row').querySelector('.member-name').textContent;
-                             container.innerHTML = memberName.charAt(0) || '?';
-                      });
-                  });
-           });
-</script>
+                    // 페이지 로드 (URL 변경)
+                    loadPage({
+                        party: party,
+                        page: 1
+                    });
+                });
+            });
+
+            // 테이블 행 클릭 이벤트
+            document.querySelectorAll('.table-row').forEach(row => {
+                row.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const memberId = this.getAttribute('data-member-id');
+                    const memberName = this.querySelector('.member-name').textContent;
+                    viewMemberDetail(memberId, memberName);
+                });
+            });
+
+            // 사진 오류 처리
+            document.querySelectorAll('.member-photo img').forEach(img => {
+                img.addEventListener('error', function() {
+                    const container = this.parentElement;
+                    const memberName = container.closest('.table-row').querySelector('.member-name').textContent;
+                    container.innerHTML = memberName.charAt(0) || '?';
+                });
+            });
+        });
+    </script>
 </body>
 </html>
