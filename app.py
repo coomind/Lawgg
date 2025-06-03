@@ -559,8 +559,7 @@ def bill_detail(bill_id):
         'propose_date': bill.propose_date,
         'committee': bill.committee,
         'detail_link': bill.detail_link,
-        'proposal_reason': bill_content.get('proposal_reason', ''),
-        'main_content': bill_content.get('main_content', '')
+        'content': bill_content.get('content', '')
     }
     
     return render_template('LAWdetail.html',
@@ -887,8 +886,7 @@ def crawl_bill_content(bill_number):
     """국회 법률안 상세 페이지에서 제안이유 및 주요내용 크롤링"""
     if not bill_number:
         return {
-            'proposal_reason': '',
-            'main_content': ''
+            'content': ''  
         }
     
     url = f"https://likms.assembly.go.kr/bill/billDetail.do?billId={bill_number}"
@@ -916,8 +914,7 @@ def crawl_bill_content(bill_number):
             main_content = '. '.join(sentences[mid_point:])[:400]
             
             return {
-                'proposal_reason': proposal_reason.strip() if proposal_reason else '',
-                'main_content': main_content.strip() if main_content else ''
+                'content': content[:2000] if content else '' 
             }
             
     except Exception as e:
@@ -925,8 +922,7 @@ def crawl_bill_content(bill_number):
     
     # 크롤링 실패 시 빈 값 반환
     return {
-        'proposal_reason': '',
-        'main_content': ''
+        'content': ''  
     }
 
 @app.route('/api/proposals/<int:proposal_id>/vote', methods=['POST'])
