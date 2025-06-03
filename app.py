@@ -208,6 +208,19 @@ def time_ago(created_at):
     else:
         return "방금 전"
 
+def get_anonymous_name(ip_address):
+    """IP별 고유한 익명 이름 생성"""
+    import hashlib
+    
+    # IP를 해시하여 숫자로 변환
+    hash_object = hashlib.md5(ip_address.encode())
+    hash_hex = hash_object.hexdigest()
+    
+    # 해시의 앞 6자리를 숫자로 변환하여 사용 (1~999999 범위)
+    anonymous_number = int(hash_hex[:6], 16) % 999999 + 1
+    
+    return f'익명{anonymous_number}'
+    
 # 라우트들
 
 @app.route('/')
@@ -697,7 +710,7 @@ def proposal_write():
             is_public=form_data['is_public'],
             is_draft=form_data['is_draft'],
             ip_address=ip_address,
-            author=f'사용자{len(Proposal.query.all()) + 1}'
+            author=get_anonymous_name(ip_address)
         )
         
         db.session.add(proposal)
@@ -925,7 +938,7 @@ def add_bill_comment(bill_id):
         content=content,
         stance=stance,
         ip_address=ip_address,
-        author=f'익명{Comment.query.count() + 1}'
+        author=get_anonymous_name(ip_address)
     )
     
     db.session.add(comment)
@@ -1171,7 +1184,7 @@ def add_proposal_comment(proposal_id):
         content=content,
         stance=stance,
         ip_address=ip_address,
-        author=f'익명{Comment.query.count() + 1}'
+        author=get_anonymous_name(ip_address)
     )
     
     db.session.add(comment)
@@ -1458,6 +1471,8 @@ def load_election_csv():
         db.session.commit()
         print("CSV 데이터 로드 완료!")
 
+
+
 # app.py에 검색 라우트 추가 (오류 핸들러 위에 추가)
 
 @app.route('/search')
@@ -1595,7 +1610,7 @@ def add_reply(parent_id):
         content=content,
         stance=stance or user_vote.vote_type,  # 사용자 투표와 동일한 stance
         ip_address=ip_address,
-        author=f'익명{Comment.query.count() + 1}'
+        author=get_anonymous_name(ip_address)
     )
     
     db.session.add(reply)
