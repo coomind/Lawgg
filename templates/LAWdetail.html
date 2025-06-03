@@ -945,8 +945,20 @@
 
         // 투표 카운트 업데이트
         function updateVoteCounts() {
-            agreeCountEl.textContent = voteCounts.agree.toLocaleString();
-            disagreeCountEl.textContent = voteCounts.disagree.toLocaleString();
+            try {
+                const agreeCount = parseInt(voteCounts.agree) || 0;
+                const disagreeCount = parseInt(voteCounts.disagree) || 0;
+                
+                agreeCountEl.textContent = agreeCount.toLocaleString();
+                disagreeCountEl.textContent = disagreeCount.toLocaleString();
+                
+                console.log('투표 수 업데이트:', { agree: agreeCount, disagree: disagreeCount });
+            } catch (error) {
+                console.error('투표 카운트 업데이트 오류:', error, voteCounts);
+                // 기본값으로 설정
+                agreeCountEl.textContent = '0';
+                disagreeCountEl.textContent = '0';
+            }
         }
 
         // 댓글 기능 활성화
@@ -1006,9 +1018,19 @@
                         enableComments();
                     }
                     
-                    // 서버에서 받은 정확한 카운트로 업데이트
-                    voteCounts.agree = data.agree_count;
-                    voteCounts.disagree = data.disagree_count;
+                    // 서버에서 받은 정확한 카운트로 업데이트 - 안전한 방식으로
+                    console.log('서버 응답 데이터:', data); // 디버깅용
+
+                    if (data.vote_counts) {
+                        voteCounts.agree = data.vote_counts.agree || 0;
+                        voteCounts.disagree = data.vote_counts.disagree || 0;
+                    } else {
+                        // 서버 응답 구조가 다를 경우 대비
+                        voteCounts.agree = data.agree_count || 0;
+                        voteCounts.disagree = data.disagree_count || 0;
+                    }
+
+                    console.log('업데이트된 voteCounts:', voteCounts); // 디버깅용
                     updateVoteCounts();
                     
                 } catch (error) {
