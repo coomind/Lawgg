@@ -680,6 +680,7 @@ def sync_bills_from_api():
                         proposer = row.findtext('PROPOSER', '').strip()
                         member_list = row.findtext('MEMBER_LIST', '').strip()
                         detail_link = row.findtext('DETAIL_LINK', '').strip()
+                        proc_result = row.findtext('PROC_RESULT', '').strip()
                         
                         # 필수 필드 확인
                         if not bill_name or not bill_id:
@@ -701,6 +702,7 @@ def sync_bills_from_api():
                                 propose_date=propose_dt,
                                 committee=committee,
                                 detail_link=detail_link,
+                                assembly_result=proc_result,
                                 view_count=0
                             )
                             db.session.add(bill)
@@ -712,6 +714,7 @@ def sync_bills_from_api():
                             existing_bill.propose_date = propose_dt
                             existing_bill.committee = committee
                             existing_bill.detail_link = detail_link
+                            existing_bill.assembly_result = proc_result
                             print(f"업데이트: {bill_name[:50]}... (제안자: {proposer})")
                         
                         page_count += 1
