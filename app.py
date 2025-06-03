@@ -245,7 +245,7 @@ def members_list():
     # 🔥 Python에서 한글 가나다순 정렬
     query = Member.query
     if party and party != '전체':
-        query = query.filter_by(party=party)
+        query = query.filter(Member.party.contains(party))
     
     all_members = query.all()
     
