@@ -917,9 +917,9 @@ def crawl_bill_content(bill_number):
         
         if "▶ 제안이유 및 주요내용" in content_text:
             start_idx = content_text.find("▶ 제안이유 및 주요내용")
-            content = content_text[start_idx:start_idx+5000]
+            content = content_text[start_idx:]  # 🔥 끝까지 다 가져오기
             
-            # 끝점 찾기 (다음 섹션들)
+            # 🎯 구조적 끝점으로만 자르기
             end_markers = ['위원회 심사', '심사경과', '검토보고', '전문위원 검토보고']
             end_idx = len(content)
             
@@ -928,16 +928,15 @@ def crawl_bill_content(bill_number):
                 if marker_idx != -1 and marker_idx < end_idx:
                     end_idx = marker_idx
             
-            # 끝점까지만 자르기
             content = content[:end_idx]
             
-            # 불필요한 공백과 줄바꿈 정리
+            # 정리
             import re
             content = re.sub(r'\n+', '\n', content)
             content = re.sub(r' +', ' ', content)
             content = content.strip()
             
-            return {'content': content[:2000] if content else ''}
+            return {'content': content}  # 🔥 글자 수 제한 완전 제거
             
     except Exception as e:
         print(f"크롤링 오류: {e}")
