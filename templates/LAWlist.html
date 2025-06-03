@@ -764,6 +764,15 @@
 
         // 이벤트 리스너 설정
         document.addEventListener('DOMContentLoaded', function() {
+            const currentCommittee = '{{ current_committee or "" }}';
+            document.querySelectorAll('.committee-item').forEach(item => {
+                const itemCommittee = item.getAttribute('data-committee');
+                if (itemCommittee === currentCommittee) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
             // 위원회 카테고리 클릭 이벤트
             document.querySelectorAll('.committee-item').forEach(item => {
                 item.addEventListener('click', function(e) {
