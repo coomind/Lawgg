@@ -925,7 +925,7 @@ def add_bill_comment(bill_id):
     })
     
 def crawl_bill_content(bill_number):
-    """국회 법률안 상세 페이지에서 제안이유 및 주요내용 크롤링 (개선된 버전)"""
+    """국회 법률안 상세 페이지에서 제안이유 및 주요내용 크롤링 (전체 중복 제거)"""
     if not bill_number:
         return {'content': ''}
     
@@ -945,10 +945,38 @@ def crawl_bill_content(bill_number):
                 start_idx += len(start_marker)
                 content = content_text[start_idx:]
                 
-                # ⛔ 크롤링된 내용에서 "제안이유 및 주요내용"이 다시 등장하면 제거
-                content = content.replace("제안이유 및 주요내용", "", 1).strip()
+                # 🔥 1단계: 제목 패턴들 제거
+                title_patterns = [
+                    "▶ 제안이유 및 주요내용", 
+                    "○ 제안이유 및 주요내용",
+                    "◎ 제안이유 및 주요내용",
+                    "◦ 제안이유 및 주요내용",
+                    "■ 제안이유 및 주요내용",
+                    "□ 제안이유 및 주요내용",
+                    "● 제안이유 및 주요내용",
+                    "◆ 제안이유 및 주요내용",
+                    "※ 제안이유 및 주요내용",
+                    "제안이유 및 주요내용"
+                ]
                 
-                # 🎯 구조적 끝점으로만 자르기
+                for pattern in title_patterns:
+                    content = content.replace(pattern, "", 1)
+                
+                # 🔥 2단계: UI 관련 텍스트 제거
+                ui_patterns = [
+                    "+ 더보기감추기",
+                    "더보기감추기", 
+                    "+ 더보기",
+                    "더보기",
+                    "감추기",
+                    "펼치기",
+                    "접기"
+                ]
+                
+                for pattern in ui_patterns:
+                    content = content.replace(pattern, "")
+                
+                # 🔥 3단계: 구조적 끝점으로 자르기
                 end_markers = [
                     '위원회 심사', '심사경과', '검토보고', '전문위원 검토보고',
                     '◎ 검토의견', '◎ 위원회 심사', '◎ 심사경과',
@@ -957,7 +985,6 @@ def crawl_bill_content(bill_number):
                 ]
                 
                 end_idx = len(content)
-                
                 for marker in end_markers:
                     marker_idx = content.find(marker)
                     if marker_idx != -1 and marker_idx < end_idx:
@@ -965,30 +992,73 @@ def crawl_bill_content(bill_number):
                 
                 content = content[:end_idx]
                 
-                # 정리
+                # 🔥 4단계: 전체 문단 중복 제거 (핵심!)
                 import re
                 
-                # 여러 개의 연속된 공백/탭을 하나로 통합
+                # 먼저 기본 정리
                 content = re.sub(r'[ \t]+', ' ', content)
-                
-                # 여러 개의 연속된 줄바꿈을 최대 2개로 제한
                 content = re.sub(r'\n{3,}', '\n\n', content)
-                
-                # 앞뒤 공백 제거
                 content = content.strip()
                 
-                # 시작 부분이 줄바꿈으로 시작하면 제거
+                # 전체 텍스트를 문단 단위로 분할 (100자 이상 단위)
+                paragraphs = []
+                current_paragraph = ""
+                
+                for line in content.split('\n'):
+                    line = line.strip()
+                    if line:
+                        current_paragraph += line + " "
+                        # 문단이 100자 이상이 되면 구분
+                        if len(current_paragraph) > 100 and line.endswith(('.', ')', '함', '음', '임')):
+                            paragraphs.append(current_paragraph.strip())
+                            current_paragraph = ""
+                
+                # 마지막 남은 내용 추가
+                if current_paragraph.strip():
+                    paragraphs.append(current_paragraph.strip())
+                
+                # 🔥 중복 문단 제거 🔥
+                unique_paragraphs = []
+                seen_paragraphs = set()
+                
+                for paragraph in paragraphs:
+                    # 의미있는 내용만 (20자 이상)
+                    if len(paragraph) > 20:
+                        # 유사도 검사 (80% 이상 같으면 중복으로 간주)
+                        is_duplicate = False
+                        for seen in seen_paragraphs:
+                            # 간단한 유사도 체크: 긴 문단의 80% 이상이 포함되어 있으면 중복
+                            longer_text = paragraph if len(paragraph) > len(seen) else seen
+                            shorter_text = seen if len(paragraph) > len(seen) else paragraph
+                            
+                            if len(shorter_text) > 50 and shorter_text in longer_text:
+                                is_duplicate = True
+                                break
+                        
+                        if not is_duplicate:
+                            unique_paragraphs.append(paragraph)
+                            seen_paragraphs.add(paragraph)
+                
+                # 🔥 5단계: 고립된 기호 제거
+                final_content = "\n\n".join(unique_paragraphs)
+                lines = final_content.split('\n')
+                cleaned_lines = []
+                
+                for line in lines:
+                    stripped_line = line.strip()
+                    # 기호만 있는 줄은 제거
+                    if re.match(r'^[▶○◎◦■□●◆※\-\*\+]+\s*$', stripped_line):
+                        continue
+                    elif stripped_line:
+                        cleaned_lines.append(line)
+                
+                content = '\n'.join(cleaned_lines)
+                
+                # 최종 정리
                 while content.startswith('\n'):
                     content = content[1:]
                 
-                # 빈 줄들로만 이루어진 시작 부분 제거
-                lines = content.split('\n')
-                while lines and not lines[0].strip():
-                    lines.pop(0)
-                
-                content = '\n'.join(lines)
-                
-                return {'content': content}
+                return {'content': content.strip()}
                 
     except Exception as e:
         print(f"크롤링 오류: {e}")
