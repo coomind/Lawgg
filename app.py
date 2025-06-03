@@ -253,10 +253,20 @@ def index():
 def members_list():
     page = request.args.get('page', 1, type=int)
     party = request.args.get('party', '전체')
+    search = request.args.get('search', '')
     per_page = 20
     
     # 🔥 Python에서 한글 가나다순 정렬
     query = Member.query
+    if search:
+        query = query.filter(
+            db.or_(
+                Member.name.contains(search),
+                Member.party.contains(search),
+                Member.district.contains(search)
+            )
+        )
+    
     if party and party != '전체':
         if party == '기타':
             # 주요 4개 정당에 속하지 않는 의원들
@@ -301,8 +311,8 @@ def members_list():
         'has_prev': page > 1,
         'has_next': page < total_pages,
         'page_range': get_page_range(page, total_pages),
-        'prev_url_params': f"page={page-1}&party={party}" if page > 1 else '',
-        'next_url_params': f"page={page+1}&party={party}" if page < total_pages else '',
+        'prev_url_params': f"page={page-1}&party={party}&search={search}" if page > 1 else '',
+        'next_url_params': f"page={page+1}&party={party}&search={search}" if page < total_pages else '',
         'page_size': per_page
     }
     
@@ -312,6 +322,8 @@ def members_list():
             params.append(f"page={page_num}")
         if party != '전체':
             params.append(f"party={party}")
+        if search:  # 🔥 이 3줄 추가
+            params.append(f"search={search}")
         return '&'.join(params)
     
     pagination_data['get_url_params'] = get_url_params
@@ -326,8 +338,13 @@ def members_list():
         'photo_url': m.photo_url
     } for m in page_members]
     
+    if search:
+        page_title = f'"{search}" 검색 결과 - 국회의원 ({total_count}명)'
+    else:
+        page_title = '국회의원 목록'
+    
     return render_template('NAlist.html',
-                         page_title='국회의원 목록',
+                         page_title=page_title,
                          members=members_data,
                          parties=parties,
                          current_party=party,
@@ -486,15 +503,21 @@ def bills_list():
     # 현재 위원회 이름 찾기
     current_committee_name = next((c['display_name'] for c in committees if c['code'] == committee), None)
     
+    if search:
+        page_title = f'"{search}" 검색 결과 - 법률안 ({pagination.total}건)'
+    else:
+        page_title = '법률안 목록'
+    
     return render_template('LAWlist.html',
-                         page_title='법률안 목록',
-                         bills=bills_data,
-                         committees=committees,
-                         current_committee=committee,
-                         current_committee_name=current_committee_name,
-                         current_search_term=search,
-                         search_placeholder='법률안 검색',
-                         pagination=pagination_data)
+                     page_title=page_title,  # 🔥 이 부분도 수정
+                     bills=bills_data,
+                     committees=committees,
+                     current_committee=committee,
+                     current_committee_name=current_committee_name,
+                     current_search_term=search,
+                     search_placeholder='법률안 검색',
+                     pagination=pagination_data)
+                
 
 @app.route('/bills/<int:bill_id>')
 def bill_detail(bill_id):
@@ -1489,55 +1512,15 @@ def search():
             Member.party.contains(query),
             Member.district.contains(query)
         )
-    ).limit(10).all()
+    ).all()
     
-    # 법률안 검색
-    bills = Bill.query.filter(
-        db.or_(
-            Bill.name.contains(query),
-            Bill.proposer.contains(query)
-        )
-    ).limit(10).all()
-    
-    # 간단한 검색 결과 표시 (템플릿 없이)
-    member_items = "".join([f"<div class='item' onclick='location.href=\"/members/{m.id}\"'>{m.name} ({m.party}) - {m.district}</div>" for m in members]) if members else '<p>검색 결과가 없습니다.</p>'
-
-    bill_items = "".join([f"<div class='item' onclick='location.href=\"/bills/{b.id}\"'>{b.name} - {b.proposer}</div>" for b in bills]) if bills else '<p>검색 결과가 없습니다.</p>'
-    
-    result_html = f"""
-    <!DOCTYPE html>
-    <html lang="ko">
-    <head>
-        <meta charset="UTF-8">
-        <title>Law.GG - "{query}" 검색 결과</title>
-        <style>
-            body {{ font-family: Arial, sans-serif; margin: 20px; }}
-            h1 {{ color: #333; }}
-            .section {{ margin: 20px 0; }}
-            .item {{ padding: 10px; border: 1px solid #ddd; margin: 5px 0; cursor: pointer; }}
-            .item:hover {{ background-color: #f5f5f5; }}
-            .back-btn {{ padding: 10px 20px; background: #333; color: white; text-decoration: none; border-radius: 5px; }}
-        </style>
-    </head>
-    <body>
-        <a href="/" class="back-btn">← 메인으로</a>
-        <h1>"{query}" 검색 결과</h1>
-    
-        <div class="section">
-            <h2>국회의원 ({len(members)}명)</h2>
-            {member_items}
-        </div>
-    
-        <div class="section">
-            <h2>법률안 ({len(bills)}건)</h2>
-            {bill_items}
-        </div>
-    </body>
-    </html>
-    """
-
-    return result_html
-    
+    if len(members) > 0:
+        # 국회의원 결과가 있으면 국회의원 페이지로
+        return redirect(url_for('members_list', search=query))
+    else:
+        # 국회의원 결과가 없으면 법률안 페이지로
+        return redirect(url_for('bills_list', search=query))
+        
 # 좋아요 API 엔드포인트
 @app.route('/api/comments/<int:comment_id>/like', methods=['POST'])
 def toggle_comment_like(comment_id):
