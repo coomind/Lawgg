@@ -843,17 +843,22 @@ def vote_bill(bill_id):
     # 기존 투표 확인
     existing_vote = BillVote.query.filter_by(bill_id=bill_id, ip_address=ip_address).first()
     
+    current_user_vote = None
+    
     if existing_vote:
         if existing_vote.vote_type == vote_type:
             # 같은 투표 취소
             db.session.delete(existing_vote)
+            current_user_vote = None
         else:
             # 투표 변경
             existing_vote.vote_type = vote_type
+            current_user_vote = vote_type
     else:
         # 새 투표
         new_vote = BillVote(bill_id=bill_id, ip_address=ip_address, vote_type=vote_type)
         db.session.add(new_vote)
+        current_user_vote = vote_type
     
     db.session.commit()
     
@@ -862,9 +867,14 @@ def vote_bill(bill_id):
     disagree_count = BillVote.query.filter_by(bill_id=bill_id, vote_type='disagree').count()
     
     return jsonify({
-        'agree_count': agree_count,
-        'disagree_count': disagree_count
+        'vote_counts': {
+            'agree': agree_count,
+            'disagree': disagree_count
+        },
+        'total_votes': agree_count + disagree_count,
+        'user_vote': current_user_vote
     })
+
 
 @app.route('/api/bills/<int:bill_id>/comments', methods=['POST'])
 def add_bill_comment(bill_id):
@@ -984,28 +994,154 @@ def vote_proposal(proposal_id):
     # 기존 투표 확인
     existing_vote = ProposalVote.query.filter_by(proposal_id=proposal_id, ip_address=ip_address).first()
     
+    current_user_vote = None  # 사용자의 현재 투표 상태
+    
     if existing_vote:
         if existing_vote.vote_type == vote_type:
             # 같은 투표 취소
             db.session.delete(existing_vote)
+            current_user_vote = None  # 투표 취소됨
         else:
             # 투표 변경
             existing_vote.vote_type = vote_type
+            current_user_vote = vote_type
     else:
         # 새 투표
         new_vote = ProposalVote(proposal_id=proposal_id, ip_address=ip_address, vote_type=vote_type)
         db.session.add(new_vote)
+        current_user_vote = vote_type
     
     db.session.commit()
     
-    # 업데이트된 투표 수 반환
+    # 업데이트된 투표 수 계산
     agree_count = ProposalVote.query.filter_by(proposal_id=proposal_id, vote_type='agree').count()
     disagree_count = ProposalVote.query.filter_by(proposal_id=proposal_id, vote_type='disagree').count()
     
     return jsonify({
-        'agree_count': agree_count,
-        'disagree_count': disagree_count,
-        'total_votes': agree_count + disagree_count
+        'vote_counts': {
+            'agree': agree_count,
+            'disagree': disagree_count
+        },
+        'total_votes': agree_count + disagree_count,
+        'user_vote': current_user_vote  # 사용자의 현재 투표 상태
+    })
+
+@app.route('/api/proposals/<int:proposal_id>/comments', methods=['POST'])
+def add_proposal_comment(proposal_id):
+    data = request.get_json()
+    content = data.get('content', '').strip()
+    stance = data.get('stance')
+    parent_id = data.get('parent_id')
+    ip_address = get_client_ip()
+    
+    if not content or stance not in ['agree', 'disagree']:
+        return jsonify({'error': 'Invalid data'}), 400
+    
+    # 투표 확인
+    user_vote = ProposalVote.query.filter_by(proposal_id=proposal_id, ip_address=ip_address).first()
+    if not user_vote:
+        return jsonify({'error': 'Vote required'}), 403
+    
+    comment = Comment(
+        proposal_id=proposal_id,  # bill_id가 아닌 proposal_id
+        parent_id=parent_id,
+        content=content,
+        stance=stance,
+        ip_address=ip_address,
+        author=f'익명{Comment.query.count() + 1}'
+    )
+    
+    db.session.add(comment)
+    db.session.commit()
+    
+    return jsonify({
+        'id': comment.id,
+        'author': comment.author,
+        'content': comment.content,
+        'stance': comment.stance,
+        'time_ago': '방금 전',
+        'parent_id': comment.parent_id,
+        'like_count': 0,
+        'report_count': 0,
+        'is_under_review': False,
+        'is_liked_by_user': False,
+        'is_reported_by_user': False
+    })
+
+@app.route('/api/proposals/<int:proposal_id>/comments', methods=['GET'])
+def get_proposal_comments(proposal_id):
+    """더보기 댓글 로드용 API"""
+    offset = request.args.get('offset', 0, type=int)
+    limit = 10
+    
+    # 부모 댓글들 가져오기
+    comments = Comment.query.filter_by(
+        proposal_id=proposal_id, 
+        parent_id=None
+    ).order_by(Comment.created_at.desc()).offset(offset).limit(limit + 1).all()
+    
+    has_more = len(comments) > limit
+    if has_more:
+        comments = comments[:-1]  # 마지막 하나 제거
+    
+    ip_address = get_client_ip()
+    
+    # 사용자가 신고한 댓글들
+    user_reports = Report.query.filter_by(reporter_ip=ip_address).all()
+    reported_comment_ids = [r.comment_id for r in user_reports if r.comment_id]
+    
+    # 사용자가 좋아요한 댓글들
+    user_likes = CommentLike.query.filter_by(ip_address=ip_address).all()
+    liked_comment_ids = [l.comment_id for l in user_likes]
+    
+    comments_data = []
+    
+    for comment in comments:
+        # 좋아요 수
+        like_count = CommentLike.query.filter_by(comment_id=comment.id).count()
+        
+        comment_data = {
+            'id': comment.id,
+            'author': comment.author or f'익명{comment.id}',
+            'content': comment.content,
+            'stance': comment.stance,
+            'time_ago': time_ago(comment.created_at),
+            'report_count': comment.report_count,
+            'is_under_review': comment.is_under_review or comment.report_count >= 3,
+            'is_reported_by_user': comment.id in reported_comment_ids,
+            'like_count': like_count,
+            'is_liked_by_user': comment.id in liked_comment_ids,
+            'parent_id': None
+        }
+        comments_data.append(comment_data)
+        
+        # 해당 댓글의 답글들도 추가
+        replies = Comment.query.filter_by(
+            proposal_id=proposal_id,
+            parent_id=comment.id
+        ).order_by(Comment.created_at.asc()).all()
+        
+        for reply in replies:
+            reply_like_count = CommentLike.query.filter_by(comment_id=reply.id).count()
+            
+            reply_data = {
+                'id': reply.id,
+                'author': reply.author or f'익명{reply.id}',
+                'content': reply.content,
+                'stance': reply.stance,
+                'time_ago': time_ago(reply.created_at),
+                'report_count': reply.report_count,
+                'is_under_review': reply.is_under_review or reply.report_count >= 3,
+                'is_reported_by_user': reply.id in reported_comment_ids,
+                'like_count': reply_like_count,
+                'is_liked_by_user': reply.id in liked_comment_ids,
+                'parent_id': reply.parent_id
+            }
+            comments_data.append(reply_data)
+    
+    return jsonify({
+        'comments': comments_data,
+        'has_more': has_more
     })
 
 @app.route('/api/proposals/<int:proposal_id>/report', methods=['POST'])
@@ -1029,8 +1165,11 @@ def report_proposal(proposal_id):
     db.session.commit()
     
     return jsonify({
-        'report_count': proposal.report_count
+        'success': True,
+        'report_count': proposal.report_count,
+        'message': 'Report submitted successfully'
     })
+
 
 @app.route('/api/autocomplete/bills')
 def autocomplete_bills():
@@ -1300,13 +1439,30 @@ def add_reply(parent_id):
     # 부모 댓글 확인
     parent_comment = Comment.query.get_or_404(parent_id)
     
+    # 투표 확인 (법률안 또는 입법제안)
+    if parent_comment.bill_id:
+        user_vote = BillVote.query.filter_by(
+            bill_id=parent_comment.bill_id, 
+            ip_address=ip_address
+        ).first()
+    elif parent_comment.proposal_id:
+        user_vote = ProposalVote.query.filter_by(
+            proposal_id=parent_comment.proposal_id, 
+            ip_address=ip_address
+        ).first()
+    else:
+        return jsonify({'error': 'Invalid parent comment'}), 400
+    
+    if not user_vote:
+        return jsonify({'error': 'Vote required'}), 403
+    
     # 답글 생성
     reply = Comment(
         bill_id=parent_comment.bill_id,
         proposal_id=parent_comment.proposal_id,
         parent_id=parent_id,
         content=content,
-        stance=stance,
+        stance=stance or user_vote.vote_type,  # 사용자 투표와 동일한 stance
         ip_address=ip_address,
         author=f'익명{Comment.query.count() + 1}'
     )
@@ -1320,7 +1476,12 @@ def add_reply(parent_id):
         'content': reply.content,
         'stance': reply.stance,
         'time_ago': '방금 전',
-        'parent_id': reply.parent_id
+        'parent_id': reply.parent_id,
+        'like_count': 0,
+        'report_count': 0,
+        'is_under_review': False,
+        'is_liked_by_user': False,
+        'is_reported_by_user': False
     })
 
 @app.route('/api/comments/<int:comment_id>/report', methods=['POST'])
@@ -1348,7 +1509,8 @@ def report_comment(comment_id):
     comment = Comment.query.get(comment_id)
     if comment:
         comment.report_count += 1
-        if comment.report_count >= 3:
+        is_under_review = comment.report_count >= 3
+        if is_under_review:
             comment.is_under_review = True
             
         # 특정 IP가 너무 많은 신고를 하는 경우 차단
@@ -1363,8 +1525,10 @@ def report_comment(comment_id):
     db.session.commit()
     
     return jsonify({
+        'success': True,
         'report_count': comment.report_count,
-        'is_under_review': comment.is_under_review
+        'is_under_review': comment.is_under_review,
+        'message': 'Report submitted successfully'
     })
 
 # 미들웨어로 차단된 IP 확인
