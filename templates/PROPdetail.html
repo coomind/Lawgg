@@ -1430,6 +1430,21 @@
                             });
                         }
                     });
+
+                    document.querySelectorAll('.like-btn').forEach(btn => {
+                        const commentId = parseInt(btn.dataset.commentId);
+                        if (likedComments.has(commentId)) {
+                            btn.classList.add('liked');
+                        }
+                    });
+                    
+                    document.querySelectorAll('.report-btn').forEach(btn => {
+                        const commentId = parseInt(btn.dataset.commentId);
+                        if (reportedComments.has(commentId)) {
+                            btn.classList.add('reported');
+                            btn.textContent = '신고됨';
+                        }
+                    });
                     
                     // 더보기 버튼 처리
                     if (!data.has_more) {
