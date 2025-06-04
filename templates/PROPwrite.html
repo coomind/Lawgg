@@ -540,7 +540,7 @@
             </div>
         </div>
     </main>
-
+    <script src="https://lawgg-backend.onrender.com/static/js/autocomplete.js"></script>
     <script>
         // API 베이스 URL 설정 (배포 시 변경)
         const API_BASE_URL = 'https://lawgg-backend.onrender.com';
@@ -800,6 +800,11 @@
             
             // 페이지 떠나기 확인 설정
             setupBeforeUnload();
+
+            if (document.getElementById('target_law')) {
+                initAutocomplete('target_law', 'bills');
+            }
+
             
             console.log('입법제안 글쓰기 페이지 로드 완료');
             console.log('편집 모드:', FORM_CONFIG.isEditMode);
