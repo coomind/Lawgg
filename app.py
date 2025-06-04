@@ -220,6 +220,174 @@ def get_anonymous_name(ip_address):
     anonymous_number = int(hash_hex[:6], 16) % 999999 + 1
     
     return f'익명{anonymous_number}'
+
+def is_admin():
+    return session.get('is_admin', False)
+
+
+@app.route('/admin/lawgg2025')
+def admin_login():
+    session['is_admin'] = True
+    return redirect('/admin/dashboard')
+
+# 관리자 로그아웃
+@app.route('/admin/logout')
+def admin_logout():
+    session.pop('is_admin', None)
+    return redirect('/')
+
+# 관리자 대시보드
+@app.route('/admin/dashboard')
+def admin_dashboard():
+    if not is_admin():
+        return "접근 거부", 403
+    
+    # 신고된 입법제안들 (신고 수 1개 이상)
+    reported_proposals = Proposal.query.filter(Proposal.report_count > 0).order_by(Proposal.report_count.desc()).all()
+    
+    # 신고된 댓글들 (신고 수 1개 이상)
+    reported_comments = Comment.query.filter(Comment.report_count > 0).order_by(Comment.report_count.desc()).all()
+    
+    # 차단된 IP 목록
+    blocked_ips = BlockedIP.query.order_by(BlockedIP.blocked_at.desc()).all()
+    
+    return render_template('admin_dashboard.html', 
+                         reported_proposals=reported_proposals,
+                         reported_comments=reported_comments,
+                         blocked_ips=blocked_ips)
+
+# 입법제안 삭제
+@app.route('/admin/proposals/<int:proposal_id>/delete', methods=['POST'])
+def admin_delete_proposal(proposal_id):
+    if not is_admin():
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    proposal = Proposal.query.get_or_404(proposal_id)
+    
+    # 관련 댓글들도 모두 삭제
+    Comment.query.filter_by(proposal_id=proposal_id).delete()
+    
+    # 관련 투표들도 삭제
+    ProposalVote.query.filter_by(proposal_id=proposal_id).delete()
+    
+    # 관련 신고들도 삭제
+    Report.query.filter_by(proposal_id=proposal_id).delete()
+    
+    # 입법제안 삭제
+    db.session.delete(proposal)
+    db.session.commit()
+    
+    return jsonify({'success': True, 'message': '입법제안이 삭제되었습니다.'})
+
+# 댓글/답글 삭제
+@app.route('/admin/comments/<int:comment_id>/delete', methods=['POST'])
+def admin_delete_comment(comment_id):
+    if not is_admin():
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    comment = Comment.query.get_or_404(comment_id)
+    
+    # 답글들도 함께 삭제 (해당 댓글이 부모인 경우)
+    Comment.query.filter_by(parent_id=comment_id).delete()
+    
+    # 관련 좋아요들 삭제
+    CommentLike.query.filter_by(comment_id=comment_id).delete()
+    
+    # 관련 신고들 삭제
+    Report.query.filter_by(comment_id=comment_id).delete()
+    
+    # 댓글 삭제
+    db.session.delete(comment)
+    db.session.commit()
+    
+    return jsonify({'success': True, 'message': '댓글이 삭제되었습니다.'})
+
+# IP 차단
+@app.route('/admin/ban-ip', methods=['POST'])
+def admin_ban_ip():
+    if not is_admin():
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    data = request.get_json()
+    ip_address = data.get('ip_address')
+    reason = data.get('reason', '관리자에 의한 차단')
+    
+    if not ip_address:
+        return jsonify({'error': 'IP 주소가 필요합니다.'}), 400
+    
+    # 이미 차단된 IP인지 확인
+    existing = BlockedIP.query.filter_by(ip_address=ip_address).first()
+    if existing:
+        return jsonify({'error': '이미 차단된 IP입니다.'}), 400
+    
+    # IP 차단 추가
+    blocked_ip = BlockedIP(ip_address=ip_address, reason=reason)
+    db.session.add(blocked_ip)
+    db.session.commit()
+    
+    return jsonify({'success': True, 'message': f'IP {ip_address}가 차단되었습니다.'})
+
+# IP 차단 해제
+@app.route('/admin/unban-ip/<int:blocked_ip_id>', methods=['POST'])
+def admin_unban_ip(blocked_ip_id):
+    if not is_admin():
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    blocked_ip = BlockedIP.query.get_or_404(blocked_ip_id)
+    ip_address = blocked_ip.ip_address
+    
+    db.session.delete(blocked_ip)
+    db.session.commit()
+    
+    return jsonify({'success': True, 'message': f'IP {ip_address} 차단이 해제되었습니다.'})
+
+# 입법제안 작성자 IP로 차단
+@app.route('/admin/proposals/<int:proposal_id>/ban-author', methods=['POST'])
+def admin_ban_proposal_author(proposal_id):
+    if not is_admin():
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    proposal = Proposal.query.get_or_404(proposal_id)
+    ip_address = proposal.ip_address
+    
+    if not ip_address:
+        return jsonify({'error': 'IP 정보가 없습니다.'}), 400
+    
+    # 이미 차단된 IP인지 확인
+    existing = BlockedIP.query.filter_by(ip_address=ip_address).first()
+    if existing:
+        return jsonify({'error': '이미 차단된 IP입니다.'}), 400
+    
+    # IP 차단
+    blocked_ip = BlockedIP(ip_address=ip_address, reason=f'입법제안 신고로 인한 차단 (제안 ID: {proposal_id})')
+    db.session.add(blocked_ip)
+    db.session.commit()
+    
+    return jsonify({'success': True, 'message': f'작성자 IP {ip_address}가 차단되었습니다.'})
+
+# 댓글 작성자 IP로 차단
+@app.route('/admin/comments/<int:comment_id>/ban-author', methods=['POST'])
+def admin_ban_comment_author(comment_id):
+    if not is_admin():
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    comment = Comment.query.get_or_404(comment_id)
+    ip_address = comment.ip_address
+    
+    if not ip_address:
+        return jsonify({'error': 'IP 정보가 없습니다.'}), 400
+    
+    # 이미 차단된 IP인지 확인
+    existing = BlockedIP.query.filter_by(ip_address=ip_address).first()
+    if existing:
+        return jsonify({'error': '이미 차단된 IP입니다.'}), 400
+    
+    # IP 차단
+    blocked_ip = BlockedIP(ip_address=ip_address, reason=f'댓글 신고로 인한 차단 (댓글 ID: {comment_id})')
+    db.session.add(blocked_ip)
+    db.session.commit()
+    
+    return jsonify({'success': True, 'message': f'작성자 IP {ip_address}가 차단되었습니다.'})
     
 # 라우트들
 
