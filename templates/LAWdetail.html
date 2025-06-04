@@ -985,7 +985,7 @@
             const existingComments = document.querySelectorAll('.comment-item:not(.reply)').length;
             
             try {
-                const response = await fetch(`${API_BASE_URL}/api/proposals/${proposalId}/comments?offset=${existingComments}`);
+                const response = await fetch(`${API_BASE_URL}/api/billId/${billId}/comments?offset=${existingComments}`);
                 
                 if (response.ok) {
                     const data = await response.json();
