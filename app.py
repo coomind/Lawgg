@@ -257,50 +257,75 @@ def admin_dashboard():
                          blocked_ips=blocked_ips)
 
 # 입법제안 삭제
+# 입법제안 삭제 함수 수정
 @app.route('/admin/proposals/<int:proposal_id>/delete', methods=['POST'])
 def admin_delete_proposal(proposal_id):
     if not is_admin():
         return jsonify({'error': 'Unauthorized'}), 403
     
-    proposal = Proposal.query.get_or_404(proposal_id)
-    
-    # 관련 댓글들도 모두 삭제
-    Comment.query.filter_by(proposal_id=proposal_id).delete()
-    
-    # 관련 투표들도 삭제
-    ProposalVote.query.filter_by(proposal_id=proposal_id).delete()
-    
-    # 관련 신고들도 삭제
-    Report.query.filter_by(proposal_id=proposal_id).delete()
-    
-    # 입법제안 삭제
-    db.session.delete(proposal)
-    db.session.commit()
-    
-    return jsonify({'success': True, 'message': '입법제안이 삭제되었습니다.'})
+    try:
+        proposal = Proposal.query.get_or_404(proposal_id)
+        
+        # 1. 관련 신고들 먼저 삭제
+        Report.query.filter_by(proposal_id=proposal_id).delete()
+        
+        # 2. 관련 댓글들의 좋아요 삭제
+        comment_ids = [c.id for c in Comment.query.filter_by(proposal_id=proposal_id).all()]
+        if comment_ids:
+            CommentLike.query.filter(CommentLike.comment_id.in_(comment_ids)).delete(synchronize_session=False)
+            
+        # 3. 관련 댓글 신고들 삭제
+        Report.query.filter(Report.comment_id.in_(comment_ids)).delete(synchronize_session=False)
+        
+        # 4. 관련 댓글들 삭제
+        Comment.query.filter_by(proposal_id=proposal_id).delete()
+        
+        # 5. 관련 투표들 삭제
+        ProposalVote.query.filter_by(proposal_id=proposal_id).delete()
+        
+        # 6. 마지막으로 입법제안 삭제
+        db.session.delete(proposal)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': '입법제안이 삭제되었습니다.'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'삭제 중 오류 발생: {str(e)}'}), 500
 
-# 댓글/답글 삭제
+# 댓글 삭제 함수 수정
 @app.route('/admin/comments/<int:comment_id>/delete', methods=['POST'])
 def admin_delete_comment(comment_id):
     if not is_admin():
         return jsonify({'error': 'Unauthorized'}), 403
     
-    comment = Comment.query.get_or_404(comment_id)
-    
-    # 답글들도 함께 삭제 (해당 댓글이 부모인 경우)
-    Comment.query.filter_by(parent_id=comment_id).delete()
-    
-    # 관련 좋아요들 삭제
-    CommentLike.query.filter_by(comment_id=comment_id).delete()
-    
-    # 관련 신고들 삭제
-    Report.query.filter_by(comment_id=comment_id).delete()
-    
-    # 댓글 삭제
-    db.session.delete(comment)
-    db.session.commit()
-    
-    return jsonify({'success': True, 'message': '댓글이 삭제되었습니다.'})
+    try:
+        comment = Comment.query.get_or_404(comment_id)
+        
+        # 1. 답글들의 좋아요 먼저 삭제
+        reply_ids = [r.id for r in Comment.query.filter_by(parent_id=comment_id).all()]
+        if reply_ids:
+            CommentLike.query.filter(CommentLike.comment_id.in_(reply_ids)).delete(synchronize_session=False)
+            Report.query.filter(Report.comment_id.in_(reply_ids)).delete(synchronize_session=False)
+        
+        # 2. 답글들 삭제
+        Comment.query.filter_by(parent_id=comment_id).delete()
+        
+        # 3. 댓글의 좋아요들 삭제
+        CommentLike.query.filter_by(comment_id=comment_id).delete()
+        
+        # 4. 댓글의 신고들 삭제
+        Report.query.filter_by(comment_id=comment_id).delete()
+        
+        # 5. 댓글 삭제
+        db.session.delete(comment)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': '댓글이 삭제되었습니다.'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'삭제 중 오류 발생: {str(e)}'}), 500
 
 # IP 차단
 @app.route('/admin/ban-ip', methods=['POST'])
