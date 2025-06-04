@@ -632,7 +632,7 @@ def bill_detail(bill_id):
                          liked_comment_ids=liked_comment_ids,
                          comment_reports=comment_reports,
                          related_bills=related_bills_data,
-                         has_more_comments=len(comments) >= 10)
+                         has_more_comments=total_parent_comments > 5)
 
 @app.route('/proposals')
 def proposals_list():
@@ -880,7 +880,7 @@ def proposal_detail(proposal_id):
                          liked_comment_ids=liked_comment_ids,  # 🔥 추가: 좋아요한 댓글 ID들
                          comments=comments_data,
                          comment_reports=comment_reports,
-                         has_more_comments=len(comments_data) >= 10)
+                         has_more_comments=total_parent_comments > 5)
 
 # AJAX API 엔드포인트들
 
