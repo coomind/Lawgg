@@ -541,7 +541,7 @@ def bill_detail(bill_id):
     }
     
     # 댓글 가져오기 (부모 댓글만)
-    comments = Comment.query.filter_by(bill_id=bill_id, parent_id=None).order_by(Comment.created_at.desc()).limit(10).all()
+    parent_comments = Comment.query.filter_by(bill_id=bill_id, parent_id=None).order_by(Comment.created_at.desc()).limit(5).all()
     
     # 사용자가 신고한 댓글 ID들
     user_reports = Report.query.filter_by(reporter_ip=ip_address).all()
@@ -819,7 +819,7 @@ def proposal_detail(proposal_id):
     ).first() is not None
     
     # 🔥 수정: 모든 댓글 가져오기 (부모 댓글과 답글 모두)
-    all_comments = Comment.query.filter_by(proposal_id=proposal_id).order_by(Comment.created_at.desc()).all()
+    parent_comments = Comment.query.filter_by(bill_id=bill_id, parent_id=None).order_by(Comment.created_at.desc()).limit(5).all()
     
     # 사용자가 신고한 댓글 ID들
     user_reports = Report.query.filter_by(reporter_ip=ip_address).all()
@@ -1128,6 +1128,121 @@ def crawl_bill_content(bill_number):
         print(f"크롤링 오류: {e}")
     
     return {'content': ''}
+
+@app.route('/api/bills/<int:bill_id>/comments', methods=['GET'])
+def get_bill_comments(bill_id):
+    offset = request.args.get('offset', 0, type=int)
+    limit = 5
+    
+    # 부모 댓글들 가져오기 (offset 적용)
+    parent_comments = Comment.query.filter_by(bill_id=bill_id, parent_id=None)\
+        .order_by(Comment.created_at.desc())\
+        .offset(offset).limit(limit).all()
+    
+    # 답글들 가져오기
+    if parent_comments:
+        parent_ids = [c.id for c in parent_comments]
+        replies = Comment.query.filter(
+            Comment.bill_id == bill_id,
+            Comment.parent_id.in_(parent_ids)
+        ).order_by(Comment.created_at.asc()).all()
+        
+        all_comments = parent_comments + replies
+    else:
+        all_comments = []
+    
+    # 더 있는지 확인
+    total_parent_comments = Comment.query.filter_by(bill_id=bill_id, parent_id=None).count()
+    has_more = (offset + limit) < total_parent_comments
+    
+    # 댓글 데이터 처리 (기존 코드와 동일)
+    ip_address = get_client_ip()
+    user_reports = Report.query.filter_by(reporter_ip=ip_address).all()
+    reported_comment_ids = [r.comment_id for r in user_reports if r.comment_id]
+    user_likes = CommentLike.query.filter_by(ip_address=ip_address).all()
+    liked_comment_ids = [l.comment_id for l in user_likes]
+    
+    comments_data = []
+    for comment in all_comments:
+        like_count = CommentLike.query.filter_by(comment_id=comment.id).count()
+        
+        comment_data = {
+            'id': comment.id,
+            'parent_id': comment.parent_id,
+            'author': comment.author or f'익명{comment.id}',
+            'content': comment.content,
+            'stance': comment.stance,
+            'time_ago': time_ago(comment.created_at),
+            'report_count': comment.report_count,
+            'is_under_review': comment.is_under_review or comment.report_count >= 3,
+            'is_reported_by_user': comment.id in reported_comment_ids,
+            'like_count': like_count,
+            'is_liked_by_user': comment.id in liked_comment_ids
+        }
+        comments_data.append(comment_data)
+    
+    return jsonify({
+        'comments': comments_data,
+        'has_more': has_more
+    })
+
+# 입법제안 댓글 더보기 API
+@app.route('/api/proposals/<int:proposal_id>/comments', methods=['GET'])
+def get_proposal_comments(proposal_id):
+    offset = request.args.get('offset', 0, type=int)
+    limit = 5
+    
+    # 부모 댓글들 가져오기 (offset 적용)
+    parent_comments = Comment.query.filter_by(proposal_id=proposal_id, parent_id=None)\
+        .order_by(Comment.created_at.desc())\
+        .offset(offset).limit(limit).all()
+    
+    # 답글들 가져오기
+    if parent_comments:
+        parent_ids = [c.id for c in parent_comments]
+        replies = Comment.query.filter(
+            Comment.proposal_id == proposal_id,
+            Comment.parent_id.in_(parent_ids)
+        ).order_by(Comment.created_at.asc()).all()
+        
+        all_comments = parent_comments + replies
+    else:
+        all_comments = []
+    
+    # 더 있는지 확인
+    total_parent_comments = Comment.query.filter_by(proposal_id=proposal_id, parent_id=None).count()
+    has_more = (offset + limit) < total_parent_comments
+    
+    # 댓글 데이터 처리 (위와 동일)
+    ip_address = get_client_ip()
+    user_reports = Report.query.filter_by(reporter_ip=ip_address).all()
+    reported_comment_ids = [r.comment_id for r in user_reports if r.comment_id]
+    user_likes = CommentLike.query.filter_by(ip_address=ip_address).all()
+    liked_comment_ids = [l.comment_id for l in user_likes]
+    
+    comments_data = []
+    for comment in all_comments:
+        like_count = CommentLike.query.filter_by(comment_id=comment.id).count()
+        
+        comment_data = {
+            'id': comment.id,
+            'parent_id': comment.parent_id,
+            'author': comment.author or f'익명{comment.id}',
+            'content': comment.content,
+            'stance': comment.stance,
+            'time_ago': time_ago(comment.created_at),
+            'report_count': comment.report_count,
+            'is_under_review': comment.is_under_review or comment.report_count >= 3,
+            'is_reported_by_user': comment.id in reported_comment_ids,
+            'like_count': like_count,
+            'is_liked_by_user': comment.id in liked_comment_ids
+        }
+        comments_data.append(comment_data)
+    
+    return jsonify({
+        'comments': comments_data,
+        'has_more': has_more
+    })
     
 @app.route('/api/proposals/<int:proposal_id>/vote', methods=['POST'])
 def vote_proposal(proposal_id):
