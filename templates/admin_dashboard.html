@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LAW.GG 관리자 페이지</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 2px solid #ddd; padding-bottom: 10px; }
+        .section { margin-bottom: 40px; }
+        .section h2 { color: #333; border-left: 4px solid #007cba; padding-left: 10px; }
+        .item { background: #f9f9f9; margin: 10px 0; padding: 15px; border-radius: 5px; border-left: 4px solid #ff6b6b; }
+        .item.low-priority { border-left-color: #ffa726; }
+        .item.high-priority { border-left-color: #f44336; }
+        .item-header { display: flex; justify-content: between; align-items: center; margin-bottom: 10px; }
+        .item-title { font-weight: bold; flex: 1; }
+        .item-meta { font-size: 12px; color: #666; margin-bottom: 8px; }
+        .item-content { margin: 10px 0; padding: 10px; background: white; border-radius: 3px; max-height: 100px; overflow-y: auto; }
+        .buttons { display: flex; gap: 10px; }
+        .btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        .btn-danger { background: #f44336; color: white; }
+        .btn-warning { background: #ff9800; color: white; }
+        .btn-info { background: #2196f3; color: white; }
+        .btn-success { background: #4caf50; color: white; }
+        .btn:hover { opacity: 0.8; }
+        .stats { display: flex; gap: 20px; margin-bottom: 20px; }
+        .stat { background: #e3f2fd; padding: 15px; border-radius: 5px; text-align: center; }
+        .blocked-ip { background: #ffebee; border-left-color: #9c27b0; }
+        .logout { background: #757575; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; }
+        .logout:hover { background: #616161; }
+        .manual-ban { background: #e8f5e8; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        .manual-ban input { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛡️ LAW.GG 관리자 대시보드</h1>
+            <a href="/admin/logout" class="logout">로그아웃</a>
+        </div>
+
+        <div class="stats">
+            <div class="stat">
+                <div style="font-size: 24px; font-weight: bold; color: #f44336;">{{ reported_proposals|length }}</div>
+                <div>신고된 입법제안</div>
+            </div>
+            <div class="stat">
+                <div style="font-size: 24px; font-weight: bold; color: #ff9800;">{{ reported_comments|length }}</div>
+                <div>신고된 댓글</div>
+            </div>
+            <div class="stat">
+                <div style="font-size: 24px; font-weight: bold; color: #9c27b0;">{{ blocked_ips|length }}</div>
+                <div>차단된 IP</div>
+            </div>
+        </div>
+
+        <!-- 수동 IP 차단 -->
+        <div class="section">
+            <h2>🚫 수동 IP 차단</h2>
+            <div class="manual-ban">
+                <input type="text" id="manual-ip" placeholder="차단할 IP 주소 입력" style="width: 200px;">
+                <input type="text" id="manual-reason" placeholder="차단 사유" style="width: 300px;">
+                <button class="btn btn-danger" onclick="manualBanIP()">IP 차단</button>
+            </div>
+        </div>
+
+        <!-- 신고된 입법제안 -->
+        <div class="section">
+            <h2>📋 신고된 입법제안 ({{ reported_proposals|length }}개)</h2>
+            {% for proposal in reported_proposals %}
+            <div class="item {% if proposal.report_count >= 5 %}high-priority{% elif proposal.report_count >= 3 %}{% else %}low-priority{% endif %}" data-proposal-id="{{ proposal.id }}">
+                <div class="item-header">
+                    <div class="item-title">{{ proposal.title }}</div>
+                    <div style="background: #f44336; color: white; padding: 4px 8px; border-radius: 12px; font-size: 11px;">
+                        신고 {{ proposal.report_count }}회
+                    </div>
+                </div>
+                <div class="item-meta">
+                    ID: {{ proposal.id }} | 작성일: {{ proposal.created_date }} | 조회수: {{ proposal.view_count }}
+                </div>
+                <div class="item-content">{{ proposal.current_situation[:200] }}...</div>
+                <div class="buttons">
+                    <button class="btn btn-danger" onclick="deleteProposal({{ proposal.id }})">🗑️ 삭제</button>
+                    <button class="btn btn-warning" onclick="banProposalAuthor({{ proposal.id }})">🚫 작성자 IP 차단</button>
+                    <button class="btn btn-info" onclick="window.open('/proposals/{{ proposal.id }}', '_blank')">👁️ 보기</button>
+                </div>
+            </div>
+            {% endfor %}
+            {% if not reported_proposals %}
+            <div style="text-align: center; color: #666; padding: 20px;">신고된 입법제안이 없습니다.</div>
+            {% endif %}
+        </div>
+
+        <!-- 신고된 댓글 -->
+        <div class="section">
+            <h2>💬 신고된 댓글/답글 ({{ reported_comments|length }}개)</h2>
+            {% for comment in reported_comments %}
+            <div class="item {% if comment.report_count >= 5 %}high-priority{% elif comment.report_count >= 3 %}{% else %}low-priority{% endif %}" data-comment-id="{{ comment.id }}">
+                <div class="item-header">
+                    <div class="item-title">
+                        {{ comment.author or '익명' + comment.id|string }} 
+                        {% if comment.parent_id %}(답글){% endif %}
+                        - {{ '찬성' if comment.stance == 'agree' else '반대' }}
+                    </div>
+                    <div style="background: #f44336; color: white; padding: 4px 8px; border-radius: 12px; font-size: 11px;">
+                        신고 {{ comment.report_count }}회
+                    </div>
+                </div>
+                <div class="item-meta">
+                    ID: {{ comment.id }} | 
+                    {% if comment.bill_id %}법률안{% else %}입법제안{% endif %} | 
+                    {% if comment.parent_id %}답글{% else %}댓글{% endif %}
+                </div>
+                <div class="item-content">{{ comment.content }}</div>
+                <div class="buttons">
+                    <button class="btn btn-danger" onclick="deleteComment({{ comment.id }})">🗑️ 삭제</button>
+                    <button class="btn btn-warning" onclick="banCommentAuthor({{ comment.id }})">🚫 작성자 IP 차단</button>
+                    {% if comment.bill_id %}
+                    <button class="btn btn-info" onclick="window.open('/bills/{{ comment.bill_id }}', '_blank')">👁️ 원글 보기</button>
+                    {% else %}
+                    <button class="btn btn-info" onclick="window.open('/proposals/{{ comment.proposal_id }}', '_blank')">👁️ 원글 보기</button>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+            {% if not reported_comments %}
+            <div style="text-align: center; color: #666; padding: 20px;">신고된 댓글이 없습니다.</div>
+            {% endif %}
+        </div>
+
+        <!-- 차단된 IP -->
+        <div class="section">
+            <h2>🚫 차단된 IP 목록 ({{ blocked_ips|length }}개)</h2>
+            {% for blocked in blocked_ips %}
+            <div class="item blocked-ip" data-blocked-id="{{ blocked.id }}">
+                <div class="item-header">
+                    <div class="item-title">{{ blocked.ip_address }}</div>
+                    <div style="background: #9c27b0; color: white; padding: 4px 8px; border-radius: 12px; font-size: 11px;">
+                        차단됨
+                    </div>
+                </div>
+                <div class="item-meta">차단일: {{ blocked.blocked_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                <div class="item-content">사유: {{ blocked.reason }}</div>
+                <div class="buttons">
+                    <button class="btn btn-success" onclick="unbanIP({{ blocked.id }})">✅ 차단 해제</button>
+                </div>
+            </div>
+            {% endfor %}
+            {% if not blocked_ips %}
+            <div style="text-align: center; color: #666; padding: 20px;">차단된 IP가 없습니다.</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        // 성공/오류 메시지 표시
+        function showMessage(message, type = 'info') {
+            const existingMessage = document.querySelector('.admin-message');
+            if (existingMessage) existingMessage.remove();
+            
+            const messageEl = document.createElement('div');
+            messageEl.className = 'admin-message';
+            messageEl.textContent = message;
+            messageEl.style.cssText = `
+                position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 6px;
+                color: white; font-weight: bold; z-index: 1000;
+                background: ${type === 'success' ? '#4caf50' : type === 'error' ? '#f44336' : '#2196f3'};
+            `;
+            document.body.appendChild(messageEl);
+            setTimeout(() => messageEl.remove(), 3000);
+        }
+
+        // 입법제안 삭제
+        async function deleteProposal(proposalId) {
+            if (!confirm('정말로 이 입법제안을 삭제하시겠습니까? (관련 댓글도 모두 삭제됩니다)')) return;
+            
+            try {
+                const response = await fetch(`/admin/proposals/${proposalId}/delete`, { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    document.querySelector(`[data-proposal-id="${proposalId}"]`).remove();
+                } else {
+                    showMessage(data.error || '삭제 실패', 'error');
+                }
+            } catch (error) {
+                showMessage('네트워크 오류', 'error');
+            }
+        }
+
+        // 댓글 삭제
+        async function deleteComment(commentId) {
+            if (!confirm('정말로 이 댓글을 삭제하시겠습니까? (답글도 함께 삭제됩니다)')) return;
+            
+            try {
+                const response = await fetch(`/admin/comments/${commentId}/delete`, { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    document.querySelector(`[data-comment-id="${commentId}"]`).remove();
+                } else {
+                    showMessage(data.error || '삭제 실패', 'error');
+                }
+            } catch (error) {
+                showMessage('네트워크 오류', 'error');
+            }
+        }
+
+        // 입법제안 작성자 IP 차단
+        async function banProposalAuthor(proposalId) {
+            if (!confirm('이 입법제안 작성자의 IP를 차단하시겠습니까?')) return;
+            
+            try {
+                const response = await fetch(`/admin/proposals/${proposalId}/ban-author`, { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                } else {
+                    showMessage(data.error || 'IP 차단 실패', 'error');
+                }
+            } catch (error) {
+                showMessage('네트워크 오류', 'error');
+            }
+        }
+
+        // 댓글 작성자 IP 차단
+        async function banCommentAuthor(commentId) {
+            if (!confirm('이 댓글 작성자의 IP를 차단하시겠습니까?')) return;
+            
+            try {
+                const response = await fetch(`/admin/comments/${commentId}/ban-author`, { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                } else {
+                    showMessage(data.error || 'IP 차단 실패', 'error');
+                }
+            } catch (error) {
+                showMessage('네트워크 오류', 'error');
+            }
+        }
+
+        // 수동 IP 차단
+        async function manualBanIP() {
+            const ip = document.getElementById('manual-ip').value.trim();
+            const reason = document.getElementById('manual-reason').value.trim() || '관리자에 의한 수동 차단';
+            
+            if (!ip) {
+                showMessage('IP 주소를 입력해주세요.', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/admin/ban-ip', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ip_address: ip, reason: reason })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    document.getElementById('manual-ip').value = '';
+                    document.getElementById('manual-reason').value = '';
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showMessage(data.error || 'IP 차단 실패', 'error');
+                }
+            } catch (error) {
+                showMessage('네트워크 오류', 'error');
+            }
+        }
+
+        // IP 차단 해제
+        async function unbanIP(blockedId) {
+            if (!confirm('이 IP의 차단을 해제하시겠습니까?')) return;
+            
+            try {
+                const response = await fetch(`/admin/unban-ip/${blockedId}`, { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    document.querySelector(`[data-blocked-id="${blockedId}"]`).remove();
+                } else {
+                    showMessage(data.error || '차단 해제 실패', 'error');
+                }
+            } catch (error) {
+                showMessage('네트워크 오류', 'error');
+            }
+        }
+
+        // 엔터키로 IP 차단
+        document.getElementById('manual-reason').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') manualBanIP();
+        });
+    </script>
+</body>
+</html>
