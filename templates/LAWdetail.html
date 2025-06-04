@@ -857,13 +857,13 @@
                         {% endif %}
                         {% endfor %}
                         
-                        <!-- 더보기 버튼 -->
-                        {% if has_more_comments %}
+                        
+                    </div>
+                    {% if has_more_comments %}
                         <div style="text-align: center; margin-top: 20px;">
                             <button onclick="loadMoreComments()" style="background-color: #495057; color: white; border: none; padding: 10px 30px; border-radius: 6px; cursor: pointer;">더보기</button>
-                        </div>
-                        {% endif %}
                     </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -985,7 +985,7 @@
             const existingComments = document.querySelectorAll('.comment-item:not(.reply)').length;
             
             try {
-                const response = await fetch(`${API_BASE_URL}/api/billId/${billId}/comments?offset=${existingComments}`);
+                const response = await fetch(`${API_BASE_URL}/api/bills/${billId}/comments?offset=${existingComments}`);
                 
                 if (response.ok) {
                     const data = await response.json();
