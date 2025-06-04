@@ -911,6 +911,49 @@
         const agreeCountEl = document.getElementById('agree-count');
         const disagreeCountEl = document.getElementById('disagree-count');
 
+        function showMessage(message, type = 'info') {
+            // 기존 메시지 제거
+            const existingMessage = document.querySelector('.message-toast');
+            if (existingMessage) {
+                existingMessage.remove();
+            }
+            
+            // 새 메시지 생성
+            const messageEl = document.createElement('div');
+            messageEl.className = `message-toast message-${type}`;
+            messageEl.textContent = message;
+            
+            // 스타일 적용
+            Object.assign(messageEl.style, {
+                position: 'fixed',
+                top: '20px',
+                right: '20px',
+                padding: '12px 20px',
+                borderRadius: '6px',
+                color: 'white',
+                fontWeight: '500',
+                zIndex: '1000',
+                animation: 'slideIn 0.3s ease'
+            });
+            
+            // 타입별 색상
+            const colors = {
+                success: '#28a745',
+                error: '#dc3545',
+                warning: '#ffc107',
+                info: '#17a2b8'
+            };
+            messageEl.style.backgroundColor = colors[type] || colors.info;
+            
+            document.body.appendChild(messageEl);
+            
+            // 3초 후 제거
+            setTimeout(() => {
+                messageEl.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => messageEl.remove(), 300);
+            }, 3000);
+        }
+
         // 네비게이션 함수들
         function goToHome() {
             window.location.href = `${API_BASE_URL}/`;
@@ -940,7 +983,7 @@
 
         function loadMoreComments() {
             // TODO: 서버에서 추가 댓글 로드 구현
-            alert('더 많은 댓글을 로드합니다.');
+            showMessage('더 많은 댓글을 로드합니다.', 'info');
         }
 
         // 투표 카운트 업데이트
@@ -995,7 +1038,8 @@
                     const data = await response.json();
                     
                     if (!response.ok) {
-                        throw new Error(data.error || '투표 실패');
+                        showMessage(data.error || '투표 실패', 'error');
+                        return;
                     }
                     
                     // 이전 투표가 있다면 카운트 감소 (클라이언트 측)
@@ -1032,10 +1076,13 @@
 
                     console.log('업데이트된 voteCounts:', voteCounts); // 디버깅용
                     updateVoteCounts();
+
+                    const message = userVote ? '투표가 완료되었습니다.' : '투표가 취소되었습니다.';
+                    showMessage(message, 'success');
                     
                 } catch (error) {
                     console.error('투표 오류:', error);
-                    alert('투표 처리 중 오류가 발생했습니다: ' + error.message);
+                    showMessage('투표 처리 중 오류가 발생했습니다: ' + error.message, 'error');
                 }
             });
         });
@@ -1044,11 +1091,11 @@
         commentSubmit.addEventListener('click', async function() {
             const content = commentInput.value.trim();
             if (!content) {
-                alert('댓글 내용을 입력해주세요.');
+                showMessage('댓글 내용을 입력해주세요.', 'warning');
                 return;
             }
             if (!userVote) {
-                alert('먼저 찬성 또는 반대를 선택해주세요.');
+                showMessage('먼저 찬성 또는 반대를 선택해주세요.', 'warning');
                 return;
             }
             
@@ -1071,10 +1118,11 @@
                 const commentData = await response.json();
                 addComment(commentData);
                 commentInput.value = '';
+                showMessage('댓글이 작성되었습니다.', 'success');
                 
             } catch (error) {
                 console.error('댓글 작성 오류:', error);
-                alert('댓글 작성 중 오류가 발생했습니다.');
+                showMessage('댓글 작성 중 오류가 발생했습니다.', 'error');
             }
         });
 
@@ -1198,7 +1246,7 @@
         // 신고 기능
         async function reportComment(commentId) {
             if (reportedComments.has(commentId)) {
-                alert('이미 신고한 댓글입니다.');
+                showMessage('이미 신고한 댓글입니다.', 'warning');
                 return;
             }
             
@@ -1218,10 +1266,11 @@
                 
                 if (!response.ok) {
                     if (data.error === 'Already reported') {
-                        alert('이미 신고한 댓글입니다.');
+                        showMessage('이미 신고한 댓글입니다.', 'warning'); 
                         return;
                     }
-                    throw new Error(data.error || '신고 실패');
+                    showMessage(data.error || '신고 실패', 'error');
+                    return;
                 }
                 
                 // 신고 성공
@@ -1250,11 +1299,11 @@
                     }
                 }
                 
-                alert('신고가 접수되었습니다.');
+                showMessage('신고가 접수되었습니다.', 'success');
                 
             } catch (error) {
                 console.error('신고 오류:', error);
-                alert('신고 처리 중 오류가 발생했습니다: ' + error.message);
+                showMessage('신고 처리 중 오류가 발생했습니다: ' + error.message, 'error');
             }
         }
         
@@ -1272,7 +1321,8 @@
                 const data = await response.json();
                 
                 if (!response.ok) {
-                    throw new Error(data.error || '좋아요 실패');
+                    showMessage(data.error || '좋아요 실패', 'error');
+                    return;
                 }
                 
                 // UI 업데이트
@@ -1291,7 +1341,7 @@
                 
             } catch (error) {
                 console.error('좋아요 오류:', error);
-                alert('좋아요 처리 중 오류가 발생했습니다.');
+                showMessage('좋아요 처리 중 오류가 발생했습니다.', 'error');
             }
         }
 
@@ -1348,7 +1398,7 @@
 
         async function handleReplySubmit() {
             if (!userVote) {
-                alert('먼저 찬성 또는 반대를 선택해주세요.');
+                showMessage('먼저 찬성 또는 반대를 선택해주세요.', 'warning');
                 return;
             }
 
@@ -1358,7 +1408,7 @@
             const content = replyInput.value.trim();
 
             if (!content) {
-                alert('답글 내용을 입력해주세요.');
+                showMessage('답글 내용을 입력해주세요.', 'warning');
                 return;
             }
 
@@ -1375,17 +1425,19 @@
                 });
 
                 if (!response.ok) {
-                    throw new Error('답글 저장 실패');
+                    showMessage(error.error || '답글 저장 실패', 'error');
+                    return;
                 }
 
                 const data = await response.json();
                 addReply(parseInt(parentId), data.content, data.stance);
                 replyInput.value = '';
                 replyForm.classList.remove('show');
+                showMessage('답글이 작성되었습니다.', 'success');
 
             } catch (error) {
                 console.error('답글 오류:', error);
-                alert('답글 저장에 실패했습니다.');
+                showMessage('답글 저장에 실패했습니다: ' + error.message, 'error');
             }
         }
         function initializeLikeStates() {
@@ -1487,7 +1539,7 @@
         // handleReplySubmit 함수 수정 (답글 저장 개선)
         async function handleReplySubmit() {
             if (!userVote) {
-                alert('먼저 찬성 또는 반대를 선택해주세요.');
+                showMessage('먼저 찬성 또는 반대를 선택해주세요.', 'warning');
                 return;
             }
         
@@ -1497,7 +1549,7 @@
             const content = replyInput.value.trim();
         
             if (!content) {
-                alert('답글 내용을 입력해주세요.');
+                showMessage('답글 내용을 입력해주세요.', 'warning');
                 return;
             }
         
@@ -1530,7 +1582,7 @@
         
             } catch (error) {
                 console.error('답글 오류:', error);
-                alert('답글 저장에 실패했습니다: ' + error.message);
+                showMessage('답글 저장에 실패했습니다: ' + error.message, 'error');
             }
         }
 
@@ -1552,6 +1604,18 @@
             
             console.log('LAW.GG 법률안 상세 페이지가 로드되었습니다.');
         });
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
     </script>
 </body>
 </html>
