@@ -982,45 +982,43 @@
         }
 
         async function loadMoreComments() {
-            // 현재 표시된 부모 댓글 개수 계산
-            const existingParentComments = document.querySelectorAll('.comment-item:not(.reply)').length;
+            const existingComments = document.querySelectorAll('.comment-item:not(.reply)').length;
             
             try {
-                const response = await fetch(`${API_BASE_URL}/api/bills/${billId}/comments?offset=${existingParentComments}`);
+                const response = await fetch(`${API_BASE_URL}/api/proposals/${proposalId}/comments?offset=${existingComments}`);
                 
-                if (!response.ok) {
-                    showMessage('댓글을 불러오는 중 오류가 발생했습니다.', 'error');
-                    return;
-                }
-                
-                const data = await response.json();
-                
-                if (data.comments.length === 0) {
-                    showMessage('더 이상 댓글이 없습니다.', 'info');
-                    return;
-                }
-                
-                // 새 댓글들 추가
-                data.comments.forEach(comment => {
-                    const commentHtml = createCommentHtml(comment);
-                    commentsList.insertAdjacentHTML('beforeend', commentHtml);
-                });
-                
-                // 새로 추가된 요소들에 이벤트 리스너 적용
-                initializeEventListeners();
-                initializeLikeStates();
-                
-                // 더보기 버튼 처리
-                if (!data.has_more) {
-                    const moreBtn = document.querySelector('button[onclick="loadMoreComments()"]');
-                    if (moreBtn) {
-                        moreBtn.style.display = 'none';
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // 새 댓글들 추가
+                    data.comments.forEach(comment => {
+                        if (!comment.parent_id) {
+                            const commentHtml = createCommentHtml(comment);
+                            commentsList.insertAdjacentHTML('beforeend', commentHtml);
+                            
+                            // 해당 댓글의 답글들도 추가
+                            data.comments.forEach(reply => {
+                                if (reply.parent_id === comment.id) {
+                                    const replyHtml = createCommentHtml(reply);
+                                    commentsList.insertAdjacentHTML('beforeend', replyHtml);
+                                }
+                            });
+                        }
+                    });
+                    
+                    // 새로 추가된 요소들에 좋아요/신고 상태 적용
+                    initializeLikeStates();
+                    
+                    // 더보기 버튼 처리
+                    if (!data.has_more) {
+                        const moreBtn = document.querySelector('button[onclick="loadMoreComments()"]');
+                        if (moreBtn) {
+                            moreBtn.style.display = 'none';
+                        }
                     }
+                } else {
+                    showMessage('댓글을 불러오는 중 오류가 발생했습니다.', 'error');
                 }
-                
-                const newParentComments = data.comments.filter(c => !c.parent_id).length;
-                showMessage(`${newParentComments}개의 댓글을 더 불러왔습니다.`, 'success');
-                
             } catch (error) {
                 console.error('댓글 로드 오류:', error);
                 showMessage('네트워크 오류가 발생했습니다.', 'error');
@@ -1030,18 +1028,18 @@
         function createCommentHtml(comment) {
             const stanceText = comment.stance === 'agree' ? '찬성' : '반대';
             const stanceClass = comment.stance === 'agree' ? 'agree' : 'disagree';
-            const isReply = comment.parent_id ? true : false;
+            const isReply = comment.parent_id ? true : false;  // ✅ 자동 판단
             const replyClass = isReply ? 'reply' : '';
             const underReviewClass = comment.is_under_review ? 'comment-under-review' : '';
             const underReviewBadge = comment.is_under_review ? '<span class="under-review-badge">검토 중</span>' : '';
-        
+            
             return `
                 <div class="comment-item ${replyClass} ${underReviewClass}" 
                     data-comment-id="${comment.id}" 
                     ${isReply ? `data-parent-id="${comment.parent_id}"` : ''}
                     data-report-count="${comment.report_count || 0}">
                     <div class="comment-header">
-                        <span class="comment-author">${comment.author}</span>
+                        <span class="comment-author">${comment.author || '익명' + comment.id}</span>
                         <span class="comment-stance ${stanceClass}">${stanceText}</span>
                         <span class="comment-time">${comment.time_ago}</span>
                         ${underReviewBadge}
