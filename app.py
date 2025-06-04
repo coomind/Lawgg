@@ -542,7 +542,7 @@ def bill_detail(bill_id):
     
     # 댓글 가져오기 (부모 댓글만)
     parent_comments = Comment.query.filter_by(bill_id=bill_id, parent_id=None).order_by(Comment.created_at.desc()).limit(5).all()
-    total_parent_comments = Comment.query.filter_by(proposal_id=proposal_id, parent_id=None).count()
+    total_parent_comments = Comment.query.filter_by(bill_id=bill_id, parent_id=None).count()
     
     # 사용자가 신고한 댓글 ID들
     user_reports = Report.query.filter_by(reporter_ip=ip_address).all()
