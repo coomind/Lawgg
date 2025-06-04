@@ -1165,13 +1165,14 @@
         }
 
         // 댓글 HTML 생성
-        function createCommentHtml(comment, isReply = false) {
+        function createCommentHtml(comment) {
             const stanceText = comment.stance === 'agree' ? '찬성' : '반대';
             const stanceClass = comment.stance === 'agree' ? 'agree' : 'disagree';
+            const isReply = comment.parent_id ? true : false;  // ✅ 자동 판단
             const replyClass = isReply ? 'reply' : '';
             const underReviewClass = comment.is_under_review ? 'comment-under-review' : '';
             const underReviewBadge = comment.is_under_review ? '<span class="under-review-badge">검토 중</span>' : '';
-
+            
             return `
                 <div class="comment-item ${replyClass} ${underReviewClass}" 
                     data-comment-id="${comment.id}" 
@@ -1180,17 +1181,19 @@
                     <div class="comment-header">
                         <span class="comment-author">${comment.author || '익명' + comment.id}</span>
                         <span class="comment-stance ${stanceClass}">${stanceText}</span>
-                        <span class="comment-time">방금 전</span>
+                        <span class="comment-time">${comment.time_ago}</span>
                         ${underReviewBadge}
                     </div>
                     <div class="comment-content">${comment.content}</div>
                     <div class="comment-actions">
                         <button class="comment-action-btn reply-btn" data-comment-id="${comment.id}">답글</button>
-                        <button class="comment-action-btn like-btn" data-comment-id="${comment.id}">
+                        <button class="comment-action-btn like-btn ${comment.is_liked_by_user ? 'liked' : ''}" data-comment-id="${comment.id}">
                             <span class="like-icon">👍</span>
                             <span class="like-count">${comment.like_count || 0}</span>
                         </button>
-                        <button class="comment-action-btn report-btn" data-comment-id="${comment.id}">신고</button>
+                        <button class="comment-action-btn report-btn ${comment.is_reported_by_user ? 'reported' : ''}" data-comment-id="${comment.id}">
+                            ${comment.is_reported_by_user ? '신고됨' : (comment.report_count > 0 ? `신고 (${comment.report_count})` : '신고')}
+                        </button>
                     </div>
                     <div class="reply-form" id="reply-form-${comment.id}">
                         <textarea class="reply-input" placeholder="답글을 작성해주세요..."></textarea>
@@ -1440,7 +1443,7 @@
                             // 해당 댓글의 답글들도 추가
                             data.comments.forEach(reply => {
                                 if (reply.parent_id === comment.id) {
-                                    const replyHtml = createCommentHtml(reply, true);
+                                    const replyHtml = createCommentHtml(reply);
                                     commentsList.insertAdjacentHTML('beforeend', replyHtml);
                                 }
                             });
