@@ -1924,18 +1924,29 @@ def report_comment(comment_id):
 # 미들웨어로 차단된 IP 확인
 @app.before_request
 def check_blocked_ip():
-    # 관리자 페이지는 제외
-    if request.endpoint in ['admin_login', 'admin_dashboard', 'admin_logout']:
+    # 관리자 관련 모든 경로 제외
+    admin_paths = [
+        '/admin/',
+        '/admin/lawgg2025',
+        '/admin/dashboard', 
+        '/admin/logout',
+        '/admin/proposals',
+        '/admin/comments',
+        '/admin/ban-ip',
+        '/admin/unban-ip',
+        '/admin/reset-db'
+    ]
+    
+    # 현재 경로가 관리자 경로면 차단 검사 생략
+    if any(request.path.startswith(path) for path in admin_paths):
         return
     
     ip_address = get_client_ip()
     blocked = BlockedIP.query.filter_by(ip_address=ip_address).first()
     
     if blocked:
-        # API 요청인 경우
         if request.endpoint and 'api' in request.endpoint:
             return jsonify({'error': 'Access denied'}), 403
-        # 일반 페이지 요청인 경우
         else:
             return render_template('blocked.html', reason=blocked.reason), 403
 
