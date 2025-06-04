@@ -1334,23 +1334,11 @@ def get_bill_comments(bill_id):
         .order_by(Comment.created_at.desc())\
         .offset(offset).limit(limit).all()
     
-    # 답글들 가져오기
-    if parent_comments:
-        parent_ids = [c.id for c in parent_comments]
-        replies = Comment.query.filter(
-            Comment.bill_id == bill_id,
-            Comment.parent_id.in_(parent_ids)
-        ).order_by(Comment.created_at.asc()).all()
-        
-        comments = parent_comments + replies
-    else:
-        comments = []
-    
     # 더 있는지 확인
     total_parent_comments = Comment.query.filter_by(bill_id=bill_id, parent_id=None).count()
     has_more = (offset + limit) < total_parent_comments
     
-    # 댓글 데이터 처리 (기존 코드와 동일)
+    # 댓글 데이터 처리
     ip_address = get_client_ip()
     user_reports = Report.query.filter_by(reporter_ip=ip_address).all()
     reported_comment_ids = [r.comment_id for r in user_reports if r.comment_id]
@@ -1359,6 +1347,7 @@ def get_bill_comments(bill_id):
     
     comments_data = []
     for comment in parent_comments:
+        # 부모 댓글 처리
         like_count = CommentLike.query.filter_by(comment_id=comment.id).count()
         
         comment_data = {
@@ -1375,6 +1364,29 @@ def get_bill_comments(bill_id):
             'is_liked_by_user': comment.id in liked_comment_ids
         }
         comments_data.append(comment_data)
+        
+        # ✅ 여기에 답글 처리 추가
+        replies = Comment.query.filter_by(
+            bill_id=bill_id,
+            parent_id=comment.id
+        ).order_by(Comment.created_at.asc()).all()
+        
+        for reply in replies:
+            reply_like_count = CommentLike.query.filter_by(comment_id=reply.id).count()
+            reply_data = {
+                'id': reply.id,
+                'parent_id': reply.parent_id,
+                'author': reply.author or f'익명{reply.id}',
+                'content': reply.content,
+                'stance': reply.stance,
+                'time_ago': time_ago(reply.created_at),
+                'report_count': reply.report_count,
+                'is_under_review': reply.is_under_review or reply.report_count >= 3,
+                'is_reported_by_user': reply.id in reported_comment_ids,
+                'like_count': reply_like_count,
+                'is_liked_by_user': reply.id in liked_comment_ids
+            }
+            comments_data.append(reply_data)
     
     return jsonify({
         'comments': comments_data,
@@ -1392,23 +1404,11 @@ def get_proposal_comments(proposal_id):
         .order_by(Comment.created_at.desc())\
         .offset(offset).limit(limit).all()
     
-    # 답글들 가져오기
-    if parent_comments:
-        parent_ids = [c.id for c in parent_comments]
-        replies = Comment.query.filter(
-            Comment.proposal_id == proposal_id,
-            Comment.parent_id.in_(parent_ids)
-        ).order_by(Comment.created_at.asc()).all()
-        
-        comments = parent_comments + replies
-    else:
-        comments = []
-    
     # 더 있는지 확인
     total_parent_comments = Comment.query.filter_by(proposal_id=proposal_id, parent_id=None).count()
     has_more = (offset + limit) < total_parent_comments
     
-    # 댓글 데이터 처리 (위와 동일)
+    # 댓글 데이터 처리
     ip_address = get_client_ip()
     user_reports = Report.query.filter_by(reporter_ip=ip_address).all()
     reported_comment_ids = [r.comment_id for r in user_reports if r.comment_id]
@@ -1417,6 +1417,7 @@ def get_proposal_comments(proposal_id):
     
     comments_data = []
     for comment in parent_comments:
+        # 부모 댓글 처리
         like_count = CommentLike.query.filter_by(comment_id=comment.id).count()
         
         comment_data = {
@@ -1433,6 +1434,29 @@ def get_proposal_comments(proposal_id):
             'is_liked_by_user': comment.id in liked_comment_ids
         }
         comments_data.append(comment_data)
+        
+        # ✅ 답글 처리 추가
+        replies = Comment.query.filter_by(
+            proposal_id=proposal_id,
+            parent_id=comment.id
+        ).order_by(Comment.created_at.asc()).all()
+        
+        for reply in replies:
+            reply_like_count = CommentLike.query.filter_by(comment_id=reply.id).count()
+            reply_data = {
+                'id': reply.id,
+                'parent_id': reply.parent_id,
+                'author': reply.author or f'익명{reply.id}',
+                'content': reply.content,
+                'stance': reply.stance,
+                'time_ago': time_ago(reply.created_at),
+                'report_count': reply.report_count,
+                'is_under_review': reply.is_under_review or reply.report_count >= 3,
+                'is_reported_by_user': reply.id in reported_comment_ids,
+                'like_count': reply_like_count,
+                'is_liked_by_user': reply.id in liked_comment_ids
+            }
+            comments_data.append(reply_data)
     
     return jsonify({
         'comments': comments_data,
