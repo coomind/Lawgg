@@ -929,24 +929,7 @@
             
         });
 
-        // ✅ 좋아요 초기 상태 적용 함수 추가
-        function initializeLikeStates() {
-            document.querySelectorAll('.like-btn').forEach(btn => {
-                const commentId = parseInt(btn.dataset.commentId);
-                if (likedComments.has(commentId)) {
-                    btn.classList.add('liked');
-                }
-            });
-            
-            // 신고 상태도 초기화
-            document.querySelectorAll('.report-btn').forEach(btn => {
-                const commentId = parseInt(btn.dataset.commentId);
-                if (reportedComments.has(commentId)) {
-                    btn.classList.add('reported');
-                    btn.textContent = '신고됨';
-                }
-            });
-        }
+    
 
         // 이벤트 리스너 설정
         function setupEventListeners() {
