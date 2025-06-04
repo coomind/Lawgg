@@ -819,7 +819,7 @@ def proposal_detail(proposal_id):
     ).first() is not None
     
     # 🔥 수정: 모든 댓글 가져오기 (부모 댓글과 답글 모두)
-    parent_comments = Comment.query.filter_by(bill_id=bill_id, parent_id=None).order_by(Comment.created_at.desc()).limit(5).all()
+    parent_comments = Comment.query.filter_by(proposal_id=proposal_id, parent_id=None).order_by(Comment.created_at.desc()).limit(5).all()
     
     # 사용자가 신고한 댓글 ID들
     user_reports = Report.query.filter_by(reporter_ip=ip_address).all()
