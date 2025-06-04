@@ -981,9 +981,89 @@
             window.location.href = `${API_BASE_URL}/bills/${billId}`;
         }
 
-        function loadMoreComments() {
-            // TODO: 서버에서 추가 댓글 로드 구현
-            showMessage('더 많은 댓글을 로드합니다.', 'info');
+        async function loadMoreComments() {
+            // 현재 표시된 부모 댓글 개수 계산
+            const existingParentComments = document.querySelectorAll('.comment-item:not(.reply)').length;
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/bills/${billId}/comments?offset=${existingParentComments}`);
+                
+                if (!response.ok) {
+                    showMessage('댓글을 불러오는 중 오류가 발생했습니다.', 'error');
+                    return;
+                }
+                
+                const data = await response.json();
+                
+                if (data.comments.length === 0) {
+                    showMessage('더 이상 댓글이 없습니다.', 'info');
+                    return;
+                }
+                
+                // 새 댓글들 추가
+                data.comments.forEach(comment => {
+                    const commentHtml = createCommentHtml(comment);
+                    commentsList.insertAdjacentHTML('beforeend', commentHtml);
+                });
+                
+                // 새로 추가된 요소들에 이벤트 리스너 적용
+                initializeEventListeners();
+                initializeLikeStates();
+                
+                // 더보기 버튼 처리
+                if (!data.has_more) {
+                    const moreBtn = document.querySelector('button[onclick="loadMoreComments()"]');
+                    if (moreBtn) {
+                        moreBtn.style.display = 'none';
+                    }
+                }
+                
+                const newParentComments = data.comments.filter(c => !c.parent_id).length;
+                showMessage(`${newParentComments}개의 댓글을 더 불러왔습니다.`, 'success');
+                
+            } catch (error) {
+                console.error('댓글 로드 오류:', error);
+                showMessage('네트워크 오류가 발생했습니다.', 'error');
+            }
+        }
+
+        function createCommentHtml(comment) {
+            const stanceText = comment.stance === 'agree' ? '찬성' : '반대';
+            const stanceClass = comment.stance === 'agree' ? 'agree' : 'disagree';
+            const isReply = comment.parent_id ? true : false;
+            const replyClass = isReply ? 'reply' : '';
+            const underReviewClass = comment.is_under_review ? 'comment-under-review' : '';
+            const underReviewBadge = comment.is_under_review ? '<span class="under-review-badge">검토 중</span>' : '';
+        
+            return `
+                <div class="comment-item ${replyClass} ${underReviewClass}" 
+                    data-comment-id="${comment.id}" 
+                    ${isReply ? `data-parent-id="${comment.parent_id}"` : ''}
+                    data-report-count="${comment.report_count || 0}">
+                    <div class="comment-header">
+                        <span class="comment-author">${comment.author}</span>
+                        <span class="comment-stance ${stanceClass}">${stanceText}</span>
+                        <span class="comment-time">${comment.time_ago}</span>
+                        ${underReviewBadge}
+                    </div>
+                    <div class="comment-content">${comment.content}</div>
+                    <div class="comment-actions">
+                        <button class="comment-action-btn reply-btn" data-comment-id="${comment.id}">답글</button>
+                        <button class="comment-action-btn like-btn ${comment.is_liked_by_user ? 'liked' : ''}" data-comment-id="${comment.id}">
+                            <span class="like-icon">👍</span>
+                            <span class="like-count">${comment.like_count || 0}</span>
+                        </button>
+                        <button class="comment-action-btn report-btn ${comment.is_reported_by_user ? 'reported' : ''}" data-comment-id="${comment.id}">
+                            ${comment.is_reported_by_user ? '신고됨' : (comment.report_count > 0 ? `신고 (${comment.report_count})` : '신고')}
+                        </button>
+                    </div>
+                    <div class="reply-form" id="reply-form-${comment.id}">
+                        <textarea class="reply-input" placeholder="답글을 작성해주세요..."></textarea>
+                        <button class="reply-submit" data-parent-id="${isReply ? comment.parent_id : comment.id}">답글 작성</button>
+                        <button class="reply-cancel">취소</button>
+                    </div>
+                </div>
+            `;
         }
 
         // 투표 카운트 업데이트
