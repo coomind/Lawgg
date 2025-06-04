@@ -833,7 +833,7 @@ def proposal_detail(proposal_id):
     comments_data = []
     comment_reports = {}
     
-    for comment in all_comments:
+    for comment in comments:
         # 좋아요 수 계산
         like_count = CommentLike.query.filter_by(comment_id=comment.id).count()
         
@@ -1147,9 +1147,9 @@ def get_bill_comments(bill_id):
             Comment.parent_id.in_(parent_ids)
         ).order_by(Comment.created_at.asc()).all()
         
-        all_comments = parent_comments + replies
+        comments = parent_comments + replies
     else:
-        all_comments = []
+        comments = []
     
     # 더 있는지 확인
     total_parent_comments = Comment.query.filter_by(bill_id=bill_id, parent_id=None).count()
@@ -1163,7 +1163,7 @@ def get_bill_comments(bill_id):
     liked_comment_ids = [l.comment_id for l in user_likes]
     
     comments_data = []
-    for comment in all_comments:
+    for comment in comments:
         like_count = CommentLike.query.filter_by(comment_id=comment.id).count()
         
         comment_data = {
@@ -1205,9 +1205,9 @@ def get_proposal_comments(proposal_id):
             Comment.parent_id.in_(parent_ids)
         ).order_by(Comment.created_at.asc()).all()
         
-        all_comments = parent_comments + replies
+        comments = parent_comments + replies
     else:
-        all_comments = []
+        comments = []
     
     # 더 있는지 확인
     total_parent_comments = Comment.query.filter_by(proposal_id=proposal_id, parent_id=None).count()
@@ -1221,7 +1221,7 @@ def get_proposal_comments(proposal_id):
     liked_comment_ids = [l.comment_id for l in user_likes]
     
     comments_data = []
-    for comment in all_comments:
+    for comment in comments:
         like_count = CommentLike.query.filter_by(comment_id=comment.id).count()
         
         comment_data = {
