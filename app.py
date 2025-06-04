@@ -1924,10 +1924,33 @@ def report_comment(comment_id):
 # 미들웨어로 차단된 IP 확인
 @app.before_request
 def check_blocked_ip():
-    if request.endpoint and 'api' in request.endpoint:
-        ip_address = get_client_ip()
-        if BlockedIP.query.filter_by(ip_address=ip_address).first():
+    # 관리자 페이지는 제외
+    if request.endpoint in ['admin_login', 'admin_dashboard', 'admin_logout']:
+        return
+    
+    ip_address = get_client_ip()
+    blocked = BlockedIP.query.filter_by(ip_address=ip_address).first()
+    
+    if blocked:
+        # API 요청인 경우
+        if request.endpoint and 'api' in request.endpoint:
             return jsonify({'error': 'Access denied'}), 403
+        # 일반 페이지 요청인 경우
+        else:
+            return render_template('blocked.html', reason=blocked.reason), 403
+
+@app.route('/debug/ip')
+def debug_ip():
+    ip_address = get_client_ip()
+    headers = dict(request.headers)
+    
+    return jsonify({
+        'detected_ip': ip_address,
+        'remote_addr': request.remote_addr,
+        'x_forwarded_for': request.headers.get('X-Forwarded-For'),
+        'x_real_ip': request.headers.get('X-Real-IP'),
+        'headers': headers
+    })
 # 오류 핸들러
 @app.errorhandler(404)
 def not_found_error(error):
