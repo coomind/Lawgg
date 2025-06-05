@@ -36,7 +36,6 @@ CORS(app)
 # 데이터베이스 모델들
 class Member(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    naas_cd = db.Column(db.String(20), unique=True)
     name = db.Column(db.String(50), nullable=False)  # unique 추가
     party = db.Column(db.String(50))  # 현재 소속 정당
     district = db.Column(db.String(100))  # 현재 선거구
@@ -2219,59 +2218,6 @@ def sync_all_route():
         return jsonify({
             "status": "error",
             "message": f"오류 발생: {str(e)}"
-        }), 500
-
-
-@app.route('/admin/migrate-db')
-def migrate_database():
-    """데이터베이스에 naas_cd 필드 추가"""
-    if not is_admin():
-        return "접근 거부", 403
-    
-    try:
-        # 직접 SQL 실행
-        db.session.execute(db.text('ALTER TABLE member ADD COLUMN naas_cd VARCHAR(20)'))
-        db.session.commit()
-        message = "✅ NAAS_CD 필드 추가 완료"
-        
-    except Exception as e:
-        error_msg = str(e).lower()
-        if 'duplicate column name' in error_msg or 'already exists' in error_msg:
-            message = "✅ NAAS_CD 필드 이미 존재"
-        else:
-            return jsonify({
-                'status': 'error', 
-                'message': f'마이그레이션 실패: {str(e)}'
-            }), 500
-    
-    return jsonify({
-        'status': 'success',
-        'message': message
-    })
-    
-@app.route('/admin/check-db')
-def check_database_structure():
-    """데이터베이스 구조 확인"""
-    if not is_admin():
-        return "접근 거부", 403
-    
-    try:
-        # 직접 SQL 실행
-        result = db.session.execute(db.text("PRAGMA table_info(member)"))
-        columns = [row for row in result]
-        
-        has_naas_cd = any(col[1] == 'naas_cd' for col in columns)
-        
-        return jsonify({
-            'status': 'success',
-            'has_naas_cd_field': has_naas_cd,
-            'columns': [{'name': col[1], 'type': col[2]} for col in columns]
-        })
-        
-    except Exception as e:
-        return jsonify({
-            'status': 'error',
-            'message': f'구조 확인 실패: {str(e)}'
         }), 500
         
 # 메인 실행
