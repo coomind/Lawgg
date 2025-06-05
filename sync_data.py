@@ -97,9 +97,6 @@ def test_api_connection():
 
 def sync_members_from_api():
     """국회 OpenAPI에서 국회의원 정보 동기화 (학력/경력 포함)"""
-    import html
-    import re
-    
     with app.app_context():
         print("\n=== 국회 OpenAPI에서 국회의원 정보 가져오기 (학력/경력 포함) ===")
         
@@ -181,7 +178,6 @@ def sync_members_from_api():
                     break
                 
                 for row in rows:
-                    naas_cd = row.findtext('NAAS_CD', '').strip()
                     name = (row.findtext('HG_NM', '') or 
                             row.findtext('NAAS_NM', '') or 
                             row.findtext('KOR_NM', '')).strip()
@@ -321,111 +317,39 @@ def sync_members_from_api():
                         education=','.join(education_data) if education_data else None,
                         career=','.join(career_data) if career_data else None
                     )
-                    member.naas_cd = naas_cd
                     db.session.add(member)
                     print(f"✨ 신규 의원 생성: {name} (생년월일: {birth_str})")
                     
-                    brf_hst = row.findtext('BRF_HST', '').strip()
-                    if brf_hst:
-                        print(f"   📋 약력 정보: {name} - {brf_hst[:100]}...")
-                        
-                        # HTML 엔티티 디코딩
-                        brf_hst = html.unescape(brf_hst)
-                        
-                        # 추가 학력/경력 데이터 수집
-                        additional_education = []
-                        additional_career = []
-                        
-                        # 다양한 구분자로 분리
-                        items = []
-                        separators = ['▶', '▪', '•', '○', '◦', '◆', '■', '□', '※', '★', '☆', '\n', '·']
-                        
-                        for sep in separators:
-                            if sep in brf_hst and brf_hst.count(sep) >= 2:
-                                items = [item.strip() for item in brf_hst.split(sep) if item.strip()]
-                                break
-                        
-                        if not items and '-' in brf_hst and brf_hst.count('-') >= 2:
-                            items = [item.strip() for item in brf_hst.split('-') if item.strip()]
-                        
-                        if not items:
-                            items = [brf_hst]
-                        
-                        # 각 항목을 분류
-                        current_category = None
-                        
-                        for item in items:
-                            if not item or len(item.strip()) < 3:
-                                continue
-                                
-                            item = item.strip('▶▪•○◦◆■□※★☆-·').strip()
+                    # 🔥 학력/경력 정보 업데이트 🔥
+                    if education_data:
+                        # 기존 학력 정보와 병합 (중복 제거)
+                        try:
+                            existing_education = member.education.split(',') if (member.education and member.education.strip()) else []
+                            existing_career = member.career.split(',') if (member.career and member.career.strip()) else []
+                        except AttributeError:
+                            existing_education = []
+                            existing_career = []
                             
-                            if not item or len(item) < 3:
-                                continue
-                            
-                            # 카테고리 헤더 확인
-                            if any(keyword in item for keyword in ['학력', '교육', '출신']) and len(item) < 20:
-                                current_category = '학력'
-                                continue
-                            elif any(keyword in item for keyword in ['경력', '이력', '근무', '활동']) and len(item) < 20:
-                                current_category = '경력'
-                                continue
-                            
-                            # 학력/경력 키워드 기반 분류
-                            education_keywords = [
-                                '학교', '학원', '대학교', '고등학교', '중학교', '초등학교', '대학원',
-                                '학과', '졸업', '수료', '입학', '박사', '석사', '학사', '전공', '부전공',
-                                '사법시험', '행정고시', '검정고시'
-                            ]
-                            
-                            career_keywords = [
-                                '의원', '대통령', '도지사', '시장', '구청장', '위원장', '위원',
-                                '당대표', '후보', '의회', '장관', '차관', '대표', '회장', '사장',
-                                '변호사', '의사', '교수', '연구원', '판사', '검사'
-                            ]
-                            
-                            # 점수 계산
-                            education_score = sum(1 for keyword in education_keywords if keyword in item)
-                            career_score = sum(1 for keyword in career_keywords if keyword in item)
-                            
-                            # 추가 패턴 분석
-                            if re.search(r'제\d+[대회기]', item) or re.search(r'민선\s*\d+', item):
-                                career_score += 2
-                            
-                            if re.search(r'.*대학교.*|.*대학.*|.*학교.*', item):
-                                education_score += 2
-                            
-                            if re.search(r'.*(시험|고시).*합격', item):
-                                education_score += 3
-                            
-                            # 분류 결정
-                            if current_category == '학력' or (education_score > career_score and education_score > 0):
-                                additional_education.append(item)
-                                print(f"   🎓 추가 학력: {item}")
-                            else:
-                                additional_career.append(item)
-                                print(f"   💼 추가 경력: {item}")
+                        all_education = existing_education + education_data
+                        # 중복 제거하면서 순서 유지
+                        unique_education = []
+                        for item in all_education:
+                            if item not in unique_education:
+                                unique_education.append(item)
+                        member.education = ','.join(unique_education)
+                        print(f"   📚 학력 업데이트: {len(unique_education)}개 항목")
+                    
+                    if career_data:
+                        # 기존 경력 정보와 병합 (중복 제거)
                         
-                        # 기존 데이터와 병합
-                        existing_education = member.education.split(',') if member.education else []
-                        existing_career = member.career.split(',') if member.career else []
-                        
-                        # 중복 제거하며 병합
-                        all_education = existing_education + additional_education
-                        all_career = existing_career + additional_career
-                        
-                        unique_education = list(dict.fromkeys([item.strip() for item in all_education if item.strip()]))
-                        unique_career = list(dict.fromkeys([item.strip() for item in all_career if item.strip()]))
-                        
-                        # 품질 필터링
-                        unique_education = [item for item in unique_education if len(item) > 3 and '대표' not in item]
-                        unique_career = [item for item in unique_career if len(item) > 5]
-                        
-                        # 업데이트
-                        member.education = ','.join(unique_education) if unique_education else None
-                        member.career = ','.join(unique_career) if unique_career else None
-                        
-                        print(f"   ✅ BRF_HST 파싱: 학력 {len(additional_education)}개, 경력 {len(additional_career)}개 추가")
+                        all_career = existing_career + career_data
+                        # 중복 제거하면서 순서 유지
+                        unique_career = []
+                        for item in all_career:
+                            if item not in unique_career:
+                                unique_career.append(item)
+                        member.career = ','.join(unique_career)
+                        print(f"   💼 경력 업데이트: {len(unique_career)}개 항목")
                     
                     # 대수별 정보 처리
                     for term in matched_terms:
