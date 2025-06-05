@@ -2229,27 +2229,26 @@ def migrate_database():
         return "접근 거부", 403
     
     try:
-        # SQLite/PostgreSQL 호환 방식으로 필드 추가
-        try:
-            db.engine.execute('ALTER TABLE member ADD COLUMN naas_cd VARCHAR(20)')
-            message = "✅ NAAS_CD 필드 추가 완료"
-        except Exception as e:
-            if 'duplicate column name' in str(e).lower() or 'already exists' in str(e).lower():
-                message = "✅ NAAS_CD 필드 이미 존재"
-            else:
-                raise e
-        
-        return jsonify({
-            'status': 'success',
-            'message': message
-        })
+        # 직접 SQL 실행
+        db.session.execute(db.text('ALTER TABLE member ADD COLUMN naas_cd VARCHAR(20)'))
+        db.session.commit()
+        message = "✅ NAAS_CD 필드 추가 완료"
         
     except Exception as e:
-        return jsonify({
-            'status': 'error', 
-            'message': f'마이그레이션 실패: {str(e)}'
-        }), 500
-
+        error_msg = str(e).lower()
+        if 'duplicate column name' in error_msg or 'already exists' in error_msg:
+            message = "✅ NAAS_CD 필드 이미 존재"
+        else:
+            return jsonify({
+                'status': 'error', 
+                'message': f'마이그레이션 실패: {str(e)}'
+            }), 500
+    
+    return jsonify({
+        'status': 'success',
+        'message': message
+    })
+    
 @app.route('/admin/check-db')
 def check_database_structure():
     """데이터베이스 구조 확인"""
@@ -2257,8 +2256,8 @@ def check_database_structure():
         return "접근 거부", 403
     
     try:
-        # 테이블 구조 확인
-        result = db.engine.execute("PRAGMA table_info(member)")
+        # 직접 SQL 실행
+        result = db.session.execute(db.text("PRAGMA table_info(member)"))
         columns = [row for row in result]
         
         has_naas_cd = any(col[1] == 'naas_cd' for col in columns)
