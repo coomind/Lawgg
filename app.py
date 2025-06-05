@@ -1184,7 +1184,7 @@ def add_bill_comment(bill_id):
     })
     
 def crawl_bill_content(bill_number):
-    """국회 법률안 상세 페이지에서 제안이유 및 주요내용 크롤링 (전체 중복 제거)"""
+    """국회 법률안 상세 페이지에서 제안이유 및 주요내용 크롤링 (안전한 중복 제거)"""
     if not bill_number:
         return {'content': ''}
     
@@ -1219,7 +1219,7 @@ def crawl_bill_content(bill_number):
                 ]
                 
                 for pattern in title_patterns:
-                    content = content.replace(pattern, "", 1)
+                    content = content.replace(pattern, "")
                 
                 # 🔥 2단계: UI 관련 텍스트 제거
                 ui_patterns = [
@@ -1251,67 +1251,8 @@ def crawl_bill_content(bill_number):
                 
                 content = content[:end_idx]
                 
-                # 🔥 4단계: 전체 문단 중복 제거 (핵심!)
-                import re
-                
-                # 먼저 기본 정리
-                content = re.sub(r'[ \t]+', ' ', content)
-                content = re.sub(r'\n{3,}', '\n\n', content)
-                content = content.strip()
-                
-                # 전체 텍스트를 문단 단위로 분할 (100자 이상 단위)
-                paragraphs = []
-                current_paragraph = ""
-                
-                for line in content.split('\n'):
-                    line = line.strip()
-                    if line:
-                        current_paragraph += line + " "
-                        # 문단이 100자 이상이 되면 구분
-                        if len(current_paragraph) > 100 and line.endswith(('.', ')', '함', '음', '임')):
-                            paragraphs.append(current_paragraph.strip())
-                            current_paragraph = ""
-                
-                # 마지막 남은 내용 추가
-                if current_paragraph.strip():
-                    paragraphs.append(current_paragraph.strip())
-                
-                # 🔥 중복 문단 제거 🔥
-                unique_paragraphs = []
-                seen_paragraphs = set()
-                
-                for paragraph in paragraphs:
-                    # 의미있는 내용만 (20자 이상)
-                    if len(paragraph) > 20:
-                        # 유사도 검사 (80% 이상 같으면 중복으로 간주)
-                        is_duplicate = False
-                        for seen in seen_paragraphs:
-                            # 간단한 유사도 체크: 긴 문단의 80% 이상이 포함되어 있으면 중복
-                            longer_text = paragraph if len(paragraph) > len(seen) else seen
-                            shorter_text = seen if len(paragraph) > len(seen) else paragraph
-                            
-                            if len(shorter_text) > 50 and shorter_text in longer_text:
-                                is_duplicate = True
-                                break
-                        
-                        if not is_duplicate:
-                            unique_paragraphs.append(paragraph)
-                            seen_paragraphs.add(paragraph)
-                
-                # 🔥 5단계: 고립된 기호 제거
-                final_content = "\n\n".join(unique_paragraphs)
-                lines = final_content.split('\n')
-                cleaned_lines = []
-                
-                for line in lines:
-                    stripped_line = line.strip()
-                    # 기호만 있는 줄은 제거
-                    if re.match(r'^[▶○◎◦■□●◆※\-\*\+]+\s*$', stripped_line):
-                        continue
-                    elif stripped_line:
-                        cleaned_lines.append(line)
-                
-                content = '\n'.join(cleaned_lines)
+                # 🔥 4단계: 안전한 중복 제거 (새로 추가)
+                content = safe_duplicate_removal(content)
                 
                 # 최종 정리
                 while content.startswith('\n'):
@@ -1324,6 +1265,127 @@ def crawl_bill_content(bill_number):
     
     return {'content': ''}
 
+
+def safe_duplicate_removal(content):
+    """안전한 중복 제거 - 명확한 중복만 제거"""
+    import re
+    
+    # 기본 정리
+    content = re.sub(r'[ \t]+', ' ', content)
+    content = re.sub(r'\n{3,}', '\n\n', content)
+    content = content.strip()
+    
+    # Step 1: 완전히 동일한 문장만 제거
+    content = remove_exact_duplicates(content)
+    
+    # Step 2: 제목이 중간에 끼어있는 경우 처리
+    content = remove_title_interruptions(content)
+    
+    # Step 3: 고립된 기호 제거
+    content = clean_orphaned_symbols(content)
+    
+    return content
+
+
+def remove_exact_duplicates(content):
+    """완전히 동일한 문장만 제거"""
+    lines = content.split('\n')
+    seen_lines = set()
+    unique_lines = []
+    
+    for line in lines:
+        line_cleaned = line.strip()
+        
+        # 빈 줄은 그대로 유지
+        if not line_cleaned:
+            unique_lines.append(line)
+            continue
+        
+        # 너무 짧은 줄은 중복 검사 제외 (10자 미만)
+        if len(line_cleaned) < 10:
+            unique_lines.append(line)
+            continue
+        
+        # 정확히 동일한 줄만 제거
+        if line_cleaned not in seen_lines:
+            seen_lines.add(line_cleaned)
+            unique_lines.append(line)
+        # 동일한 줄 발견시 생략
+    
+    return '\n'.join(unique_lines)
+
+
+def remove_title_interruptions(content):
+    """제목이 중간에 끼어있는 패턴 제거"""
+    import re
+    
+    # 패턴: "문장A 제안이유및주요내용 문장A" 형태 찾기
+    pattern = r'([^.]{20,})\s*제안이유\s*및?\s*주요내용\s*([^.]{20,})'
+    
+    def check_and_clean(match):
+        before = match.group(1).strip()
+        after = match.group(2).strip()
+        
+        # 앞뒤 문장이 유사한지 확인 (90% 이상 일치)
+        if calculate_simple_similarity(before, after) > 0.9:
+            return before  # 앞 문장만 유지
+        else:
+            return match.group(0)  # 원본 유지
+    
+    content = re.sub(pattern, check_and_clean, content)
+    return content
+
+
+def calculate_simple_similarity(text1, text2):
+    """간단한 유사도 계산"""
+    import re
+    
+    if not text1 or not text2:
+        return 0.0
+    
+    # 한글+영문+숫자만 남기고 비교 (가-힣 = 모든 한글 문자)
+    clean1 = re.sub(r'[^\w가-힣]', '', text1)
+    clean2 = re.sub(r'[^\w가-힣]', '', text2)
+    
+    if clean1 == clean2:
+        return 1.0
+    
+    # 더 짧은 텍스트가 긴 텍스트에 포함되는지 확인
+    shorter = clean1 if len(clean1) < len(clean2) else clean2
+    longer = clean2 if len(clean1) < len(clean2) else clean1
+    
+    if shorter in longer:
+        return len(shorter) / len(longer)
+    
+    # 문자 단위 일치율
+    matches = sum(1 for a, b in zip(clean1, clean2) if a == b)
+    max_length = max(len(clean1), len(clean2))
+    
+    return matches / max_length if max_length > 0 else 0
+
+
+def clean_orphaned_symbols(content):
+    """고립된 기호들 정리"""
+    import re
+    
+    lines = content.split('\n')
+    cleaned_lines = []
+    
+    for line in lines:
+        stripped_line = line.strip()
+        
+        # 기호만 있는 줄은 제거
+        if re.match(r'^[▶○◎◦■□●◆※\-\*\+\s]*$', stripped_line):
+            continue
+        
+        # 의미있는 내용이 있으면 유지
+        if stripped_line:
+            cleaned_lines.append(line)
+        else:
+            # 빈 줄도 유지 (문단 구분용)
+            cleaned_lines.append(line)
+    
+    return '\n'.join(cleaned_lines)
 @app.route('/api/bills/<int:bill_id>/comments', methods=['GET'])
 def get_bill_comments(bill_id):
     offset = request.args.get('offset', 0, type=int)
