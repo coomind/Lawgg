@@ -1184,7 +1184,7 @@ def add_bill_comment(bill_id):
     })
     
 def crawl_bill_content(bill_number):
-    """국회 법률안 상세 페이지에서 제안이유 및 주요내용 크롤링 (안전한 중복 제거)"""
+    """국회 법률안 상세 페이지에서 제안이유 및 주요내용 크롤링 (중복 문제 해결)"""
     if not bill_number:
         return {'content': ''}
     
@@ -1194,71 +1194,32 @@ def crawl_bill_content(bill_number):
         response = requests.get(url, timeout=10)
         soup = BeautifulSoup(response.content, 'html.parser')
         
-        content_text = soup.get_text()
+        # 🔥 핵심 해결책: 숨겨진 전체 내용만 가져오기
+        # 1순위: summaryHiddenContentDiv (전체 내용)
+        hidden_content = soup.find('div', id='summaryHiddenContentDiv')
         
-        if "▶ 제안이유 및 주요내용" in content_text:
-            # "▶ 제안이유 및 주요내용" 다음부터 시작
-            start_marker = "▶ 제안이유 및 주요내용"
-            start_idx = content_text.find(start_marker)
-            if start_idx != -1:
-                start_idx += len(start_marker)
-                content = content_text[start_idx:]
+        if hidden_content:
+            content_text = hidden_content.get_text()
+        else:
+            # 2순위: summaryContentDiv (기본 표시 - fallback)
+            content_div = soup.find('div', id='summaryContentDiv')
+            if content_div:
+                content_text = content_div.get_text()
+            else:
+                # 3순위: 전체 텍스트에서 찾기 (기존 방식)
+                content_text = soup.get_text()
                 
-                # 🔥 1단계: 제목 패턴들 제거
-                title_patterns = [
-                    "▶ 제안이유 및 주요내용", 
-                    "○ 제안이유 및 주요내용",
-                    "◎ 제안이유 및 주요내용",
-                    "◦ 제안이유 및 주요내용",
-                    "■ 제안이유 및 주요내용",
-                    "□ 제안이유 및 주요내용",
-                    "● 제안이유 및 주요내용",
-                    "◆ 제안이유 및 주요내용",
-                    "※ 제안이유 및 주요내용",
-                    "제안이유 및 주요내용"
-                ]
-                
-                for pattern in title_patterns:
-                    content = content.replace(pattern, "")
-                
-                # 🔥 2단계: UI 관련 텍스트 제거
-                ui_patterns = [
-                    "+ 더보기감추기",
-                    "더보기감추기", 
-                    "+ 더보기",
-                    "더보기",
-                    "감추기",
-                    "펼치기",
-                    "접기"
-                ]
-                
-                for pattern in ui_patterns:
-                    content = content.replace(pattern, "")
-                
-                # 🔥 3단계: 구조적 끝점으로 자르기
-                end_markers = [
-                    '위원회 심사', '심사경과', '검토보고', '전문위원 검토보고',
-                    '◎ 검토의견', '◎ 위원회 심사', '◎ 심사경과',
-                    '▶ 검토의견', '▶ 위원회 심사', '▶ 심사경과',
-                    '○ 검토의견', '○ 위원회 심사', '○ 심사경과'
-                ]
-                
-                end_idx = len(content)
-                for marker in end_markers:
-                    marker_idx = content.find(marker)
-                    if marker_idx != -1 and marker_idx < end_idx:
-                        end_idx = marker_idx
-                
-                content = content[:end_idx]
-                
-                # 🔥 4단계: 안전한 중복 제거 (새로 추가)
-                content = safe_duplicate_removal(content)
-                
-                # 최종 정리
-                while content.startswith('\n'):
-                    content = content[1:]
-                
-                return {'content': content.strip()}
+                if "▶ 제안이유 및 주요내용" in content_text:
+                    start_marker = "▶ 제안이유 및 주요내용"
+                    start_idx = content_text.find(start_marker)
+                    if start_idx != -1:
+                        start_idx += len(start_marker)
+                        content_text = content_text[start_idx:]
+        
+        # 🔥 기본 정리만 (중복 제거 알고리즘 불필요!)
+        content = clean_content_basic(content_text)
+        
+        return {'content': content.strip()}
                 
     except Exception as e:
         print(f"크롤링 오류: {e}")
@@ -1266,8 +1227,8 @@ def crawl_bill_content(bill_number):
     return {'content': ''}
 
 
-def safe_duplicate_removal(content):
-    """안전한 중복 제거 - 명확한 중복만 제거"""
+def clean_content_basic(content):
+    """기본적인 내용 정리만"""
     import re
     
     # 기본 정리
@@ -1275,99 +1236,37 @@ def safe_duplicate_removal(content):
     content = re.sub(r'\n{3,}', '\n\n', content)
     content = content.strip()
     
-    # Step 1: 완전히 동일한 문장만 제거
-    content = remove_exact_duplicates(content)
+    # UI 관련 텍스트 제거
+    ui_patterns = [
+        "+ 더보기감추기",
+        "더보기감추기", 
+        "+ 더보기",
+        "더보기",
+        "감추기",
+        "펼치기",
+        "접기"
+    ]
     
-    # Step 2: 제목이 중간에 끼어있는 경우 처리
-    content = remove_title_interruptions(content)
+    for pattern in ui_patterns:
+        content = content.replace(pattern, "")
     
-    # Step 3: 고립된 기호 제거
-    content = clean_orphaned_symbols(content)
+    # 구조적 끝점으로 자르기
+    end_markers = [
+        '위원회 심사', '심사경과', '검토보고', '전문위원 검토보고',
+        '◎ 검토의견', '◎ 위원회 심사', '◎ 심사경과',
+        '▶ 검토의견', '▶ 위원회 심사', '▶ 심사경과',
+        '○ 검토의견', '○ 위원회 심사', '○ 심사경과'
+    ]
     
-    return content
-
-
-def remove_exact_duplicates(content):
-    """완전히 동일한 문장만 제거"""
-    lines = content.split('\n')
-    seen_lines = set()
-    unique_lines = []
+    end_idx = len(content)
+    for marker in end_markers:
+        marker_idx = content.find(marker)
+        if marker_idx != -1 and marker_idx < end_idx:
+            end_idx = marker_idx
     
-    for line in lines:
-        line_cleaned = line.strip()
-        
-        # 빈 줄은 그대로 유지
-        if not line_cleaned:
-            unique_lines.append(line)
-            continue
-        
-        # 너무 짧은 줄은 중복 검사 제외 (10자 미만)
-        if len(line_cleaned) < 10:
-            unique_lines.append(line)
-            continue
-        
-        # 정확히 동일한 줄만 제거
-        if line_cleaned not in seen_lines:
-            seen_lines.add(line_cleaned)
-            unique_lines.append(line)
-        # 동일한 줄 발견시 생략
+    content = content[:end_idx]
     
-    return '\n'.join(unique_lines)
-
-
-def remove_title_interruptions(content):
-    """제목이 중간에 끼어있는 패턴 제거"""
-    import re
-    
-    # 패턴: "문장A 제안이유및주요내용 문장A" 형태 찾기
-    pattern = r'([^.]{20,})\s*제안이유\s*및?\s*주요내용\s*([^.]{20,})'
-    
-    def check_and_clean(match):
-        before = match.group(1).strip()
-        after = match.group(2).strip()
-        
-        # 앞뒤 문장이 유사한지 확인 (90% 이상 일치)
-        if calculate_simple_similarity(before, after) > 0.9:
-            return before  # 앞 문장만 유지
-        else:
-            return match.group(0)  # 원본 유지
-    
-    content = re.sub(pattern, check_and_clean, content)
-    return content
-
-
-def calculate_simple_similarity(text1, text2):
-    """간단한 유사도 계산"""
-    import re
-    
-    if not text1 or not text2:
-        return 0.0
-    
-    # 한글+영문+숫자만 남기고 비교 (가-힣 = 모든 한글 문자)
-    clean1 = re.sub(r'[^\w가-힣]', '', text1)
-    clean2 = re.sub(r'[^\w가-힣]', '', text2)
-    
-    if clean1 == clean2:
-        return 1.0
-    
-    # 더 짧은 텍스트가 긴 텍스트에 포함되는지 확인
-    shorter = clean1 if len(clean1) < len(clean2) else clean2
-    longer = clean2 if len(clean1) < len(clean2) else clean1
-    
-    if shorter in longer:
-        return len(shorter) / len(longer)
-    
-    # 문자 단위 일치율
-    matches = sum(1 for a, b in zip(clean1, clean2) if a == b)
-    max_length = max(len(clean1), len(clean2))
-    
-    return matches / max_length if max_length > 0 else 0
-
-
-def clean_orphaned_symbols(content):
-    """고립된 기호들 정리"""
-    import re
-    
+    # 고립된 기호 제거
     lines = content.split('\n')
     cleaned_lines = []
     
@@ -1378,14 +1277,18 @@ def clean_orphaned_symbols(content):
         if re.match(r'^[▶○◎◦■□●◆※\-\*\+\s]*$', stripped_line):
             continue
         
-        # 의미있는 내용이 있으면 유지
         if stripped_line:
             cleaned_lines.append(line)
         else:
-            # 빈 줄도 유지 (문단 구분용)
-            cleaned_lines.append(line)
+            cleaned_lines.append(line)  # 빈 줄 유지
     
-    return '\n'.join(cleaned_lines)
+    # 최종 정리
+    content = '\n'.join(cleaned_lines)
+    while content.startswith('\n'):
+        content = content[1:]
+    
+    return content
+
 @app.route('/api/bills/<int:bill_id>/comments', methods=['GET'])
 def get_bill_comments(bill_id):
     offset = request.args.get('offset', 0, type=int)
