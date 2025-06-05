@@ -325,37 +325,6 @@ def sync_members_from_api():
                     db.session.add(member)
                     print(f"✨ 신규 의원 생성: {name} (생년월일: {birth_str})")
                     
-                    # 🔥 학력/경력 정보 업데이트 🔥
-                    if education_data:
-                        # 기존 학력 정보와 병합 (중복 제거)
-                        try:
-                            existing_education = member.education.split(',') if (member.education and member.education.strip()) else []
-                            existing_career = member.career.split(',') if (member.career and member.career.strip()) else []
-                        except AttributeError:
-                            existing_education = []
-                            existing_career = []
-                            
-                        all_education = existing_education + education_data
-                        # 중복 제거하면서 순서 유지
-                        unique_education = []
-                        for item in all_education:
-                            if item not in unique_education:
-                                unique_education.append(item)
-                        member.education = ','.join(unique_education)
-                        print(f"   📚 학력 업데이트: {len(unique_education)}개 항목")
-                    
-                    if career_data:
-                        # 기존 경력 정보와 병합 (중복 제거)
-                        
-                        all_career = existing_career + career_data
-                        # 중복 제거하면서 순서 유지
-                        unique_career = []
-                        for item in all_career:
-                            if item not in unique_career:
-                                unique_career.append(item)
-                        member.career = ','.join(unique_career)
-                        print(f"   💼 경력 업데이트: {len(unique_career)}개 항목")
-
                     brf_hst = row.findtext('BRF_HST', '').strip()
                     if brf_hst:
                         print(f"   📋 약력 정보: {name} - {brf_hst[:100]}...")
