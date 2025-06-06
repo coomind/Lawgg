@@ -118,6 +118,11 @@ def get_hunjunghoi_education_career(name, session_num):
                 for row in rows:
                     hak_data = row.findtext('HAK', '').strip()
                     if hak_data:
+                        # HTML 엔티티 변환
+                        hak_data = hak_data.replace('&middot;', '·')
+                        hak_data = hak_data.replace('&nbsp;', ' ')
+                        hak_data = hak_data.replace('&amp;', '&')
+                        
                         print(f"   ✅ 헌정회 약력 찾음: {name} - {len(hak_data)}자")
                         return hak_data
         
@@ -126,6 +131,46 @@ def get_hunjunghoi_education_career(name, session_num):
     except Exception as e:
         print(f"   ❌ 헌정회 API 오류: {str(e)}")
         return None
+
+def parse_career_string(text):
+    """약력 문자열을 세밀하게 파싱하는 함수"""
+    # HTML 엔티티 변환
+    text = text.replace('&middot;', '·')
+    text = text.replace('&nbsp;', ' ')
+    text = text.replace('&amp;', '&')
+    
+    # 다양한 구분자로 분리
+    items = []
+    
+    # 1. 줄바꿈으로 먼저 분리
+    if '\n' in text:
+        lines = text.split('\n')
+        for line in lines:
+            line = line.strip()
+            if line:
+                # 각 줄에서 추가 구분자 확인
+                if '·' in line:
+                    items.extend([item.strip() for item in line.split('·')])
+                elif ',' in line:
+                    items.extend([item.strip() for item in line.split(',')])
+                elif '/' in line and len(line.split('/')) > 2:  # 날짜가 아닌 경우
+                    items.extend([item.strip() for item in line.split('/')])
+                else:
+                    items.append(line)
+    
+    # 2. 줄바꿈이 없는 경우 다른 구분자로 분리
+    elif '·' in text:
+        items = [item.strip() for item in text.split('·')]
+    elif ',' in text:
+        items = [item.strip() for item in text.split(',')]
+    else:
+        # 정규식으로 번호 패턴 찾기 (1. 2. 또는 1) 2) 등)
+        import re
+        pattern = r'(?:(?:\d+[.)]\s*)|(?:[-•]\s*))'
+        parts = re.split(pattern, text)
+        items = [part.strip() for part in parts if part.strip()]
+    
+    return [item for item in items if item and len(item) > 3]
         
 def sync_members_from_api():
     """국회 OpenAPI에서 국회의원 정보 동기화 (학력/경력 포함)"""
@@ -277,65 +322,56 @@ def sync_members_from_api():
                     all_career_data = []
                     education_data = []
                     career_data = []
+                    hunjung_collected = False  # 🔥 헌정회 데이터 수집 여부 플래그
                     
+                    # 1단계: 20, 21대는 헌정회 API 우선 시도
                     for term in matched_terms:
                         if term in [20, 21]:
                             hunjung_hak = get_hunjunghoi_education_career(name, term)
                             if hunjung_hak:
+                                hunjung_collected = True
                                 print(f"   ✅ {term}대 헌정회 데이터 수집 성공")
-                                # HAK 필드 파싱
-                                if ',' in hunjung_hak:
-                                    items = [item.strip() for item in hunjung_hak.split(',')]
-                                elif '\n' in hunjung_hak:
-                                    items = [item.strip() for item in hunjung_hak.split('\n')]
-                                else:
-                                    items = [hunjung_hak]
-                                
-                                for item in items:
-                                    if item and len(item) > 3:
-                                        all_career_data.append(item)
+                                # parse_career_string 함수 사용
+                                items = parse_career_string(hunjung_hak)
+                                all_career_data.extend(items)
                     
-                    # 🔥 2단계: 22대 또는 헌정회에 없는 20,21대는 BRF_HST 확인
-                    brf_hst = row.findtext('BRF_HST', '').strip()
-                    if brf_hst:
-                        print(f"   📋 BRF_HST 약력: {name} - {len(brf_hst)}자")
-                        # 쉼표나 줄바꿈으로 분리
-                        if ',' in brf_hst:
-                            items = [item.strip() for item in brf_hst.split(',')]
-                        elif '\n' in brf_hst:
-                            items = [item.strip() for item in brf_hst.split('\n')]
-                        else:
-                            items = [brf_hst]
-                        
-                        for item in items:
-                            if item and len(item) > 3:
-                                all_career_data.append(item)
-                    # XML의 모든 필드를 확인해서 학력/경력 관련 데이터 찾기
-                    for child in row:
-                        field_name = child.tag
-                        field_value = child.text
-                        
-                        if field_value and field_value.strip():
-                            field_value = field_value.strip()
-                            
-                            # 학력/경력 관련 필드들 확인
-                            career_keywords = ['SCH', 'EDUCATION', 'CAREER', 'HIS', 'WORK', 'JOB', 'ACADEMIC', 'PROFILE', 'EXPERIENCE']
-                            
-                            if any(keyword in field_name.upper() for keyword in career_keywords):
-                                # 쉼표나 줄바꿈으로 분리된 항목들 처리
-                                items = []
-                                if ',' in field_value:
-                                    items = [item.strip() for item in field_value.split(',')]
-                                elif '\n' in field_value:
-                                    items = [item.strip() for item in field_value.split('\n')]
-                                else:
-                                    items = [field_value]
-                                
-                                for item in items:
-                                    if item and len(item) > 3:  # 너무 짧은 항목은 제외
-                                        all_career_data.append(item)
-                                        print(f"   📚 {field_name}: {item[:50]}...")
+                    # 🔥 2단계: 헌정회에서 못 찾은 경우만 BRF_HST 확인
+                    if not hunjung_collected or 22 in matched_terms:
+                        brf_hst = row.findtext('BRF_HST', '').strip()
+                        if brf_hst:
+                            print(f"   📋 BRF_HST 약력: {name} - {len(brf_hst)}자")
+                            # parse_career_string 함수 사용
+                            items = parse_career_string(brf_hst)
+                            all_career_data.extend(items)
                     
+                    # 🔥 3단계: 헌정회 데이터가 없는 경우만 다른 필드 확인
+                    if not hunjung_collected:
+                        # XML의 모든 필드를 확인해서 학력/경력 관련 데이터 찾기
+                        for child in row:
+                            field_name = child.tag
+                            field_value = child.text
+                            
+                            if field_value and field_value.strip():
+                                field_value = field_value.strip()
+                                
+                                # 학력/경력 관련 필드들 확인
+                                career_keywords = ['SCH', 'EDUCATION', 'CAREER', 'HIS', 'WORK', 'JOB', 'ACADEMIC', 'PROFILE', 'EXPERIENCE']
+                                
+                                if any(keyword in field_name.upper() for keyword in career_keywords):
+                                    # 쉼표나 줄바꿈으로 분리된 항목들 처리
+                                    items = []
+                                    if ',' in field_value:
+                                        items = [item.strip() for item in field_value.split(',')]
+                                    elif '\n' in field_value:
+                                        items = [item.strip() for item in field_value.split('\n')]
+                                    else:
+                                        items = [field_value]
+                                    
+                                    for item in items:
+                                        if item and len(item) > 3:  # 너무 짧은 항목은 제외
+                                            all_career_data.append(item)
+                                            print(f"   📚 {field_name}: {item[:50]}...")
+                        
                     # 🎓 학력과 경력 분류 🎓
                     for item in all_career_data:
                         # 학력 키워드 체크 (학교, 학원, 대학교, 고등학교, 중학교, 초등학교, 대학원, 학과)
