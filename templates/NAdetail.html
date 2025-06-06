@@ -434,7 +434,7 @@
                 <!-- 경력 및 학력 정보 -->
                 <div class="info-grid">
                     <div class="info-section">
-                        <h3 class="info-title">대표 경력</h3>
+                        <h3 class="info-title">민간 및 국회 관련 경력</h3>
                         <div class="info-content" id="career-info">
                             {% if member.career and member.career|length > 0 %}
                                 {% for career_item in member.career[:8] %}
@@ -444,19 +444,19 @@
                                     <span style="color: #6c757d; font-size: 12px;">외 {{ member.career|length - 8 }}개</span>
                                 {% endif %}
                             {% else %}
-                                <span style="color: #6c757d;">경력 정보가 없습니다.</span>
+                                <span style="color: #6c757d;">민간 및 국회 관련 경력 정보가 없습니다.</span>
                             {% endif %}
                         </div>
                     </div>
                     <div class="info-section">
-                        <h3 class="info-title">학력</h3>
+                        <h3 class="info-title">학교 관련 경력력</h3>
                         <div class="info-content" id="education-info">
                             {% if member.education and member.education|length > 0 %}
                                 {% for edu_item in member.education %}
                                     • {{ edu_item }}<br>
                                 {% endfor %}
                             {% else %}
-                                <span style="color: #6c757d;">학력 정보가 없습니다.</span>
+                                <span style="color: #6c757d;">학교 관련 경력 정보가 없습니다.</span>
                             {% endif %}
                         </div>
                     </div>
