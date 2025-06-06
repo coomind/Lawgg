@@ -732,7 +732,7 @@ def sync_members_from_api():
                         except:
                             birth_year = None
                     english_name = row.findtext('NAAS_EN_NM', '').strip()
-
+                    member_key = (name, birth_str)
                     member = Member.query.filter_by(name=name, birth_date=birth_str).first()
                     if not member:
                         member = Member(
@@ -780,7 +780,7 @@ def sync_members_from_api():
                     
                     print(f"   ✅ API+CSV 일치: {name}")
                     
-                    member_key = (name, birth_str)
+                    
                     if member_key in processed_members:
                         print(f"   ⏭️ 이미 처리됨: {name} ({birth_str})")
                         continue
