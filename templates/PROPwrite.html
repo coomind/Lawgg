@@ -455,19 +455,15 @@
                     <textarea class="form-textarea" 
                               id="current_situation" 
                               name="current_situation"
-                              placeholder="- 현황 법령 ∙ 제도의 구체적 내용"
+                              placeholder="※ 게시판의 성격에 맞지 않는 게시글, 욕설, 비방, 광고, 반복게시물을 올릴 경우 임의 삭제될 수 있습니다.
+                              ※ 법안 정보는 정확하고 구체적으로 작성해주세요.
+                              - 현황 법령 ∙ 제도의 구체적 내용 (최대 2000자)"
                               maxlength="2000"
                               required>{{ form_data.current_situation or '' }}</textarea>
                     <div class="character-count" id="current_situation-count">
                         <span id="current_situation-length">{{ (form_data.current_situation or '')|length }}</span>/2000자
                     </div>
                     <div class="error-message" id="current_situation-error"></div>
-                    
-                    <div class="content-notice">
-                        <p>※ 게시판의 성격에 맞지 않는 게시글, 욕설, 비방, 광고, 반복게시물을 올릴 경우 임의 삭제될 수 있습니다.</p>
-                        <p>※ 법안 정보는 정확하고 구체적으로 작성해주세요.</p>
-                        <p>(최대 2000자)</p>
-                    </div>
                 </div>
 
                 <div class="form-group">
