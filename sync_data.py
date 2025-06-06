@@ -94,7 +94,39 @@ def test_api_connection():
         return False
         
 # sync_data.py 수정 - 학력/경력 정보 수집 개선
-
+def get_hunjunghoi_education_career(name, session_num):
+    """헌정회 API에서 20, 21대 의원의 학력/경력 정보 가져오기"""
+    try:
+        url = f"{BASE_URL}/nprlapfmaufmqytet"
+        params = {
+            'KEY': API_KEY,
+            'Type': 'xml',
+            'pIndex': 1,
+            'pSize': 10,
+            'DAESU': str(session_num),
+            'NAME': name
+        }
+        
+        print(f"   📚 헌정회 API 호출: {name} ({session_num}대)")
+        response = requests.get(url, params=params, timeout=30)
+        
+        if response.status_code == 200 and 'INFO-000' in response.text:
+            root = ET.fromstring(response.content)
+            rows = root.findall('.//row')
+            
+            if rows:
+                for row in rows:
+                    hak_data = row.findtext('HAK', '').strip()
+                    if hak_data:
+                        print(f"   ✅ 헌정회 약력 찾음: {name} - {len(hak_data)}자")
+                        return hak_data
+        
+        return None
+        
+    except Exception as e:
+        print(f"   ❌ 헌정회 API 오류: {str(e)}")
+        return None
+        
 def sync_members_from_api():
     """국회 OpenAPI에서 국회의원 정보 동기화 (학력/경력 포함)"""
     with app.app_context():
@@ -246,6 +278,38 @@ def sync_members_from_api():
                     education_data = []
                     career_data = []
                     
+                    for term in matched_terms:
+                        if term in [20, 21]:
+                            hunjung_hak = get_hunjunghoi_education_career(name, term)
+                            if hunjung_hak:
+                                print(f"   ✅ {term}대 헌정회 데이터 수집 성공")
+                                # HAK 필드 파싱
+                                if ',' in hunjung_hak:
+                                    items = [item.strip() for item in hunjung_hak.split(',')]
+                                elif '\n' in hunjung_hak:
+                                    items = [item.strip() for item in hunjung_hak.split('\n')]
+                                else:
+                                    items = [hunjung_hak]
+                                
+                                for item in items:
+                                    if item and len(item) > 3:
+                                        all_career_data.append(item)
+                    
+                    # 🔥 2단계: 22대 또는 헌정회에 없는 20,21대는 BRF_HST 확인
+                    brf_hst = row.findtext('BRF_HST', '').strip()
+                    if brf_hst:
+                        print(f"   📋 BRF_HST 약력: {name} - {len(brf_hst)}자")
+                        # 쉼표나 줄바꿈으로 분리
+                        if ',' in brf_hst:
+                            items = [item.strip() for item in brf_hst.split(',')]
+                        elif '\n' in brf_hst:
+                            items = [item.strip() for item in brf_hst.split('\n')]
+                        else:
+                            items = [brf_hst]
+                        
+                        for item in items:
+                            if item and len(item) > 3:
+                                all_career_data.append(item)
                     # XML의 모든 필드를 확인해서 학력/경력 관련 데이터 찾기
                     for child in row:
                         field_name = child.tag
