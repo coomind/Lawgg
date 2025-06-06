@@ -471,15 +471,12 @@
                     <textarea class="form-textarea" 
                               id="problems" 
                               name="problems"
-                              placeholder="- 법령 운영의 문제점 또는 한계"
+                              placeholder="- 현재 법령의 문제점이나 비효율적인 부분, 그 사례 등을 입력하세요 (최대 2000자자)"
                               maxlength="2000">{{ form_data.problems or '' }}</textarea>
                     <div class="character-count" id="problems-count">
                         <span id="problems-length">{{ (form_data.problems or '')|length }}</span>/2000자
                     </div>
                     <div class="error-message" id="problems-error"></div>
-                    <p style="font-size: 12px; color: #666; margin-top: 5px;">
-                        - 현재 법령의 문제점이나 비효율적인 부분, 그 사례 등<br>(최대 2000자)
-                    </p>
                 </div>
 
                 <div class="form-group">
@@ -487,16 +484,13 @@
                     <textarea class="form-textarea" 
                               id="proposal_reasons" 
                               name="proposal_reasons"
-                              placeholder="- 구체적 개선 방안"
+                              placeholder="- 개선방안의 구체적인 법령 개선안을 제시해주세요요"
                               maxlength="2000"
                               required>{{ form_data.proposal_reasons or '' }}</textarea>
                     <div class="character-count" id="proposal_reasons-count">
                         <span id="proposal_reasons-length">{{ (form_data.proposal_reasons or '')|length }}</span>/2000자
                     </div>
                     <div class="error-message" id="proposal_reasons-error"></div>
-                    <p style="font-size: 12px; color: #666; margin-top: 5px;">
-                        - 개선방안의 구체적인 법령 개선안을 제시해주세요
-                    </p>
                     
                     <div class="checkbox-group">
                         <div class="checkbox-item">
