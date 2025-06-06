@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Law.GG 데이터 동기화 스크립트 - 디버깅 버전
+Law.GG 데이터 동기화 스크립트 - 최종 개선 버전
 """
 
 import os
@@ -15,15 +15,12 @@ from bs4 import BeautifulSoup
 import xml.etree.ElementTree as ET
 from datetime import datetime
 import time
-from sqlalchemy import func, or_
+from sqlalchemy import func, or_, and_
 
 # API 설정
 API_KEY = 'a3fada8210244129907d945abe2beada'
 BASE_URL = 'https://open.assembly.go.kr/portal/openapi'
 
-
-
-    
 def test_api_connection():
     """API 연결 테스트"""
     print("\n=== API 연결 테스트 ===")
@@ -93,8 +90,7 @@ def test_api_connection():
     except Exception as e:
         print(f"❌ 연결 오류: {type(e).__name__}: {str(e)}")
         return False
-        
-# sync_data.py 수정 - 학력/경력 정보 수집 개선
+
 def get_hunjunghoi_education_career(name, session_num):
     """헌정회 API에서 20, 21대 의원의 학력/경력 정보 가져오기"""
     try:
@@ -125,7 +121,6 @@ def get_hunjunghoi_education_career(name, session_num):
                         hak_data = hak_data.replace('&amp;', '&')
                         
                         print(f"   ✅ 헌정회 약력 찾음: {name} - {len(hak_data)}자")
-                        # 🔥 새로운 파싱 함수 사용
                         return parse_assembly_profile_text(hak_data, name)
         
         return None, None
@@ -135,11 +130,11 @@ def get_hunjunghoi_education_career(name, session_num):
         return None, None
 
 def crawl_member_profile_with_detection(member_name, english_name, session_num=22):
-    """홈페이지 크롤링 with 메뉴 텍스트 감지 및 fallback"""
+    """개선된 홈페이지 크롤링 - HTML 구조 기반 파싱"""
     try:
         if not english_name:
             print(f"   ❌ 영문명 없음: {member_name}")
-            return None, None, True  # fallback 필요 표시 추가
+            return None, None, True
             
         # 띄어쓰기 제거하고 대문자로
         clean_english_name = english_name.replace(' ', '').upper()
@@ -148,42 +143,211 @@ def crawl_member_profile_with_detection(member_name, english_name, session_num=2
         print(f"   🌐 크롤링 시도: {url}")
         
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'ko-KR,ko;q=0.9,en;q=0.8',
+            'Referer': 'https://www.assembly.go.kr/',
+            'Connection': 'keep-alive'
         }
         
-        response = requests.get(url, timeout=30, headers=headers)
+        response = requests.get(url, timeout=45, headers=headers)
         
         if response.status_code == 200:
             soup = BeautifulSoup(response.content, 'html.parser')
-            page_text = soup.get_text()
             
-            # 🔥 핵심: 메뉴 텍스트만 크롤링된 경우 감지
-            if is_menu_text_only(page_text, member_name):
-                print(f"   ⚠️ 메뉴 텍스트만 감지됨: {member_name} - API fallback 필요")
-                return None, None, True  # fallback 필요 표시
-            
-            # 정상적인 페이지인 경우 파싱
-            education_items, career_items = parse_assembly_profile_text(page_text, member_name)
+            # 🔥 핵심 개선: 구조적 HTML 파싱
+            education_items, career_items = parse_structured_html(soup, member_name)
             
             if education_items or career_items:
-                print(f"   ✅ 크롤링 성공: {member_name} - 학력:{len(education_items or [])}개, 경력:{len(career_items or [])}개")
+                print(f"   ✅ 구조적 파싱 성공: {member_name} - 학력:{len(education_items or [])}개, 경력:{len(career_items or [])}개")
                 return education_items, career_items, False
             else:
-                print(f"   ⚠️ 파싱 실패: {member_name} - API fallback 필요")
-                return None, None, True  # fallback 필요
+                print(f"   ⚠️ 구조적 파싱 실패 - API fallback 필요")
+                return None, None, True
         else:
             print(f"   ❌ HTTP {response.status_code}: {url}")
-            return None, None, True  # fallback 필요
+            return None, None, True
         
-    except requests.exceptions.Timeout:
-        print(f"   ⏰ 타임아웃: {member_name}")
-        return None, None, True  # fallback 필요
-    except requests.exceptions.RequestException as e:
-        print(f"   🚫 요청 오류: {member_name} - {str(e)}")
-        return None, None, True  # fallback 필요
     except Exception as e:
         print(f"   ❌ 크롤링 오류 ({member_name}): {str(e)}")
-        return None, None, True  # fallback 필요
+        return None, None, True
+
+def parse_structured_html(soup, member_name):
+    """HTML 구조를 기반으로 한 정확한 파싱"""
+    education_items = []
+    career_items = []
+    
+    try:
+        # 🔥 방법 1: <pre> 태그에서 주요약력 추출 (김위상, 김윤 케이스)
+        pre_tags = soup.find_all('pre')
+        for pre in pre_tags:
+            text = pre.get_text(strip=True)
+            if text and len(text) > 50:  # 의미있는 내용이 있는 경우
+                print(f"   📋 <pre> 태그에서 약력 발견: {len(text)}자")
+                
+                # 🔥 메뉴 텍스트 체크 먼저
+                if is_menu_text_content(text):
+                    print(f"   ⚠️ 메뉴 텍스트 감지됨: {member_name} - fallback 필요")
+                    return None, None  # fallback으로 이동
+                
+                # 🔥 핵심: 스마트 분할로 "전)" 구분자 활용
+                items = parse_pre_tag_career(text)
+                
+                # 학력/경력 분류
+                for item in items:
+                    if is_education_item(item):
+                        education_items.append(item)
+                    else:
+                        career_items.append(item)
+                
+                if items:
+                    print(f"   ✅ <pre> 파싱 완료: 총 {len(items)}개 항목")
+                    break
+        
+        # 🔥 방법 2: 일반적인 구조화된 HTML 파싱 (다른 의원들)
+        if not education_items and not career_items:
+            # 전체 텍스트에서 메뉴 텍스트 체크
+            page_text = soup.get_text()
+            if is_menu_text_only(page_text, member_name):
+                print(f"   ⚠️ 메뉴 텍스트만 감지됨: {member_name} - API fallback 필요")
+                return None, None
+            
+            # 기존 파싱 방법 실행
+            education_items, career_items = parse_assembly_profile_text(page_text, member_name)
+        
+        return education_items, career_items
+        
+    except Exception as e:
+        print(f"   ❌ 구조적 파싱 오류: {str(e)}")
+        return None, None
+
+def is_menu_text_content(text):
+    """메뉴 텍스트만 있는 내용인지 판단"""
+    menu_patterns = [
+        '국회의원 -', '의원실알림', '역대국회의원', '국회의원통계',
+        '국회의원 이력', '위원회 경력', '대표발의법률안', '위원회 의사일정'
+    ]
+    
+    menu_count = sum(1 for pattern in menu_patterns if pattern in text)
+    
+    # 메뉴 텍스트가 3개 이상이고 전체 길이가 짧으면 메뉴만 있는 것
+    return menu_count >= 3 and len(text) < 500
+
+def parse_pre_tag_career(text):
+    """<pre> 태그 내용을 스마트하게 파싱 - 개선된 버전"""
+    items = []
+    
+    # 🔥 먼저 메뉴 텍스트인지 확인
+    if is_menu_text_content(text):
+        print(f"   ⚠️ 메뉴 텍스트 감지됨, fallback 진행")
+        return []
+    
+    import re
+    
+    # 1단계: 연도 기반 분할 (가장 정확)
+    year_pattern = r'(\d{4}\.?\d*[-~]\d{4}\.?\d*|\d{4}\.?\d+)'
+    year_matches = list(re.finditer(year_pattern, text))
+    
+    if len(year_matches) >= 2:  # 연도가 2개 이상 있으면 연도 기준으로 분할
+        prev_end = 0
+        for i, match in enumerate(year_matches[1:], 1):
+            # 이전 연도부터 현재 연도 직전까지
+            start = prev_end
+            end = match.start()
+            
+            segment = text[start:end].strip()
+            if len(segment) > 15 and len(segment) < 300:
+                cleaned = clean_career_item_advanced(segment)
+                if cleaned and is_valid_career_item(cleaned):
+                    items.append(cleaned)
+            
+            prev_end = match.start()
+        
+        # 마지막 부분
+        last_segment = text[prev_end:].strip()
+        if len(last_segment) > 15 and len(last_segment) < 300:
+            cleaned = clean_career_item_advanced(last_segment)
+            if cleaned and is_valid_career_item(cleaned):
+                items.append(cleaned)
+    
+    # 2단계: 기존 패턴 분할 (연도 분할 실패시)
+    if not items:
+        patterns = [
+            r'(?=전\))',      # "전)" 앞에서 분할
+            r'(?=現\))',      # "現)" 앞에서 분할  
+            r'(?=현\))',      # "현)" 앞에서 분할
+        ]
+        
+        for pattern in patterns:
+            parts = re.split(pattern, text)
+            if len(parts) > 1:
+                for part in parts:
+                    part = part.strip()
+                    if len(part) > 15 and len(part) < 300:
+                        cleaned = clean_career_item_advanced(part)
+                        if cleaned and is_valid_career_item(cleaned):
+                            items.append(cleaned)
+                break
+    
+    # 3단계: 분할 실패시 전체를 하나로
+    if not items and len(text) > 20:
+        cleaned = clean_career_item_advanced(text)
+        if cleaned and is_valid_career_item(cleaned):
+            items.append(cleaned)
+    
+    return items
+
+def clean_career_item_advanced(item):
+    """고급 경력 항목 정리"""
+    if not item:
+        return None
+    
+    # 앞뒤 공백 및 따옴표 제거
+    item = item.strip().strip('"').strip("'")
+    
+    # 🔥 괄호 내용 보호 (제6회, 제7회 등)
+    import re
+    
+    # 불필요한 접두사 제거 (괄호 보호하면서)
+    prefixes_to_remove = [
+        '(현)', '(전)', '現)', '前)', 
+        '-', '•', '·', '※', '▶', '▪', '▫', '◦'
+    ]
+    
+    for prefix in prefixes_to_remove:
+        if item.startswith(prefix):
+            item = item[len(prefix):].strip()
+    
+    # 🔥 중요한 괄호는 보호하면서 쉼표 분할 방지
+    # (제6회, 제7회) 같은 패턴은 분할하지 않음
+    protected_patterns = [
+        r'\(제\d+회[,\s]*제?\d*회?\)',  # (제6회, 제7회)
+        r'\(제\d+대[,\s]*제?\d*대?\)',  # (제20대, 제21대)
+        r'\(\d{4}[,\s]*\d{4}\)',       # (2020, 2021)
+    ]
+    
+    # 보호된 패턴이 있으면 분할하지 않음
+    has_protected = any(re.search(pattern, item) for pattern in protected_patterns)
+    
+    if not has_protected:
+        # 일반적인 정리만 수행
+        item = re.sub(r'\s+', ' ', item)  # 공백 정리
+    
+    return item if len(item) > 5 else None
+
+def is_education_item(item):
+    """학력 항목인지 판단"""
+    education_keywords = [
+        '학교', '학원', '대학교', '고등학교', '중학교', '초등학교', '대학원',
+        '학과', '졸업', '수료', '입학', '전공', '학사', '석사', '박사',
+        '사관학교', '교육대학', '기술대학', '전문대학',
+        # 🔥 교수직 추가 - 학교 관련 경력
+        '교수', '전임교수', '부교수', '조교수', '겸임교수', '객원교수', 
+        '초빙교수', '명예교수', '연구교수', '임상교수', '시간강사',
+        '강사', '교육과정', '교육연구', '연구원', '연구소'
+    ]
+    
+    return any(keyword in item for keyword in education_keywords)
 
 def is_menu_text_only(page_text, member_name):
     """메뉴 텍스트만 크롤링된 경우인지 감지"""
@@ -212,6 +376,7 @@ def is_menu_text_only(page_text, member_name):
         '■ 학력', '□ 학력', '[학력]', '○ 학력', '▶학력',
         '■ 경력', '□ 경력', '[경력]', '○ 경력', '▶경력',
         '■ 약력', '□ 약력', '[약력]', '○ 약력', '▶약력',
+        '주요약력', '주요경력', '주요학력',  # 🔥 추가
         '대학교', '고등학교', '졸업', '수료',
         '위원장', '장관', '청장', '교수', '변호사', '판사'
     ]
@@ -222,22 +387,26 @@ def is_menu_text_only(page_text, member_name):
     # 실제 컨텐츠 개수 세기
     content_count = sum(1 for indicator in real_content_indicators if indicator in page_text)
     
-    # 🔥 판단 로직
-    # 1. 메뉴 텍스트가 3개 이상이고 실제 컨텐츠가 거의 없으면 메뉴만 크롤링된 것
+    # 🔥 개선된 판단 로직
+    # 1. 실제 컨텐츠가 3개 이상 있으면 정상 페이지로 판단
+    if content_count >= 3:
+        return False
+    
+    # 2. 메뉴 텍스트가 3개 이상이고 실제 컨텐츠가 거의 없으면 메뉴만 크롤링된 것
     if menu_count >= 3 and content_count <= 1:
         return True
     
-    # 2. 텍스트가 매우 짧고 메뉴 텍스트만 있는 경우
+    # 3. 텍스트가 매우 짧고 메뉴 텍스트만 있는 경우
     if len(page_text.strip()) < 500 and menu_count >= 2:
         return True
     
-    # 3. "외 XX개" 패턴이 있고 실제 정보가 없는 경우 (강경숙 의원 케이스)
+    # 4. "외 XX개" 패턴이 있고 실제 정보가 없는 경우 (강경숙 의원 케이스)
     import re
     if re.search(r'외\s*\d+개', page_text) and content_count == 0:
         return True
     
     return False
-    
+
 def parse_assembly_profile_text(text, member_name):
     """국회 홈페이지 텍스트에서 학력/경력 파싱 - 모든 패턴 지원 (개선된 버전)"""
     education_items = []
@@ -247,7 +416,7 @@ def parse_assembly_profile_text(text, member_name):
         # 전처리: 줄바꿈 정리
         text = text.replace('\r\n', '\n').replace('\r', '\n')
         
-        # 🔥 패턴별 섹션 찾기 (이 부분이 빠져있었음!)
+        # 🔥 패턴별 섹션 찾기
         patterns = [
             # 패턴 1: ■ 학력, ■ 경력
             {
@@ -632,7 +801,24 @@ def remove_duplicates_preserve_order(items):
             seen.add(item)
             result.append(item)
     return result
+
+def parse_brf_hst_fallback(brf_hst_text, member_name):
+    """BRF_HST 필드에서 학력/경력 파싱 (fallback용)"""
+    if not brf_hst_text:
+        return None, None
     
+    print(f"   📋 BRF_HST 파싱 시도: {member_name}")
+    
+    # 기본 텍스트 정리
+    text = brf_hst_text.replace('&middot;', '·')
+    text = text.replace('&nbsp;', ' ')
+    text = text.replace('&amp;', '&')
+    
+    # 기존 파싱 함수 재사용
+    education_items, career_items = parse_assembly_profile_text(text, member_name)
+    
+    return education_items, career_items
+
 def sync_members_from_api():
     """국회 OpenAPI에서 국회의원 정보 동기화 (학력/경력 포함)"""
     with app.app_context():
@@ -732,6 +918,7 @@ def sync_members_from_api():
                         except:
                             birth_year = None
                     english_name = row.findtext('NAAS_EN_NM', '').strip()
+                    
                     if not name:
                         continue
 
@@ -832,7 +1019,7 @@ def sync_members_from_api():
                         brf_hst = row.findtext('BRF_HST', '').strip()
                         if brf_hst:
                             print(f"   📋 BRF_HST 필드 사용 (fallback): {name}")
-                            edu_items, career_items = parse_brf_hst_fallback(brf_hst, name)  # 🔥 전용 함수 사용
+                            edu_items, career_items = parse_brf_hst_fallback(brf_hst, name)
                             if edu_items or career_items:
                                 education_data.extend(edu_items or [])
                                 career_data.extend(career_items or [])
@@ -840,6 +1027,7 @@ def sync_members_from_api():
                                 print(f"   ✅ BRF_HST fallback 성공: 학력 {len(edu_items or [])}개, 경력 {len(career_items or [])}개")
                             else:
                                 print(f"   ❌ BRF_HST에서도 정보 추출 실패")
+                    
                     # 정보 없는 경우 로그
                     if not info_collected:
                         print(f"   ❌ 학력/경력 정보 없음: {name}")
@@ -948,83 +1136,47 @@ def sync_members_from_api():
         # 학력/경력 정보가 부족한 의원들 확인
         missing_count = update_missing_education_career()
         if missing_count > 0:
-            print(f"⚠️ {missing_count}명의 의원은 학력/경력 정보가 부족합니다.")
-
-
-def debug_member_api_fields():
-    """국회의원 API 응답 필드 디버깅"""
-    with app.app_context():
-        print("\n=== 국회의원 API 필드 디버깅 ===")
-        
-        url = f"{BASE_URL}/ALLNAMEMBER"
-        params = {
-            'KEY': API_KEY,
-            'Type': 'xml',
-            'pIndex': 1,
-            'pSize': 5  # 처음 5명만 확인
-        }
-        
-        try:
-            response = requests.get(url, params=params, timeout=30)
-            
-            if response.status_code == 200 and 'INFO-000' in response.text:
-                root = ET.fromstring(response.content)
-                rows = root.findall('.//row')
-                
-                if rows:
-                    first_row = rows[0]
-                    name = (first_row.findtext('HG_NM', '') or 
-                           first_row.findtext('NAAS_NM', '') or 
-                           first_row.findtext('KOR_NM', '')).strip()
-                    
-                    print(f"\n첫 번째 의원: {name}")
-                    print("="*50)
-                    
-                    # 모든 필드 출력
-                    for child in first_row:
-                        field_name = child.tag
-                        field_value = child.text
-                        
-                        if field_value and field_value.strip():
-                            print(f"{field_name}: {field_value}")
-                    
-                    print("\n학력/경력 관련 가능성 있는 필드들:")
-                    print("="*50)
-                    
-                    career_keywords = ['SCH', 'EDUCATION', 'CAREER', 'HIS', 'WORK', 'JOB', 'ACADEMIC', 'PROFILE', 'EXPERIENCE']
-                    
-                    for child in first_row:
-                        field_name = child.tag
-                        field_value = child.text
-                        
-                        if field_value and field_value.strip():
-                            if any(keyword in field_name.upper() for keyword in career_keywords):
-                                print(f"🎯 {field_name}: {field_value}")
-                
-        except Exception as e:
-            print(f"디버깅 중 오류: {str(e)}")
-
+            print(f"⚠️ {missing_count}명의 의원은 학력/경력 정보가 모두 부족합니다.")
 
 def update_missing_education_career():
     """학력/경력 정보가 없는 의원들을 위한 추가 API 호출"""
     with app.app_context():
         print("\n=== 학력/경력 정보 보완 ===")
         
-        # 학력/경력 정보가 없는 의원들 찾기
+        # 🔥 수정: 학력 AND 경력이 모두 없는 의원들만 찾기
         members_without_info = Member.query.filter(
-            or_(  # 기존: db.or_() → 변경: or_()
-                Member.education.is_(None),
-                Member.education == '',
-                Member.career.is_(None), 
-                Member.career == ''
+            and_(
+                or_(Member.education.is_(None), Member.education == ''),
+                or_(Member.career.is_(None), Member.career == '')
             )
         ).all()
         
-        print(f"학력/경력 정보가 부족한 의원: {len(members_without_info)}명")
+        print(f"학력/경력 정보가 모두 부족한 의원: {len(members_without_info)}명")
+        
+        # 🔥 추가: 통계 정보
+        total_members = Member.query.count()
+        members_with_education = Member.query.filter(
+            and_(Member.education.isnot(None), Member.education != '')
+        ).count()
+        members_with_career = Member.query.filter(
+            and_(Member.career.isnot(None), Member.career != '')
+        ).count()
+        members_with_either = Member.query.filter(
+            or_(
+                and_(Member.education.isnot(None), Member.education != ''),
+                and_(Member.career.isnot(None), Member.career != '')
+            )
+        ).count()
+        
+        print(f"\n📊 상세 통계:")
+        print(f"전체 의원: {total_members}명")
+        print(f"학력 정보 있음: {members_with_education}명")
+        print(f"경력 정보 있음: {members_with_career}명")
+        print(f"학력 또는 경력 중 하나 이상 있음: {members_with_either}명")
+        print(f"학력/경력 모두 없음: {len(members_without_info)}명")
         
         if len(members_without_info) > 0:
-            print("이러한 의원들은 API에서 학력/경력 정보를 제공하지 않을 수 있습니다.")
-            print("또는 다른 API 엔드포인트를 시도해볼 수 있습니다.")
+            print("\n이러한 의원들은 API에서 정보를 제공하지 않을 수 있습니다:")
             
             # 몇 명의 예시만 출력
             for i, member in enumerate(members_without_info[:5]):
@@ -1267,25 +1419,6 @@ def sync_bills_from_api():
         total_bills = Bill.query.count()
         print(f"데이터베이스 총 법률안: {total_bills}건")
 
-
-def parse_brf_hst_fallback(brf_hst_text, member_name):
-    """BRF_HST 필드에서 학력/경력 파싱 (fallback용)"""
-    if not brf_hst_text:
-        return None, None
-    
-    print(f"   📋 BRF_HST 파싱 시도: {member_name}")
-    
-    # 기본 텍스트 정리
-    text = brf_hst_text.replace('&middot;', '·')
-    text = text.replace('&nbsp;', ' ')
-    text = text.replace('&amp;', '&')
-    
-    # 기존 파싱 함수 재사용
-    education_items, career_items = parse_assembly_profile_text(text, member_name)
-    
-    return education_items, career_items
-    
-
 def sync_all_data():
     """국회의원 + 법률안 전체 동기화"""
     print("\n🚀 전체 데이터 동기화 시작!")
@@ -1302,7 +1435,7 @@ def sync_all_data():
     sync_bills_from_api()
     
     print("\n🎉 전체 동기화 완료!")
-    
+
 def cleanup_and_sync():
     """중복 정리 후 전체 동기화"""
     print("\n🧹 데이터 정리 및 동기화 시작!")
