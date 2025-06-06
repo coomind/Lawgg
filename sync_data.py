@@ -732,26 +732,6 @@ def sync_members_from_api():
                         except:
                             birth_year = None
                     english_name = row.findtext('NAAS_EN_NM', '').strip()
-                    member_key = (name, birth_str)
-                    member = Member.query.filter_by(name=name, birth_date=birth_str).first()
-                    if not member:
-                        member = Member(
-                            name=name,
-                            birth_date=birth_str,
-                            english_name=english_name
-                        )
-                        db.session.add(member)
-                        print(f"   ➕ 새 의원 생성: {name}")
-                    else:
-                        print(f"   🔄 기존 의원 업데이트: {name}")
-                    
-                    # 영문명 업데이트 (없는 경우에만)
-                    if english_name and not member.english_name:
-                        member.english_name = english_name
-                    
-                    # processed_members에 추가
-                    processed_members.add(member_key)
-                    
                     if not name:
                         continue
 
@@ -772,18 +752,38 @@ def sync_members_from_api():
                     else:
                         print(f"   ⚠️ API 대수 정보 없음: {name} - 일단 통과")
                     
-                    # 🔥 CSV 필터링 (기존 코드 그대로 유지!)
+                    # 🔥 CSV 필터링을 Member 생성 전에 먼저 실행
                     matched_terms = [term for (csv_name, term) in csv_data.keys() 
                                      if csv_name == name and term in [20, 21, 22]]
                     if not matched_terms:
-                        continue  # CSV에 없으면 건너뜀
+                        print(f"   ❌ CSV에 없음: {name} - 건너뜀")
+                        continue  # CSV에 없으면 완전히 건너뜀
                     
-                    print(f"   ✅ API+CSV 일치: {name}")
-                    
-                    
+                    # 중복 체크
+                    member_key = (name, birth_str)
                     if member_key in processed_members:
                         print(f"   ⏭️ 이미 처리됨: {name} ({birth_str})")
                         continue
+
+                    processed_members.add(member_key)
+                    print(f"   ✅ API+CSV 일치: {name}")
+
+                    # 이제 Member 생성/조회
+                    member = Member.query.filter_by(name=name, birth_date=birth_str).first()
+                    if not member:
+                        member = Member(
+                            name=name,
+                            birth_date=birth_str,
+                            english_name=english_name
+                        )
+                        db.session.add(member)
+                        print(f"   ➕ 새 의원 생성: {name}")
+                    else:
+                        print(f"   🔄 기존 의원 업데이트: {name}")
+                    
+                    # 영문명 업데이트 (없는 경우에만)
+                    if english_name and not member.english_name:
+                        member.english_name = english_name
                                     
                     # 🔥 학력/경력 정보 수집 🔥
                     # API에서 제공되는 다양한 필드들 확인
@@ -843,11 +843,6 @@ def sync_members_from_api():
                     # 정보 없는 경우 로그
                     if not info_collected:
                         print(f"   ❌ 학력/경력 정보 없음: {name}")
-
-                    member = Member.query.filter_by(name=name, birth_date=birth_str).first()
-                    if not member:
-                        member = Member(name=name, birth_date=birth_str, english_name=english_name)
-                        db.session.add(member)
 
                     # 🔥 학력/경력 정보 업데이트 🔥
                     if education_data:
@@ -1272,6 +1267,24 @@ def sync_bills_from_api():
         total_bills = Bill.query.count()
         print(f"데이터베이스 총 법률안: {total_bills}건")
 
+
+def parse_brf_hst_fallback(brf_hst_text, member_name):
+    """BRF_HST 필드에서 학력/경력 파싱 (fallback용)"""
+    if not brf_hst_text:
+        return None, None
+    
+    print(f"   📋 BRF_HST 파싱 시도: {member_name}")
+    
+    # 기본 텍스트 정리
+    text = brf_hst_text.replace('&middot;', '·')
+    text = text.replace('&nbsp;', ' ')
+    text = text.replace('&amp;', '&')
+    
+    # 기존 파싱 함수 재사용
+    education_items, career_items = parse_assembly_profile_text(text, member_name)
+    
+    return education_items, career_items
+    
 
 def sync_all_data():
     """국회의원 + 법률안 전체 동기화"""
