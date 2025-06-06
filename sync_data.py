@@ -234,7 +234,7 @@ def is_menu_text_content(text):
     return menu_count >= 3 and len(text) < 500
 
 def parse_pre_tag_career(text):
-    """<pre> 태그 내용을 스마트하게 파싱 - 개선된 버전"""
+    """<pre> 태그 내용을 스마트하게 파싱 - 22대 의원 개선 버전"""
     items = []
     
     # 🔥 먼저 메뉴 텍스트인지 확인
@@ -244,7 +244,32 @@ def parse_pre_tag_career(text):
     
     import re
     
-    # 1단계: 연도 기반 분할 (가장 정확)
+    # 🔥 1단계: 22대 의원 특화 - 현/전 구분자로 강력 분할
+    modern_patterns = [
+        r'(?=•\s*現\s)',    # "• 現 " 앞에서 분할
+        r'(?=•\s*前\s)',    # "• 前 " 앞에서 분할  
+        r'(?=現\s)',        # "現 " 앞에서 분할
+        r'(?=前\s)',        # "前 " 앞에서 분할
+        r'(?=전\)\s)',      # "전) " 앞에서 분할
+        r'(?=현\)\s)',      # "현) " 앞에서 분할
+    ]
+    
+    # 현/전 패턴으로 분할 시도
+    for pattern in modern_patterns:
+        parts = re.split(pattern, text)
+        if len(parts) > 1:  # 분할이 성공한 경우
+            print(f"   🔥 현/전 패턴으로 분할 성공: {len(parts)}개")
+            for part in parts:
+                part = part.strip()
+                if len(part) > 10 and len(part) < 500:  # 적절한 길이
+                    cleaned = clean_career_item_advanced(part)
+                    if cleaned and is_valid_career_item(cleaned):
+                        items.append(cleaned)
+            
+            if items:  # 성공적으로 분할됨
+                return items
+    
+    # 2단계: 연도 기반 분할 (기존 방식)
     year_pattern = r'(\d{4}\.?\d*[-~]\d{4}\.?\d*|\d{4}\.?\d+)'
     year_matches = list(re.finditer(year_pattern, text))
     
@@ -270,7 +295,7 @@ def parse_pre_tag_career(text):
             if cleaned and is_valid_career_item(cleaned):
                 items.append(cleaned)
     
-    # 2단계: 기존 패턴 분할 (연도 분할 실패시)
+    # 3단계: 기존 패턴 분할 (연도 분할 실패시)
     if not items:
         patterns = [
             r'(?=전\))',      # "전)" 앞에서 분할
@@ -289,7 +314,7 @@ def parse_pre_tag_career(text):
                             items.append(cleaned)
                 break
     
-    # 3단계: 분할 실패시 전체를 하나로
+    # 4단계: 분할 실패시 전체를 하나로
     if not items and len(text) > 20:
         cleaned = clean_career_item_advanced(text)
         if cleaned and is_valid_career_item(cleaned):
