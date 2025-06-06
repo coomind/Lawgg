@@ -75,7 +75,6 @@
             border-radius: 4px;
         }
 
-
         .nav {
             display: flex;
             gap: 24px;
@@ -108,20 +107,13 @@
         .main-logo-icon {
             width: 120px;
             height: 120px;
+            background: #2c3e50;
             border-radius: 12px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             margin-bottom: 16px;
             position: relative;
-            overflow: hidden;
-        }
-
-        .main-logo-icon img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            border-radius: 12px;
         }
 
         .main-logo-text {
@@ -134,6 +126,7 @@
             font-size: 32px;
             font-weight: 700;
             color: #2c3e50;
+            margin-left: 16px;
         }
 
         .search-container {
@@ -278,8 +271,8 @@
 
         .bill-title, .member-name {
             font-weight: 500;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            overflow: hidden; /* 🔥 추가 */
+            text-overflow: ellipsis; /* 🔥 추가 */
             white-space: nowrap;
         }
 
@@ -380,7 +373,7 @@
         <section class="main-content">
             <div class="main-logo">
                 <div class="main-logo-icon">
-                    <img src="https://media.istockphoto.com/id/1324471624/ko/%EB%B2%A1%ED%84%B0/%EC%9E%90%EB%B3%B8-%EA%B1%B4%EB%AC%BC-%EC%8B%A4%EB%A3%A8%EC%97%A3.jpg?s=612x612&w=0&k=20&c=hqAJxKuswNzDVza8nMHbXOf6bjya7gU6pAb3HglFk7E=" alt="LAW.GG 메인 로고">
+                    <span class="main-logo-text">⚖️</span>
                 </div>
                 <div style="display: flex; align-items: center; justify-content: center;">
                     <span class="main-logo-subtitle">LAW.GG</span>
@@ -404,46 +397,18 @@
                     화제의 법률안
                 </h2>
                 <ul class="section-list">
-                    <li onclick="viewBillDetail('2', '지방세법 일부개정법률안')">
-                        <div class="list-number">1</div>
+                    {% for bill in trending_bills %}
+                    <li onclick="viewBillDetail('{{ bill.id }}', '{{ bill.title }}')">
+                        <div class="list-number">{{ loop.index }}</div>
                         <div class="bill-info">
-                            <span class="bill-title">지방세법 일부개정법률안</span>
-                            <span class="bill-status">행정안전위원회</span>
+                            <span class="bill-title">{{ bill.title }}</span>
+                            {% if bill.status %}
+                            <span class="bill-status">{{ bill.status }}</span>
+                            {% endif %}
                         </div>
-                        <span class="view-count">0회</span>
+                        <span class="view-count">{{ "{:,}".format(bill.view_count) }}회</span>
                     </li>
-                    <li onclick="viewBillDetail('3', '상장회사법안')">
-                        <div class="list-number">2</div>
-                        <div class="bill-info">
-                            <span class="bill-title">상장회사법안</span>
-                            <span class="bill-status">정무위원회</span>
-                        </div>
-                        <span class="view-count">0회</span>
-                    </li>
-                    <li onclick="viewBillDetail('4', '자원의 절약과 재활용촉진에 관한 법률 일부개정법률안')">
-                        <div class="list-number">3</div>
-                        <div class="bill-info">
-                            <span class="bill-title">자원의 절약과 재활용촉진에 관한 법률 일부개정법률안</span>
-                            <span class="bill-status">환경노동위원회</span>
-                        </div>
-                        <span class="view-count">0회</span>
-                    </li>
-                    <li onclick="viewBillDetail('5', '건설기술 진흥법 일부개정법률안')">
-                        <div class="list-number">4</div>
-                        <div class="bill-info">
-                            <span class="bill-title">건설기술 진흥법 일부개정법률안</span>
-                            <span class="bill-status">국토교통위원회</span>
-                        </div>
-                        <span class="view-count">0회</span>
-                    </li>
-                    <li onclick="viewBillDetail('1', '집합건물의 소유 및 관리에 관한 법률 일부개정법률안')">
-                        <div class="list-number">5</div>
-                        <div class="bill-info">
-                            <span class="bill-title">집합건물의 소유 및 관리에 관한 법률 일부개정법률안</span>
-                            <span class="bill-status">법제사법위원회</span>
-                        </div>
-                        <span class="view-count">0회</span>
-                    </li>
+                    {% endfor %}
                 </ul>
             </div>
 
@@ -454,61 +419,30 @@
                     화제의 국회의원
                 </h2>
                 <ul class="section-list">
-                    <li onclick="viewMemberDetail('1', '강경숙')">
-                        <div class="list-number">1</div>
+                    {% for member in trending_members %}
+                    <li onclick="viewMemberDetail('{{ member.id }}', '{{ member.name }}')">
+                        <div class="list-number">{{ loop.index }}</div>
+                        
+                        {% if member.photo_url %}
                         <div class="member-avatar">
-                            <img src="https://www.assembly.go.kr/static/portal/img/openassm/new/68f83caf0c9e4546b1694ead863f45ce.jpg" alt="강경숙" class="avatar-img">
+                            <img src="{{ member.photo_url }}" alt="{{ member.name }}" class="avatar-img">
                         </div>
-                        <div class="member-info">
-                            <span class="member-name">강경숙</span>
-                            <span class="member-party">조국혁신당</span>
-                        </div>
-                        <span class="view-count">8회</span>
-                    </li>
-                    <li onclick="viewMemberDetail('219', '박영선')">
-                        <div class="list-number">2</div>
+                        {% else %}
                         <div class="member-avatar">
-                            <img src="https://www.assembly.go.kr/static/portal/img/openassm/S8431719.jpg" alt="박영선" class="avatar-img">
+                            {{ member.name[0] }}
                         </div>
+                        {% endif %}
+                        
                         <div class="member-info">
-                            <span class="member-name">박영선</span>
-                            <span class="member-party">열린우리당/통합민주당/민주통합당/더불어민주당</span>
+                            <span class="member-name">{{ member.name }}</span>
+                            {% if member.party %}
+                            <span class="member-party">{{ member.party }}</span>
+                            {% endif %}
                         </div>
-                        <span class="view-count">7회</span>
+                        
+                        <span class="view-count">{{ "{:,}".format(member.view_count) }}회</span>
                     </li>
-                    <li onclick="viewMemberDetail('207', '박상웅')">
-                        <div class="list-number">3</div>
-                        <div class="member-avatar">
-                            <img src="https://www.assembly.go.kr/static/portal/img/openassm/new/8547330068044169b78f59594e3e4076.jpg" alt="박상웅" class="avatar-img">
-                        </div>
-                        <div class="member-info">
-                            <span class="member-name">박상웅</span>
-                            <span class="member-party">국민의힘</span>
-                        </div>
-                        <span class="view-count">6회</span>
-                    </li>
-                    <li onclick="viewMemberDetail('202', '박맹우')">
-                        <div class="list-number">4</div>
-                        <div class="member-avatar">
-                            <img src="https://www.assembly.go.kr/static/portal/img/openassm/EUR98126.jpg" alt="박맹우" class="avatar-img">
-                        </div>
-                        <div class="member-info">
-                            <span class="member-name">박맹우</span>
-                            <span class="member-party">새누리당/새누리당</span>
-                        </div>
-                        <span class="view-count">5회</span>
-                    </li>
-                    <li onclick="viewMemberDetail('201', '박덕흠')">
-                        <div class="list-number">5</div>
-                        <div class="member-avatar">
-                            <img src="https://www.assembly.go.kr/static/portal/img/openassm/new/ad05c3a202f641aca68b663b1fe9c36b.jpg" alt="박덕흠" class="avatar-img">
-                        </div>
-                        <div class="member-info">
-                            <span class="member-name">박덕흠</span>
-                            <span class="member-party">새누리당/새누리당/미래통합당/국민의힘</span>
-                        </div>
-                        <span class="view-count">5회</span>
-                    </li>
+                    {% endfor %}
                 </ul>
             </div>
         </div>
