@@ -37,6 +37,7 @@ CORS(app)
 class Member(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), nullable=False)  # unique 추가
+    english_name = db.Column(db.String(100))
     party = db.Column(db.String(50))  # 현재 소속 정당
     district = db.Column(db.String(100))  # 현재 선거구
     photo_url = db.Column(db.String(200))
@@ -50,6 +51,12 @@ class Member(db.Model):
     vote_rate = db.Column(db.Float)  # 최신 득표율
     view_count = db.Column(db.Integer, default=0)
     birth_date = db.Column(db.String(10))
+    def get_assembly_homepage_url(self):
+        """국회 홈페이지 URL 생성"""
+        if self.current_session and self.english_name:
+            clean_english_name = self.english_name.replace(' ', '')
+            return f"https://www.assembly.go.kr/members/{self.current_session}nd/{clean_english_name}"
+        return None
     
     # 새로운 필드들
     sessions = db.Column(db.String(50))  # "20,21,22" 형태
@@ -604,7 +611,7 @@ def member_detail(member_id):
         'career': career,        # 경력 전체 (길이 제한 제거)
         'phone': member.phone,
         'email': member.email,
-        'homepage': member.homepage,
+        'homepage': member.get_assembly_homepage_url(),
         'vote_rate': member.vote_rate,
         'terms': [{'session': s } for s in member.get_session_list()] if member.sessions else []
     }
