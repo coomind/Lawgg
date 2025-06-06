@@ -324,7 +324,36 @@
             color: #0c5460;
             border: 1px solid #bee5eb;
         }
+        /* placeholder 폰트 스타일 통일 */
+        .form-input::placeholder,
+        .form-textarea::placeholder {
+            color: #999;
+            font-size: 14px;
+            font-weight: 400;
+            font-family: 'Inter', sans-serif;
+            line-height: 1.4;
+            opacity: 1; /* 브라우저별 투명도 차이 방지 */
+        }
 
+        /* Firefox 호환성 */
+        .form-input::-moz-placeholder,
+        .form-textarea::-moz-placeholder {
+            color: #999;
+            font-size: 14px;
+            font-weight: 400;
+            font-family: 'Inter', sans-serif;
+            line-height: 1.4;
+            opacity: 1;
+        }
+
+        /* 오래된 브라우저 호환성 */
+        .form-input:-ms-input-placeholder,
+        .form-textarea:-ms-input-placeholder {
+            color: #999;
+            font-size: 14px;
+            font-weight: 400;
+            font-family: 'Inter', sans-serif;
+        }
         @media (max-width: 768px) {
             .container {
                 padding: 20px 15px;
@@ -420,7 +449,7 @@
                            id="title" 
                            name="title"
                            value="{{ form_data.title or '' }}"
-                           placeholder="제목을 입력하세요"
+                           placeholder="※ 제목을 입력하세요"
                            maxlength="200"
                            required>
                     <div class="error-message" id="title-error"></div>
@@ -433,7 +462,7 @@
                            id="target_law" 
                            name="target_law"
                            value="{{ form_data.target_law or '' }}"
-                           placeholder="대상법안을 입력하세요"
+                           placeholder="※ 대상법안을 입력하세요"
                            maxlength="100">
                     <div class="error-message" id="target_law-error"></div>
                 </div>
@@ -455,9 +484,7 @@
                     <textarea class="form-textarea" 
                               id="current_situation" 
                               name="current_situation"
-                              placeholder="※ 게시판의 성격에 맞지 않는 게시글, 욕설, 비방, 광고, 반복게시물을 올릴 경우 임의 삭제될 수 있습니다.
-                        ※ 법안 정보는 정확하고 구체적으로 작성해주세요.
-                        - 현황 법령 ∙ 제도의 구체적 내용 (최대 2000자)"
+                              placeholder="※ 게시판의 성격에 맞지 않는 게시글, 욕설, 비방, 광고, 반복게시물을 올릴 경우 임의 삭제될 수 있습니다.&#10;※ 법안 정보는 정확하고 구체적으로 작성해주세요.&#10;※ 현황 법령 ∙ 제도의 구체적 내용 (최대 2000자)"
                               maxlength="2000"
                               required>{{ form_data.current_situation or '' }}</textarea>
                     <div class="character-count" id="current_situation-count">
@@ -471,7 +498,7 @@
                     <textarea class="form-textarea" 
                               id="problems" 
                               name="problems"
-                              placeholder="- 현재 법령의 문제점이나 비효율적인 부분, 그 사례 등을 입력하세요 (최대 2000자자)"
+                              placeholder="※ 현재 법령의 문제점이나 비효율적인 부분, 그 사례 등을 입력하세요 (최대 2000자)"
                               maxlength="2000">{{ form_data.problems or '' }}</textarea>
                     <div class="character-count" id="problems-count">
                         <span id="problems-length">{{ (form_data.problems or '')|length }}</span>/2000자
@@ -484,7 +511,7 @@
                     <textarea class="form-textarea" 
                               id="proposal_reasons" 
                               name="proposal_reasons"
-                              placeholder="- 개선방안의 구체적인 법령 개선안을 제시해주세요요"
+                              placeholder="※ 개선방안의 구체적인 법령 개선안을 제시해주세요"
                               maxlength="2000"
                               required>{{ form_data.proposal_reasons or '' }}</textarea>
                     <div class="character-count" id="proposal_reasons-count">
