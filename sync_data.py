@@ -134,15 +134,15 @@ def get_hunjunghoi_education_career(name, session_num):
         print(f"   ❌ 헌정회 API 오류: {str(e)}")
         return None, None
 
-def crawl_member_profile(member_name, english_name, session_num=22):
-    """국회의원 홈페이지에서 약력 크롤링"""
+def crawl_member_profile_with_detection(member_name, english_name, session_num=22):
+    """홈페이지 크롤링 with 메뉴 텍스트 감지 및 fallback"""
     try:
         if not english_name:
             print(f"   ❌ 영문명 없음: {member_name}")
-            return None, None
+            return None, None, True  # fallback 필요 표시 추가
             
-        # 띄어쓰기 제거
-        clean_english_name = english_name.replace(' ', '')
+        # 띄어쓰기 제거하고 대문자로
+        clean_english_name = english_name.replace(' ', '').upper()
         url = f"https://www.assembly.go.kr/members/{session_num}nd/{clean_english_name}"
         
         print(f"   🌐 크롤링 시도: {url}")
@@ -154,29 +154,90 @@ def crawl_member_profile(member_name, english_name, session_num=22):
         response = requests.get(url, timeout=30, headers=headers)
         
         if response.status_code == 200:
-            from bs4 import BeautifulSoup
             soup = BeautifulSoup(response.content, 'html.parser')
-            
-            # 전체 텍스트 가져오기
             page_text = soup.get_text()
             
-            # 다양한 패턴으로 학력/경력 파싱
+            # 🔥 핵심: 메뉴 텍스트만 크롤링된 경우 감지
+            if is_menu_text_only(page_text, member_name):
+                print(f"   ⚠️ 메뉴 텍스트만 감지됨: {member_name} - API fallback 필요")
+                return None, None, True  # fallback 필요 표시
+            
+            # 정상적인 페이지인 경우 파싱
             education_items, career_items = parse_assembly_profile_text(page_text, member_name)
             
             if education_items or career_items:
                 print(f"   ✅ 크롤링 성공: {member_name} - 학력:{len(education_items or [])}개, 경력:{len(career_items or [])}개")
-                return education_items, career_items
+                return education_items, career_items, False
             else:
-                print(f"   ⚠️ 학력/경력 정보 파싱 실패: {member_name}")
+                print(f"   ⚠️ 파싱 실패: {member_name} - API fallback 필요")
+                return None, None, True  # fallback 필요
         else:
             print(f"   ❌ HTTP {response.status_code}: {url}")
+            return None, None, True  # fallback 필요
         
-        return None, None
-        
+    except requests.exceptions.Timeout:
+        print(f"   ⏰ 타임아웃: {member_name}")
+        return None, None, True  # fallback 필요
+    except requests.exceptions.RequestException as e:
+        print(f"   🚫 요청 오류: {member_name} - {str(e)}")
+        return None, None, True  # fallback 필요
     except Exception as e:
         print(f"   ❌ 크롤링 오류 ({member_name}): {str(e)}")
-        return None, None
+        return None, None, True  # fallback 필요
 
+def is_menu_text_only(page_text, member_name):
+    """메뉴 텍스트만 크롤링된 경우인지 감지"""
+    
+    # 🔥 조국 의원처럼 메뉴 텍스트만 나오는 패턴들
+    menu_indicators = [
+        f'국회의원 - {member_name}',
+        f'국회의원-{member_name}',
+        '의원실알림',
+        '역대국회의원',
+        '국회의원통계',
+        '22대국회의원',
+        '21대국회의원', 
+        '20대국회의원',
+        '국회의원 이력',
+        '위원회 경력',
+        '대표발의법률안',
+        '위원회 의사일정',
+        '의정활동',
+        '정책자료',
+        '보도자료'
+    ]
+    
+    # 실제 학력/경력 정보 패턴들
+    real_content_indicators = [
+        '■ 학력', '□ 학력', '[학력]', '○ 학력', '▶학력',
+        '■ 경력', '□ 경력', '[경력]', '○ 경력', '▶경력',
+        '■ 약력', '□ 약력', '[약력]', '○ 약력', '▶약력',
+        '대학교', '고등학교', '졸업', '수료',
+        '위원장', '장관', '청장', '교수', '변호사', '판사'
+    ]
+    
+    # 메뉴 텍스트 개수 세기
+    menu_count = sum(1 for indicator in menu_indicators if indicator in page_text)
+    
+    # 실제 컨텐츠 개수 세기
+    content_count = sum(1 for indicator in real_content_indicators if indicator in page_text)
+    
+    # 🔥 판단 로직
+    # 1. 메뉴 텍스트가 3개 이상이고 실제 컨텐츠가 거의 없으면 메뉴만 크롤링된 것
+    if menu_count >= 3 and content_count <= 1:
+        return True
+    
+    # 2. 텍스트가 매우 짧고 메뉴 텍스트만 있는 경우
+    if len(page_text.strip()) < 500 and menu_count >= 2:
+        return True
+    
+    # 3. "외 XX개" 패턴이 있고 실제 정보가 없는 경우 (강경숙 의원 케이스)
+    import re
+    if re.search(r'외\s*\d+개', page_text) and content_count == 0:
+        return True
+    
+    return False
+    
 def parse_assembly_profile_text(text, member_name):
     """국회 홈페이지 텍스트에서 학력/경력 파싱 - 모든 패턴 지원 (개선된 버전)"""
     education_items = []
@@ -671,6 +732,25 @@ def sync_members_from_api():
                         except:
                             birth_year = None
                     english_name = row.findtext('NAAS_EN_NM', '').strip()
+
+                    member = Member.query.filter_by(name=name, birth_date=birth_str).first()
+                    if not member:
+                        member = Member(
+                            name=name,
+                            birth_date=birth_str,
+                            english_name=english_name
+                        )
+                        db.session.add(member)
+                        print(f"   ➕ 새 의원 생성: {name}")
+                    else:
+                        print(f"   🔄 기존 의원 업데이트: {name}")
+                    
+                    # 영문명 업데이트 (없는 경우에만)
+                    if english_name and not member.english_name:
+                        member.english_name = english_name
+                    
+                    # processed_members에 추가
+                    processed_members.add(member_key)
                     
                     if not name:
                         continue
@@ -710,38 +790,56 @@ def sync_members_from_api():
                     education_data = []
                     career_data = []
                     info_collected = False
-
+                    
                     # 1단계: 20, 21대는 헌정회 API 우선 시도
                     for term in matched_terms:
                         if term in [20, 21] and not info_collected:
+                            print(f"   📚 {term}대 헌정회 API 시도: {name}")
                             edu_items, career_items = get_hunjunghoi_education_career(name, term)
                             if edu_items or career_items:
                                 education_data.extend(edu_items or [])
                                 career_data.extend(career_items or [])
                                 info_collected = True
-                                print(f"   ✅ {term}대 헌정회 데이터 수집 성공")
+                                print(f"   ✅ {term}대 헌정회 성공: 학력 {len(edu_items or [])}개, 경력 {len(career_items or [])}개")
                                 break
-
-                    # 2단계: 헌정회에서 못 찾은 경우 홈페이지 크롤링
+                            else:
+                                print(f"   ❌ {term}대 헌정회에서 정보 없음")
+                    
+                    # 2단계: 22대 또는 헌정회 실패시 홈페이지 크롤링 시도 (메뉴 텍스트 감지 포함)
                     if not info_collected and english_name:
                         session_to_crawl = max(matched_terms) if matched_terms else 22
-                        edu_items, career_items = crawl_member_profile(name, english_name, session_to_crawl)
-                        if edu_items or career_items:
-                            education_data.extend(edu_items or [])
-                            career_data.extend(career_items or [])
-                            info_collected = True
-                            print(f"   ✅ {session_to_crawl}대 홈페이지 크롤링 성공")
-
-                    # 3단계: 기존 BRF_HST 방식 (최종 fallback)
+                        print(f"   🌐 {session_to_crawl}대 홈페이지 크롤링 시도: {name}")
+                        
+                        try:
+                            edu_items, career_items, need_fallback = crawl_member_profile_with_detection(name, english_name, session_to_crawl)
+                            
+                            if edu_items or career_items:
+                                education_data.extend(edu_items or [])
+                                career_data.extend(career_items or [])
+                                info_collected = True
+                                print(f"   ✅ {session_to_crawl}대 홈페이지 성공: 학력 {len(edu_items or [])}개, 경력 {len(career_items or [])}개")
+                            elif need_fallback:
+                                print(f"   ⚠️ 홈페이지에서 메뉴 텍스트만 감지 - API fallback 진행")
+                                # 즉시 3단계로 이동
+                            else:
+                                print(f"   ❌ {session_to_crawl}대 홈페이지에서 정보 없음")
+                        except Exception as e:
+                            print(f"   ⚠️ 홈페이지 크롤링 실패: {str(e)} - API fallback 진행")
+                            need_fallback = True
+                    
+                    # 3단계: BRF_HST 필드 사용 (API 데이터) - 크롤링 실패시 또는 메뉴 텍스트만 감지시
                     if not info_collected:
                         brf_hst = row.findtext('BRF_HST', '').strip()
                         if brf_hst:
-                            print(f"   📋 BRF_HST 약력 사용: {name}")
-                            edu_items, career_items = parse_assembly_profile_text(brf_hst, name)
-                            education_data.extend(edu_items or [])
-                            career_data.extend(career_items or [])
-                            info_collected = True
-
+                            print(f"   📋 BRF_HST 필드 사용 (fallback): {name}")
+                            edu_items, career_items = parse_brf_hst_fallback(brf_hst, name)  # 🔥 전용 함수 사용
+                            if edu_items or career_items:
+                                education_data.extend(edu_items or [])
+                                career_data.extend(career_items or [])
+                                info_collected = True
+                                print(f"   ✅ BRF_HST fallback 성공: 학력 {len(edu_items or [])}개, 경력 {len(career_items or [])}개")
+                            else:
+                                print(f"   ❌ BRF_HST에서도 정보 추출 실패")
                     # 정보 없는 경우 로그
                     if not info_collected:
                         print(f"   ❌ 학력/경력 정보 없음: {name}")
