@@ -415,7 +415,9 @@
             </div>
 
             <div class="member-info">
-                <div class="party-tag {{ member.party.replace(' ', '') if member.party else ' 기타' }}" id="party-tag">{{ member.party or '무소속' }}</div>
+                <div class="party-tag {{ (member.party.split('/')[-1] if '/' in (member.party or '') else (member.party or '기타')).replace(' ', '') }}" id="party-tag">
+                    {{ member.party.split('/')[-1] if '/' in (member.party or '') else (member.party or '무소속') }}
+                </div>
                 <h1 class="member-name" id="member-name">{{ member.name }}</h1>
                 <p class="member-description" id="member-description">
                     {% if member.terms %}
