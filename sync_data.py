@@ -664,6 +664,12 @@ def sync_members_from_api():
                              row.findtext('PARTY_NM', '')).strip()
                     
                     birth_str = row.findtext('BIRDY_DT', '').strip()
+                    birth_year = None
+                    if birth_str and len(birth_str) >= 4:
+                        try:
+                            birth_year = int(birth_str[:4])
+                        except:
+                            birth_year = None
                     english_name = row.findtext('NAAS_EN_NM', '').strip()
                     
                     if not name:
@@ -739,6 +745,11 @@ def sync_members_from_api():
                     # 정보 없는 경우 로그
                     if not info_collected:
                         print(f"   ❌ 학력/경력 정보 없음: {name}")
+
+                    member = Member.query.filter_by(name=name, birth_date=birth_str).first()
+                    if not member:
+                        member = Member(name=name, birth_date=birth_str, english_name=english_name)
+                        db.session.add(member)
 
                     # 🔥 학력/경력 정보 업데이트 🔥
                     if education_data:
