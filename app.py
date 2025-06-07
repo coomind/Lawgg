@@ -13,6 +13,7 @@ from bs4 import BeautifulSoup
 import threading
 import time
 
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'  
 # PostgreSQL 데이터베이스 설정
@@ -32,6 +33,16 @@ ASSEMBLY_API_KEY = 'a3fada8210244129907d945abe2beada'
 
 db = SQLAlchemy(app)
 CORS(app)
+
+@app.before_first_request
+def create_tables():
+    """첫 번째 요청 시에만 테이블 생성"""
+    try:
+        db.create_all()
+        print("📋 데이터베이스 테이블 확인/생성 완료")
+    except Exception as e:
+        print(f"❌ 테이블 생성 오류: {e}")
+        
 # 데이터베이스 모델들
 class Member(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -2169,21 +2180,6 @@ def sync_all_route():
         
 # 메인 실행
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-        
-        member_count = Member.query.count()
-        bill_count = Bill.query.count()
-        
-        print(f"\n=== 🗂️ 현재 데이터베이스 상태 ===")
-        print(f"국회의원: {member_count}명")
-        print(f"법률안: {bill_count}건")
-        
-        if member_count == 0 and bill_count == 0:
-            print(f"\n💡 데이터베이스가 비어있습니다.")
-            
-        else:
-            print(f"\n✅ 데이터가 존재합니다.")
             
         print(f"\n🛠️ 관리 도구:")
         print(f"• 관리자 대시보드: lawgg.me/admin/lawgg2025")
