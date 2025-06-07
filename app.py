@@ -14,11 +14,10 @@ import threading
 import time
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your-secret-key-here'  # 실제 배포시 변경 필요
+app.config['SECRET_KEY'] = 'your-secret-key-here'  
 # PostgreSQL 데이터베이스 설정
 DATABASE_URL = os.environ.get('DATABASE_URL')
 if DATABASE_URL:
-    # Render.com PostgreSQL URL 수정 (postgres:// -> postgresql://)
     if DATABASE_URL.startswith("postgres://"):
         DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
     app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
@@ -36,10 +35,10 @@ CORS(app)
 # 데이터베이스 모델들
 class Member(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(50), nullable=False)  # unique 추가
+    name = db.Column(db.String(50), nullable=False)  
     english_name = db.Column(db.String(100))
-    party = db.Column(db.String(50))  # 현재 소속 정당
-    district = db.Column(db.String(100))  # 현재 선거구
+    party = db.Column(db.String(50))  
+    district = db.Column(db.String(100)) 
     photo_url = db.Column(db.String(200))
     age = db.Column(db.Integer)
     gender = db.Column(db.String(10))
@@ -48,16 +47,16 @@ class Member(db.Model):
     phone = db.Column(db.String(50))
     email = db.Column(db.String(100))
     homepage = db.Column(db.String(200))
-    vote_rate = db.Column(db.Float)  # 최신 득표율
+    vote_rate = db.Column(db.Float)  
     view_count = db.Column(db.Integer, default=0)
     birth_date = db.Column(db.String(10))
     def get_assembly_homepage_url(self):
         """국회 홈페이지 URL - 실제 동작하는 URL 우선"""
-        # 🔥 1순위: 크롤링 시 저장한 실제 동작하는 URL
+        # 1순위: 크롤링 시 저장한 실제 동작하는 URL
         if self.homepage and 'assembly.go.kr/members' in self.homepage:
             return self.homepage
         
-        # 🔥 2순위: 기존 방식으로 생성 (fallback)
+        # 2순위: 기존 방식으로 생성 (fallback)
         if self.current_session and self.english_name:
             clean_english_name = self.english_name.replace(' ', '')
             return f"https://www.assembly.go.kr/members/{self.current_session}nd/{clean_english_name}"
@@ -65,23 +64,23 @@ class Member(db.Model):
         return None
     
     # 새로운 필드들
-    sessions = db.Column(db.String(50))  # "20,21,22" 형태
-    current_session = db.Column(db.Integer)  # 현재/최신 대수
-    first_session = db.Column(db.Integer)  # 첫 당선 대수
+    sessions = db.Column(db.String(50))  
+    current_session = db.Column(db.Integer)  
+    first_session = db.Column(db.Integer)  
     
-    # 대수별 상세 정보 (JSON 형태로 저장)
+    # 대수별 상세 정보 
     session_details = db.Column(db.Text)  # JSON: {"20": {"party": "A당", "district": "서울"}, "21": {...}}
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     def get_session_list(self):
-        """대수 리스트 반환"""
+        
         if self.sessions:
             return [int(x) for x in self.sessions.split(',')]
         return []
     
     def add_session(self, session_num):
-        """새 대수 추가"""
+        
         sessions = self.get_session_list()
         if session_num not in sessions:
             sessions.append(session_num)
@@ -92,18 +91,18 @@ class Member(db.Model):
             if not self.first_session:
                 self.first_session = min(sessions)
             
-            # 현재 대수 업데이트 (가장 최신)
+            # 현재 대수 업데이트
             self.current_session = max(sessions)
     
     def get_session_details(self):
-        """대수별 상세 정보 반환"""
+       
         if self.session_details:
             import json
             return json.loads(self.session_details)
         return {}
     
     def update_session_details(self, session_num, party, district, vote_rate=None):
-        """대수별 상세 정보 업데이트"""
+        
         import json
         details = self.get_session_details()
         
@@ -132,7 +131,7 @@ class BillVote(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     bill_id = db.Column(db.Integer, db.ForeignKey('bill.id'))
     ip_address = db.Column(db.String(50))
-    vote_type = db.Column(db.String(10))  # 'agree' or 'disagree'
+    vote_type = db.Column(db.String(10))  
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Comment(db.Model):
@@ -142,7 +141,7 @@ class Comment(db.Model):
     parent_id = db.Column(db.Integer, db.ForeignKey('comment.id'), nullable=True)
     author = db.Column(db.String(50))
     content = db.Column(db.Text, nullable=False)
-    stance = db.Column(db.String(10))  # 'agree' or 'disagree'
+    stance = db.Column(db.String(10)) 
     ip_address = db.Column(db.String(50))
     report_count = db.Column(db.Integer, default=0)
     is_under_review = db.Column(db.Boolean, default=False)
@@ -172,7 +171,7 @@ class ProposalVote(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     proposal_id = db.Column(db.Integer, db.ForeignKey('proposal.id'))
     ip_address = db.Column(db.String(50))
-    vote_type = db.Column(db.String(10))  # 'agree' or 'disagree'
+    vote_type = db.Column(db.String(10))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Report(db.Model):
@@ -222,7 +221,7 @@ def time_ago(created_at):
         return "방금 전"
 
 def get_anonymous_name(ip_address):
-    """IP별 고유한 익명 이름 생성"""
+   
     import hashlib
     
     # IP를 해시하여 숫자로 변환
@@ -270,7 +269,6 @@ def admin_dashboard():
                          blocked_ips=blocked_ips)
 
 # 입법제안 삭제
-# 입법제안 삭제 함수 수정
 @app.route('/admin/proposals/<int:proposal_id>/delete', methods=['POST'])
 def admin_delete_proposal(proposal_id):
     if not is_admin():
@@ -462,7 +460,7 @@ def members_list():
     search = request.args.get('search', '')
     per_page = 20
     
-    # 🔥 Python에서 한글 가나다순 정렬
+    # 한글 가나다순 정렬
     query = Member.query
     if search:
         query = query.filter(
@@ -475,7 +473,6 @@ def members_list():
     
     if party and party != '전체':
         if party == '기타':
-            # 주요 4개 정당에 속하지 않는 의원들
             major_parties = ['더불어민주당', '국민의힘', '정의당', '국민의당']
             query = query.filter(~db.or_(*[Member.party.contains(p) for p in major_parties]))
         else:
@@ -483,16 +480,16 @@ def members_list():
     
     all_members = query.all()
     
-    # 한글 가나다순 정렬
+   
     import locale
     try:
         locale.setlocale(locale.LC_COLLATE, 'ko_KR.UTF-8')
         sorted_members = sorted(all_members, key=lambda x: locale.strxfrm(x.name or ''))
     except:
-        # fallback: 기본 정렬
+        
         sorted_members = sorted(all_members, key=lambda x: x.name or '')
     
-    # 수동 페이지네이션
+    
     start_idx = (page - 1) * per_page
     end_idx = start_idx + per_page
     page_members = sorted_members[start_idx:end_idx]
@@ -500,7 +497,7 @@ def members_list():
     total_count = len(sorted_members)
     total_pages = (total_count + per_page - 1) // per_page
     
-    # 정당 목록
+
     parties = [
         {'code': '전체', 'name': '전체'},
         {'code': '더불어민주당', 'name': '더불어민주당'},
@@ -510,7 +507,7 @@ def members_list():
         {'code': '기타', 'name': '기타'}
     ]
     
-    # 페이지네이션 데이터 재구성
+  
     pagination_data = {
         'current_page': page,
         'total_pages': total_pages,
@@ -528,13 +525,13 @@ def members_list():
             params.append(f"page={page_num}")
         if party != '전체':
             params.append(f"party={party}")
-        if search:  # 🔥 이 3줄 추가
+        if search:  
             params.append(f"search={search}")
         return '&'.join(params)
     
     pagination_data['get_url_params'] = get_url_params
     
-    # 🔥 page_members 사용 (pagination.items 대신)
+   
     members_data = [{
         'id': m.id,
         'name': m.name,
@@ -556,31 +553,25 @@ def members_list():
                          current_party=party,
                          pagination=pagination_data)
     
-# 기존 함수 전체를 이것으로 교체:
 @app.route('/members/<int:member_id>')
 def member_detail(member_id):
     member = Member.query.get_or_404(member_id)
     member.view_count += 1
     db.session.commit()
     
-    # 해당 의원이 발의한 법률안
     bills = Bill.query.filter(Bill.proposer.contains(member.name)).limit(10).all()
     
-    # 🔥 학력/경력 분리 로직 개선 🔥
     education = []
     career = []
     
-    # 1. education 필드에서 학력 추출
     if member.education:
         education_items = [item.strip() for item in member.education.split(',') if item.strip()]
         education.extend(education_items)
     
-    # 2. career 필드에서 경력 추출
     if member.career:
         career_items = [item.strip() for item in member.career.split(',') if item.strip()]
         career.extend(career_items)
     
-    # 3. 기존 로직 (career 필드가 학력과 경력이 섞여있는 경우를 위한 fallback)
     if not education and not career and member.career:
         items = member.career.split(',')
         for item in items:
@@ -613,8 +604,8 @@ def member_detail(member_id):
         'party': member.party,
         'district_name': member.district,
         'photo_url': member.photo_url,
-        'education': education,  # 학력 전체
-        'career': career,        # 경력 전체 (길이 제한 제거)
+        'education': education,  
+        'career': career,        
         'phone': member.phone,
         'email': member.email,
         'homepage': member.get_assembly_homepage_url(),
@@ -649,7 +640,6 @@ def bills_list():
     
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     
-    # 위원회 목록
     committees = [
         {'code': '', 'display_name': '전체'},
         {'code': '법제사법위원회', 'display_name': '법제사법'},
@@ -715,7 +705,7 @@ def bills_list():
         page_title = '법률안 목록'
     
     return render_template('LAWlist.html',
-                     page_title=page_title,  # 🔥 이 부분도 수정
+                     page_title=page_title,  
                      bills=bills_data,
                      committees=committees,
                      current_committee=committee,
@@ -801,7 +791,6 @@ def bill_detail(bill_id):
             comments_data.append(reply_data)
             comment_reports[str(reply.id)] = reply.report_count
     
-    # 관련 법률안 (같은 위원회) - 실제 데이터만
     related_bills = Bill.query.filter(
         Bill.committee == bill.committee,
         Bill.id != bill.id
@@ -957,8 +946,7 @@ def proposal_write():
         else:
             return redirect(url_for('proposal_detail', proposal_id=proposal.id))
     
-    # GET 요청: 폼 표시
-    # 임시저장된 글 확인
+    
     draft = Proposal.query.filter_by(ip_address=ip_address, is_draft=True).first()
     
     form_data = {
@@ -995,7 +983,6 @@ def proposal_write():
                          has_draft=bool(draft),
                          draft_restored=draft_restored)
 
-# app.py의 proposal_detail() 함수를 이것으로 교체하세요
 
 @app.route('/proposals/<int:proposal_id>')
 def proposal_detail(proposal_id):
@@ -1025,7 +1012,6 @@ def proposal_detail(proposal_id):
         reporter_ip=ip_address
     ).first() is not None
     
-    # 🔥 수정: 모든 댓글 가져오기 (부모 댓글과 답글 모두)
     parent_comments = Comment.query.filter_by(proposal_id=proposal_id, parent_id=None).order_by(Comment.created_at.desc()).limit(5).all()
     total_parent_comments = Comment.query.filter_by(proposal_id=proposal_id, parent_id=None).count()
     
@@ -1033,11 +1019,11 @@ def proposal_detail(proposal_id):
     user_reports = Report.query.filter_by(reporter_ip=ip_address).all()
     user_reported_comments = [r.comment_id for r in user_reports if r.comment_id]
     
-    # 🔥 수정: 사용자가 좋아요한 댓글 ID들
+    # 사용자가 좋아요한 댓글 ID들
     user_likes = CommentLike.query.filter_by(ip_address=ip_address).all()
     liked_comment_ids = [l.comment_id for l in user_likes]
     
-    # 🔥 수정: 댓글 데이터 준비 (좋아요 수 포함)
+    # 댓글 데이터 준비 (좋아요 수 포함)
     comments_data = []
     comment_reports = {}
     
@@ -1047,7 +1033,7 @@ def proposal_detail(proposal_id):
         
         comment_data = {
             'id': comment.id,
-            'parent_id': comment.parent_id,  # 🔥 추가: parent_id 포함
+            'parent_id': comment.parent_id,  
             'author': comment.author or f'익명{comment.id}',
             'content': comment.content,
             'stance': comment.stance,
@@ -1055,8 +1041,8 @@ def proposal_detail(proposal_id):
             'report_count': comment.report_count,
             'is_under_review': comment.is_under_review or comment.report_count >= 3,
             'is_reported_by_user': comment.id in user_reported_comments,
-            'like_count': like_count,  # 🔥 추가: 좋아요 수
-            'is_liked_by_user': comment.id in liked_comment_ids  # 🔥 추가: 사용자 좋아요 상태
+            'like_count': like_count, 
+            'is_liked_by_user': comment.id in liked_comment_ids  
         }
         comments_data.append(comment_data)
         comment_reports[str(comment.id)] = comment.report_count
@@ -1085,12 +1071,11 @@ def proposal_detail(proposal_id):
                          user_vote=user_vote_type,
                          user_reported_proposal=user_reported_proposal,
                          user_reported_comments=user_reported_comments,
-                         liked_comment_ids=liked_comment_ids,  # 🔥 추가: 좋아요한 댓글 ID들
+                         liked_comment_ids=liked_comment_ids, 
                          comments=comments_data,
                          comment_reports=comment_reports,
                          has_more_comments=total_parent_comments > 5)
 
-# AJAX API 엔드포인트들
 
 @app.route('/api/bills/<int:bill_id>/vote', methods=['POST'])
 def vote_bill(bill_id):
@@ -1142,7 +1127,7 @@ def add_bill_comment(bill_id):
     data = request.get_json()
     content = data.get('content', '').strip()
     stance = data.get('stance')
-    parent_id = data.get('parent_id')  # 🔥 추가: 답글 지원
+    parent_id = data.get('parent_id') 
     ip_address = get_client_ip()
     
     if not content or stance not in ['agree', 'disagree']:
@@ -1153,13 +1138,11 @@ def add_bill_comment(bill_id):
     if not user_vote:
         return jsonify({'error': 'Vote required'}), 403
     
-    # 🔥 개선: parent_id가 있는 경우 부모 댓글 확인
     if parent_id:
         parent_comment = Comment.query.get(parent_id)
         if not parent_comment or parent_comment.bill_id != bill_id:
             return jsonify({'error': 'Invalid parent comment'}), 400
         
-        # 🔥 답글의 답글인 경우, 최상위 부모로 설정 (깊이 제한)
         if parent_comment.parent_id:
             parent_id = parent_comment.parent_id
     
@@ -1175,7 +1158,7 @@ def add_bill_comment(bill_id):
     db.session.add(comment)
     db.session.commit()
     
-    # 🔥 개선: 생성된 댓글의 좋아요 정보도 함께 반환
+    # 생성된 댓글의 좋아요 정보도 함께 반환
     like_count = CommentLike.query.filter_by(comment_id=comment.id).count()
     is_liked_by_user = CommentLike.query.filter_by(
         comment_id=comment.id, 
@@ -1207,7 +1190,7 @@ def crawl_bill_content(bill_number):
         response = requests.get(url, timeout=10)
         soup = BeautifulSoup(response.content, 'html.parser')
         
-        # 🔥 핵심 해결책: 숨겨진 전체 내용만 가져오기
+        # 숨겨진 전체 내용만 가져오기
         # 1순위: summaryHiddenContentDiv (전체 내용)
         hidden_content = soup.find('div', id='summaryHiddenContentDiv')
         
@@ -1228,8 +1211,7 @@ def crawl_bill_content(bill_number):
                     if start_idx != -1:
                         start_idx += len(start_marker)
                         content_text = content_text[start_idx:]
-        
-        # 🔥 기본 정리만 (중복 제거 알고리즘 불필요!)
+                        
         content = clean_content_basic(content_text)
         
         return {'content': content.strip()}
@@ -1241,7 +1223,7 @@ def crawl_bill_content(bill_number):
 
 
 def clean_content_basic(content):
-    """기본적인 내용 정리만"""
+    
     import re
     
     # 기본 정리
@@ -1293,7 +1275,7 @@ def clean_content_basic(content):
         if stripped_line:
             cleaned_lines.append(line)
         else:
-            cleaned_lines.append(line)  # 빈 줄 유지
+            cleaned_lines.append(line)
     
     # 최종 정리
     content = '\n'.join(cleaned_lines)
@@ -1307,7 +1289,7 @@ def get_bill_comments(bill_id):
     offset = request.args.get('offset', 0, type=int)
     limit = 5
     
-    # 부모 댓글들 가져오기 (offset 적용)
+    # 부모 댓글들 가져오기
     parent_comments = Comment.query.filter_by(bill_id=bill_id, parent_id=None)\
         .order_by(Comment.created_at.desc())\
         .offset(offset).limit(limit).all()
@@ -1343,7 +1325,7 @@ def get_bill_comments(bill_id):
         }
         comments_data.append(comment_data)
         
-        # ✅ 여기에 답글 처리 추가
+        #  답글 처리 추가
         replies = Comment.query.filter_by(
             bill_id=bill_id,
             parent_id=comment.id
@@ -1371,13 +1353,13 @@ def get_bill_comments(bill_id):
         'has_more': has_more
     })
 
-# 입법제안 댓글 더보기 API
+# 입법제안 댓글 더보기
 @app.route('/api/proposals/<int:proposal_id>/comments', methods=['GET'])
 def get_proposal_comments(proposal_id):
     offset = request.args.get('offset', 0, type=int)
     limit = 5
     
-    # 부모 댓글들 가져오기 (offset 적용)
+    # 부모 댓글들 가져오기
     parent_comments = Comment.query.filter_by(proposal_id=proposal_id, parent_id=None)\
         .order_by(Comment.created_at.desc())\
         .offset(offset).limit(limit).all()
@@ -1413,7 +1395,7 @@ def get_proposal_comments(proposal_id):
         }
         comments_data.append(comment_data)
         
-        # ✅ 답글 처리 추가
+        # 답글 처리 추가
         replies = Comment.query.filter_by(
             proposal_id=proposal_id,
             parent_id=comment.id
@@ -1453,13 +1435,13 @@ def vote_proposal(proposal_id):
     # 기존 투표 확인
     existing_vote = ProposalVote.query.filter_by(proposal_id=proposal_id, ip_address=ip_address).first()
     
-    current_user_vote = None  # 사용자의 현재 투표 상태
+    current_user_vote = None
     
     if existing_vote:
         if existing_vote.vote_type == vote_type:
             # 같은 투표 취소
             db.session.delete(existing_vote)
-            current_user_vote = None  # 투표 취소됨
+            current_user_vote = None 
         else:
             # 투표 변경
             existing_vote.vote_type = vote_type
@@ -1485,8 +1467,6 @@ def vote_proposal(proposal_id):
         'user_vote': current_user_vote  # 사용자의 현재 투표 상태
     })
 
-# app.py의 add_proposal_comment() 함수를 이것으로 교체하세요
-
 @app.route('/api/proposals/<int:proposal_id>/comments', methods=['POST'])
 def add_proposal_comment(proposal_id):
     data = request.get_json()
@@ -1503,13 +1483,13 @@ def add_proposal_comment(proposal_id):
     if not user_vote:
         return jsonify({'error': 'Vote required'}), 403
     
-    # 🔥 개선: parent_id가 있는 경우 부모 댓글 확인
+    # parent_id가 있는 경우 부모 댓글 확인
     if parent_id:
         parent_comment = Comment.query.get(parent_id)
         if not parent_comment or parent_comment.proposal_id != proposal_id:
             return jsonify({'error': 'Invalid parent comment'}), 400
         
-        # 🔥 답글의 답글인 경우, 최상위 부모로 설정 (깊이 제한)
+        # 답글의 답글인 경우, 최상위 부모로 설정 (깊이 제한)
         if parent_comment.parent_id:
             parent_id = parent_comment.parent_id
     
@@ -1525,7 +1505,7 @@ def add_proposal_comment(proposal_id):
     db.session.add(comment)
     db.session.commit()
     
-    # 🔥 개선: 생성된 댓글의 좋아요 정보도 함께 반환
+    # 생성된 댓글의 좋아요 정보도 함께 반환
     like_count = CommentLike.query.filter_by(comment_id=comment.id).count()
     is_liked_by_user = CommentLike.query.filter_by(
         comment_id=comment.id, 
@@ -1566,7 +1546,7 @@ def report_proposal(proposal_id):
     
     db.session.commit()
     
-    # ✅ 신고수 정보 포함하여 반환
+    # 신고수 정보 포함하여 반환
     return jsonify({
         'success': True,
         'report_count': proposal.report_count,
@@ -1731,9 +1711,6 @@ def load_election_csv():
         print("CSV 데이터 로드 완료!")
 
 
-
-# app.py에 검색 라우트 추가 (오류 핸들러 위에 추가)
-
 @app.route('/search')
 def search():
     query = request.args.get('q', '')
@@ -1889,7 +1866,7 @@ def report_comment(comment_id):
     
     db.session.commit()
     
-    # ✅ 신고수와 상태 정보 모두 반환
+    #  신고수와 상태 정보 모두 반환
     return jsonify({
         'success': True,
         'report_count': comment.report_count,
@@ -1952,10 +1929,7 @@ def internal_error(error):
 
 @app.route('/favicon.ico')
 def favicon():
-    return '', 204  # No Content
-    
-#with app.app_context():
-    #db.create_all()
+    return '', 204  
 
 
 sync_status = {
@@ -1968,10 +1942,10 @@ sync_status = {
     'processed_count': 0
 }
 
-# app.py의 background_sync() 함수 수정
+
 
 def background_sync():
-    """백그라운드에서 동기화 실행"""
+    
     global sync_status
     
     # Flask 애플리케이션 컨텍스트 설정
@@ -1988,7 +1962,6 @@ def background_sync():
             })
             
             try:
-                # 🔥 수정된 부분 🔥
                 from sync_data import test_api_connection, cleanup_and_sync
             except ImportError as e:
                 sync_status.update({
@@ -2019,7 +1992,6 @@ def background_sync():
                 'message': '중복 데이터 정리 및 전체 동기화 시작...'
             })
             
-            # 🔥 실제 동기화 실행 (중복 정리 + 국회의원 + 법률안) 🔥
             cleanup_and_sync()
             
             sync_status.update({
@@ -2087,12 +2059,10 @@ def start_sync():
 
 @app.route('/sync/status')
 def sync_status_api():
-    """동기화 진행상황 확인"""
     return jsonify(sync_status)
 
 @app.route('/sync/test')
 def test_api():
-    """국회 API 연결 테스트만"""
     try:
         from sync_data import test_api_connection
         
@@ -2115,7 +2085,6 @@ def test_api():
 
 @app.route('/debug/api')
 def debug_api():
-    """API 디버그 정보"""
     try:
         import requests
         
@@ -2198,9 +2167,6 @@ def sync_all_route():
             "message": f"오류 발생: {str(e)}"
         }), 500
         
-# 메인 실행
-# 메인 실행 부분을 다음으로 교체하세요 (app.py 맨 아래)
-
 # 메인 실행
 if __name__ == '__main__':
     with app.app_context():
