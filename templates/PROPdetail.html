@@ -287,7 +287,7 @@
             color: #666;
         }
 
-        /* 댓글 섹션 - Bill 스타일로 통일 */
+        /* 댓글 섹션 */
         .comments-section {
             margin-top: 40px;
         }
@@ -736,7 +736,7 @@
             </div>
             {% endif %}
 
-            <!-- 찬성/반대 투표 (중앙 배치) -->
+            <!-- 찬성/반대 투표 -->
             <div class="vote-section-centered">
                 <div class="vote-buttons">
                     <button class="vote-btn agree {% if user_vote == 'agree' %}active{% endif %}" data-vote="agree">찬성</button>
@@ -754,9 +754,6 @@
                     </div>
                 </div>
             </div>
-
-            <!-- PROPdetail.html의 댓글 섹션을 이것으로 교체 -->
-            <!-- 이 부분을 현재 HTML의 댓글 섹션(323-412줄)과 교체하세요 -->
 
             <!-- 댓글 섹션 -->
             <div class="comments-section">
@@ -875,7 +872,6 @@
     </main>
 
     <script>
-                // PROPdetail.html의 <script> 태그 안의 전체 내용을 이것으로 교체
 
         // API 베이스 URL 설정
         const proposalId = {{ proposal.id }};
@@ -1119,7 +1115,7 @@
             }
         }
 
-        // ✅ 댓글을 리스트에 추가 (답글 구조 개선)
+        // ✅ 댓글을 리스트에 추가 
         function addCommentToList(comment, isReply = false) {
             const commentHtml = createCommentHtml(comment, isReply);
             
@@ -1313,7 +1309,7 @@
 
         // ========== 신고 관련 함수들 ==========
 
-        // ✅ 댓글 신고 처리 (신고수 표시 개선)
+        // ✅ 댓글 신고 처리 
         async function handleReportClick(e) {
             e.preventDefault();
             
@@ -1373,7 +1369,7 @@
             }
         }
 
-        // ✅ 입법제안 신고 처리 (신고수 표시 개선)
+        // ✅ 입법제안 신고 처리 
         async function handleProposalReport() {
             const reportBtn = document.getElementById('proposal-report-btn');
             
