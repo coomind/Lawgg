@@ -1,8 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""
-Law.GG 데이터 동기화 스크립트 - 최종 개선 버전
-"""
 
 import os
 import sys
@@ -44,22 +41,22 @@ def test_api_connection():
             # XML 파싱 시도
             try:
                 root = ET.fromstring(response.content)
-                # 다양한 방법으로 결과 코드 찾기
+                
                 result_code = None
                 result_msg = None
                 
-                # 방법 1: .//RESULT/CODE
+                
                 code_elem = root.find('.//RESULT/CODE')
                 if code_elem is not None:
                     result_code = code_elem.text
                 
-                # 방법 2: .//CODE  
+                  
                 if result_code is None:
                     code_elem = root.find('.//CODE')
                     if code_elem is not None:
                         result_code = code_elem.text
                 
-                # 메시지도 찾기
+               
                 msg_elem = root.find('.//RESULT/MESSAGE')
                 if msg_elem is not None:
                     result_msg = msg_elem.text
@@ -78,7 +75,7 @@ def test_api_connection():
                     
             except ET.ParseError as e:
                 print(f"❌ XML 파싱 오류: {str(e)}")
-                # 하지만 200 응답이므로 성공으로 처리
+                
                 if 'INFO-000' in response.text:
                     print("✅ 응답 텍스트에서 INFO-000 확인됨, 연결 성공!")
                     return True
@@ -132,28 +129,28 @@ def get_hunjunghoi_education_career(name, session_num):
 # sync_data.py의 crawl_member_profile_with_detection() 함수를 이것으로 교체
 
 def crawl_member_profile_with_detection(member_name, english_name, session_num=22):
-    """개선된 홈페이지 크롤링 - 다양한 영문명 변형 지원"""
+    
     try:
         if not english_name:
             print(f"   ❌ 영문명 없음: {member_name}")
             return None, None, None, True
             
-        # 🔥 다양한 영문명 변형 생성
+       
         clean_name = english_name.replace(' ', '').strip()
         
         name_variations = [
-            clean_name.upper(),           # KIMHYUN (기존 방식)
-            clean_name.title(),           # Kimhyun
-            clean_name.lower(),           # kimhyun
+            clean_name.upper(),           
+            clean_name.title(),           
+            clean_name.lower(),           
         ]
         
-        # 한국식 성명 패턴 추가 (성 대문자 + 이름 첫글자 대문자)
+       
         if len(clean_name) >= 4:
             surname_2 = clean_name[:2].upper()
             given_name_2 = clean_name[2:]
             name_variations.extend([
-                f"{surname_2}{given_name_2.title()}",      # KIMHyun ← 김현 의원!
-                f"{surname_2}{given_name_2.lower()}",      # KIMhyun
+                f"{surname_2}{given_name_2.title()}",      
+                f"{surname_2}{given_name_2.lower()}",     
             ])
         
         if len(clean_name) >= 5:
@@ -189,17 +186,17 @@ def crawl_member_profile_with_detection(member_name, english_name, session_num=2
                 if response.status_code == 200:
                     soup = BeautifulSoup(response.content, 'html.parser')
                     
-                    # 실제 의원 페이지인지 확인
+                    
                     page_text = soup.get_text()
                     if member_name in page_text or "국회의원" in page_text:
                         print(f"   ✅ URL 성공: {url}")
                         
-                        # 메뉴 텍스트만 있는지 확인
+                        
                         if is_menu_text_only(page_text, member_name):
                             print(f"   ⚠️ 메뉴 텍스트만 감지됨 - 다음 변형 시도")
                             continue
                         
-                        # 구조적 파싱 시도
+                        
                         education_items, career_items = parse_structured_html(soup, member_name)
                         
                         if education_items or career_items:
@@ -210,10 +207,10 @@ def crawl_member_profile_with_detection(member_name, english_name, session_num=2
                             return None, None, None, True
                             
             except Exception as e:
-                # 조용히 다음 변형 시도
+               
                 continue
             
-            # 최대 6-7개까지만 시도 (성능 최적화)
+            
             if i >= 6:
                 break
         
@@ -229,7 +226,7 @@ def parse_structured_html(soup, member_name):
     career_items = []
     
     try:
-        # 🔥 방법 1: <pre> 태그 파싱 (기존 방식)
+       
         pre_tags = soup.find_all('pre')
         for pre in pre_tags:
             text = pre.get_text(strip=True)
@@ -237,14 +234,14 @@ def parse_structured_html(soup, member_name):
                 if is_menu_text_content(text):
                     return None, None
                 
-                # 🔥 기존 방식 대신 무조건 분할 적용
+               
                 print(f"   📋 <pre> 태그 데이터에 무조건 분할 방식 적용: {member_name}")
                 education_items, career_items = parse_assembly_profile_text(text, member_name)
                 
                 if education_items or career_items:
                     break
         
-        # 🔥 방법 2: <pre> 태그 없는 경우
+      
         if not education_items and not career_items:
             page_text = soup.get_text()
             if is_menu_text_only(page_text, member_name):
@@ -260,9 +257,9 @@ def parse_structured_html(soup, member_name):
         return None, None
         
 def is_menu_text_only(page_text, member_name):
-    """메뉴 텍스트만 크롤링된 경우인지 감지 - 포괄적 개선 버전"""
     
-    # 🔥 실제 프로필 컨텐츠 지표들 (모든 의원 공통)
+    
+ 
     real_content_indicators = [
         # 학력/경력 섹션 마커
         '■ 학력', '□ 학력', '[학력]', '○ 학력', '▶학력', '▶ 학력',
@@ -303,7 +300,7 @@ def is_menu_text_only(page_text, member_name):
         '대학', '연구소', '재단', '협회', '학회', '위원회',
     ]
     
-    # 🔥 메뉴 텍스트 지표들
+    
     menu_indicators = [
         f'국회의원 - {member_name}',
         f'국회의원-{member_name}',
@@ -312,14 +309,13 @@ def is_menu_text_only(page_text, member_name):
         '국회의원 이력', '위원회 경력', '대표발의법률안',
         '위원회 의사일정', '의정활동', '정책자료', '보도자료',
         '의정보고서', '정책세미나', '토론회', '간담회',
-        '외 XX개', '외 \d+개',  # 강경숙 의원 케이스
+        '외 XX개', '외 \d+개',
     ]
     
-    # 실제 컨텐츠 개수 세기
     content_count = sum(1 for indicator in real_content_indicators if indicator in page_text)
     menu_count = sum(1 for indicator in menu_indicators if indicator in page_text)
     
-    # 정규식 패턴도 체크
+ 
     import re
     if re.search(r'외\s*\d+개', page_text):
         menu_count += 1
@@ -330,7 +326,7 @@ def is_menu_text_only(page_text, member_name):
     
     print(f"   📊 컨텐츠 분석: {member_name} - 실제컨텐츠: {content_count}개, 메뉴지표: {menu_count}개")
     
-    # 🔥 포괄적 판단 로직
+
     # 1. 실제 컨텐츠가 5개 이상이면 확실히 정상 페이지
     if content_count >= 5:
         print(f"   ✅ 실제 컨텐츠 풍부: {member_name} - 정상 페이지")
@@ -365,22 +361,20 @@ def is_menu_text_only(page_text, member_name):
         print(f"   ❌ 의심스러운 패턴 감지: {member_name}")
         return True
     
-    # 6. 기본적으로는 정상 페이지로 판단 (보수적)
+    # 6. 기본적으로는 정상 페이지로 판단
     print(f"   ✅ 정상 페이지로 판단: {member_name}")
     return False
     
 def parse_pre_tag_career(text):
-    """<pre> 태그 내용을 스마트하게 파싱 - 22대 의원 개선 버전"""
-    items = []
     
-    # 🔥 먼저 메뉴 텍스트인지 확인
+    items = []
+
     if is_menu_text_content(text):
         print(f"   ⚠️ 메뉴 텍스트 감지됨, fallback 진행")
         return []
     
     import re
     
-    # 🔥 1단계: 22대 의원 특화 - 현/전 구분자로 강력 분할
     modern_patterns = [
         r'(?=•\s*現\s)',    # "• 現 " 앞에서 분할
         r'(?=•\s*前\s)',    # "• 前 " 앞에서 분할  
@@ -390,29 +384,28 @@ def parse_pre_tag_career(text):
         r'(?=현\)\s)',      # "현) " 앞에서 분할
     ]
     
-    # 현/전 패턴으로 분할 시도
+   
     for pattern in modern_patterns:
         parts = re.split(pattern, text)
         if len(parts) > 1:  # 분할이 성공한 경우
             print(f"   🔥 현/전 패턴으로 분할 성공: {len(parts)}개")
             for part in parts:
                 part = part.strip()
-                if len(part) > 10 and len(part) < 500:  # 적절한 길이
+                if len(part) > 10 and len(part) < 500:  
                     cleaned = clean_career_item_advanced(part)
                     if cleaned and is_valid_career_item(cleaned):
                         items.append(cleaned)
             
-            if items:  # 성공적으로 분할됨
+            if items:  
                 return items
     
-    # 2단계: 연도 기반 분할 (기존 방식)
+    # 2단계: 연도 기반 분할
     year_pattern = r'(\d{4}\.?\d*[-~]\d{4}\.?\d*|\d{4}\.?\d+)'
     year_matches = list(re.finditer(year_pattern, text))
     
-    if len(year_matches) >= 2:  # 연도가 2개 이상 있으면 연도 기준으로 분할
+    if len(year_matches) >= 2:
         prev_end = 0
-        for i, match in enumerate(year_matches[1:], 1):
-            # 이전 연도부터 현재 연도 직전까지
+        for i, match in enumerate(year_matches[1:], 1):      
             start = prev_end
             end = match.start()
             
@@ -423,20 +416,19 @@ def parse_pre_tag_career(text):
                     items.append(cleaned)
             
             prev_end = match.start()
-        
-        # 마지막 부분
+         
         last_segment = text[prev_end:].strip()
         if len(last_segment) > 15 and len(last_segment) < 300:
             cleaned = clean_career_item_advanced(last_segment)
             if cleaned and is_valid_career_item(cleaned):
                 items.append(cleaned)
     
-    # 3단계: 기존 패턴 분할 (연도 분할 실패시)
+    # 3단계: 기존 패턴 분할
     if not items:
         patterns = [
-            r'(?=전\))',      # "전)" 앞에서 분할
-            r'(?=現\))',      # "現)" 앞에서 분할  
-            r'(?=현\))',      # "현)" 앞에서 분할
+            r'(?=전\))',      
+            r'(?=現\))',      
+            r'(?=현\))',      
         ]
         
         for pattern in patterns:
@@ -459,7 +451,7 @@ def parse_pre_tag_career(text):
     return items
 
 def is_menu_text_content(text):
-    """메뉴 텍스트만 있는 내용인지 판단"""
+    
     menu_patterns = [
         '국회의원 -', '의원실알림', '역대국회의원', '국회의원통계',
         '국회의원 이력', '위원회 경력', '대표발의법률안', '위원회 의사일정',
@@ -472,17 +464,14 @@ def is_menu_text_content(text):
     return menu_count >= 3 and len(text) < 500
 
 def clean_career_item_advanced(item):
-    """고급 경력 항목 정리"""
+    
     if not item:
         return None
     
-    # 앞뒤 공백 및 따옴표 제거
     item = item.strip().strip('"').strip("'")
     
-    # 🔥 괄호 내용 보호 (제6회, 제7회 등)
     import re
     
-    # 불필요한 접두사 제거 (괄호 보호하면서)
     prefixes_to_remove = [
         '(현)', '(전)', '現)', '前)', 
         '-', '•', '·', '※', '▶', '▪', '▫', '◦'
@@ -491,13 +480,11 @@ def clean_career_item_advanced(item):
     for prefix in prefixes_to_remove:
         if item.startswith(prefix):
             item = item[len(prefix):].strip()
-    
-    # 🔥 중요한 괄호는 보호하면서 쉼표 분할 방지
-    # (제6회, 제7회) 같은 패턴은 분할하지 않음
+
     protected_patterns = [
-        r'\(제\d+회[,\s]*제?\d*회?\)',  # (제6회, 제7회)
-        r'\(제\d+대[,\s]*제?\d*대?\)',  # (제20대, 제21대)
-        r'\(\d{4}[,\s]*\d{4}\)',       # (2020, 2021)
+        r'\(제\d+회[,\s]*제?\d*회?\)',  
+        r'\(제\d+대[,\s]*제?\d*대?\)',  
+        r'\(\d{4}[,\s]*\d{4}\)',      
     ]
     
     # 보호된 패턴이 있으면 분할하지 않음
@@ -505,12 +492,12 @@ def clean_career_item_advanced(item):
     
     if not has_protected:
         # 일반적인 정리만 수행
-        item = re.sub(r'\s+', ' ', item)  # 공백 정리
+        item = re.sub(r'\s+', ' ', item) 
     
     return item if len(item) > 5 else None
 
 def is_education_item(item):
-    """학력 항목인지 판단"""
+  
     education_keywords = [
         '학교', '학원', '대학교', '고등학교', '중학교', '초등학교', '대학원',
         '학과', '졸업', '수료', '입학', '전공', '학사', '석사', '박사',
@@ -524,9 +511,7 @@ def is_education_item(item):
     return any(keyword in item for keyword in education_keywords)
 
 def is_menu_text_only(page_text, member_name):
-    """메뉴 텍스트만 크롤링된 경우인지 감지"""
     
-    # 🔥 조국 의원처럼 메뉴 텍스트만 나오는 패턴들
     menu_indicators = [
         f'국회의원 - {member_name}',
         f'국회의원-{member_name}',
@@ -561,7 +546,7 @@ def is_menu_text_only(page_text, member_name):
     # 실제 컨텐츠 개수 세기
     content_count = sum(1 for indicator in real_content_indicators if indicator in page_text)
     
-    # 🔥 개선된 판단 로직
+   
     # 1. 실제 컨텐츠가 3개 이상 있으면 정상 페이지로 판단
     if content_count >= 3:
         return False
@@ -574,7 +559,7 @@ def is_menu_text_only(page_text, member_name):
     if len(page_text.strip()) < 500 and menu_count >= 2:
         return True
     
-    # 4. "외 XX개" 패턴이 있고 실제 정보가 없는 경우 (강경숙 의원 케이스)
+    # 4. "외 XX개" 패턴이 있고 실제 정보가 없는 경우
     import re
     if re.search(r'외\s*\d+개', page_text) and content_count == 0:
         return True
@@ -582,18 +567,18 @@ def is_menu_text_only(page_text, member_name):
     return False
 
 def parse_assembly_profile_text(text, member_name):
-    """무조건 분할 후 스마트 분류 방식"""
+   
     education_items = []
     career_items = []
     
     try:
         print(f"   📋 무조건 분할 방식 적용: {member_name}")
         
-        # 🔥 1단계: 무조건 분할
+       
         all_items = force_split_text_completely(text)
         print(f"   📊 분할 결과: {len(all_items)}개 항목")
         
-        # 🔥 2단계: 학력/경력 분류
+       
         for item in all_items:
             cleaned = clean_item_thoroughly(item)
             if not cleaned:
@@ -606,7 +591,7 @@ def parse_assembly_profile_text(text, member_name):
                 career_items.append(cleaned)
                 print(f"   💼 경력: {cleaned[:50]}...")
         
-        # 🔥 3단계: 중복 제거
+       
         education_items = remove_duplicates_final(education_items)
         career_items = remove_duplicates_final(career_items)
         
@@ -618,10 +603,10 @@ def parse_assembly_profile_text(text, member_name):
         return [], []
         
 def force_split_text_completely(text):
-    """텍스트를 최대한 세분화"""
+  
     import re
     
-    # 모든 가능한 구분자로 분할
+
     separators = [
         r'•\s*',           # • 
         r'·\s*',           # ·
@@ -637,7 +622,6 @@ def force_split_text_completely(text):
         r'(?<=\))\s+',     # 괄호 뒤
         r'\n+',            # 줄바꿈
         r'\s{3,}',         # 3칸 이상 공백
-        # 🔥 추가: 섹션 헤더 구분자 (김건 사례)
         r'학력\s*:?\s*',    # 학력: 또는 학력
         r'경력\s*:?\s*',    # 경력: 또는 경력  
         r'약력\s*:?\s*',    # 약력: 또는 약력
@@ -666,14 +650,14 @@ def force_split_text_completely(text):
     return [item for item in items if len(item.strip()) > 3]
     
 def clean_item_thoroughly(item):
-    """아이템 철저히 정리"""
+   
     if not item:
         return None
     
     # 기본 정리
     item = item.strip().strip('"').strip("'")
     
-    # 🔥 괄호 안의 연도 정보 제거
+  
     import re
     item = re.sub(r'\((\d{4})\)', '', item)  # (2020) 제거
     item = re.sub(r'\((\d{4}년)\)', '', item)  # (2020년) 제거
@@ -684,34 +668,28 @@ def clean_item_thoroughly(item):
         if item.startswith(prefix):
             item = item[len(prefix):].strip()
     
-    # 🔥 섹션 헤더 제거 (포괄적으로 확장)
     section_headers = [
-        # 기본 형태
+        
         '학력:', '경력:', '약력:', 
         '주요학력:', '주요경력:', '주요약력:',
         '학력사항:', '경력사항:', '약력사항:',
         
-        # ■ 형태
         '■ 학력', '■ 경력', '■ 약력', 
         '■ 주요학력', '■ 주요경력', '■ 주요약력',
         '■ 학력사항', '■ 경력사항', '■ 약력사항',
         
-        # □ 형태 (강명구 사례)
         '□ 학력', '□ 경력', '□ 약력',
         '□ 주요학력', '□ 주요경력', '□ 주요약력',
         '□ 학력사항', '□ 경력사항', '□ 약력사항',
-        '□ 주요 학력', '□ 주요 경력', '□ 주요 약력',  # 공백 있는 버전
+        '□ 주요 학력', '□ 주요 경력', '□ 주요 약력', 
         
-        # ○ 형태
         '○ 학력', '○ 경력', '○ 약력',
         '○ 주요학력', '○ 주요경력', '○ 주요약력',
         
-        # [대괄호] 형태
         '[학력]', '[경력]', '[약력]',
         '[주요학력]', '[주요경력]', '[주요약력]',
         '[학력사항]', '[경력사항]', '[약력사항]',
         
-        # ▶ 형태
         '▶ 학력', '▶ 경력', '▶ 약력',
         '▶ 주요학력', '▶ 주요경력', '▶ 주요약력'
     ]
@@ -719,13 +697,11 @@ def clean_item_thoroughly(item):
     for header in section_headers:
         if item.startswith(header):
             item = item[len(header):].strip()
-            break  # 하나 찾으면 중단
+            break  
     
-    # 너무 짧거나 의미없는 것 제외
     if len(item) < 4:
         return None
     
-    # 🔥 섹션 헤더만 남은 경우 제외 (확장)
     header_only = [
         '학력', '경력', '약력', '주요학력', '주요경력', '주요약력',
         '학력사항', '경력사항', '약력사항', '주요 학력', '주요 경력', '주요 약력'
@@ -733,7 +709,6 @@ def clean_item_thoroughly(item):
     if item.lower() in [h.lower() for h in header_only]:
         return None
     
-    # 연락처나 UI 요소 제외
     exclude_patterns = ['T:', 'F:', '@', 'http', '전화', '팩스', '이메일', '더보기', '감추기']
     if any(pattern in item for pattern in exclude_patterns):
         return None
@@ -741,7 +716,7 @@ def clean_item_thoroughly(item):
     return item
     
 def is_education_strict(item):
-    """엄격한 학력 판별"""
+
     education_keywords = [
         # 학교 관련
         '초등학교', '중학교', '고등학교', '대학교', '대학원', '사관학교',
@@ -757,7 +732,7 @@ def is_education_strict(item):
     return any(keyword in item for keyword in education_keywords)
 
 def remove_duplicates_final(items):
-    """최종 중복 제거"""
+    
     if not items:
         return []
     
@@ -765,7 +740,7 @@ def remove_duplicates_final(items):
     seen_keywords = set()
     
     for item in items:
-        # 주요 키워드로 중복 판별
+       
         import re
         keywords = re.findall(r'[가-힣]+(?:대학교?|고등학교|중학교|교수|위원장|장관|청장)', item)
         keyword_signature = tuple(sorted(set(keywords)))
@@ -777,22 +752,20 @@ def remove_duplicates_final(items):
     return result
     
 def find_sections(text, markers):
-    """텍스트에서 특정 마커들로 시작하는 섹션들 찾기"""
+   
     sections = []
     
     for marker in markers:
         marker_pos = text.find(marker)
         if marker_pos != -1:
-            # 마커 이후부터 다음 주요 섹션까지 추출
             section_start = marker_pos
             
-            # 다음 섹션 구분자들 찾기
             next_markers = [
                 '□ ', '■', '○ ', '[', '<', '**', '* ',
-                '\n\n\n',  # 3줄 이상 공백
-                '내일을 여는',  # 페이지 하단
-                '지역사무실',  # 연락처 섹션
-                'T:', 'F:'  # 전화번호 섹션
+                '\n\n\n',  
+                '내일을 여는',  
+                '지역사무실',  
+                'T:', 'F:'  
             ]
             
             section_end = len(text)
@@ -802,40 +775,39 @@ def find_sections(text, markers):
                     section_end = next_pos
             
             section = text[section_start:section_end].strip()
-            if len(section) > len(marker):  # 마커만 있는 게 아닌 경우
+            if len(section) > len(marker):  
                 sections.append(section)
     
     return sections
 
 def extract_items_from_section(section_text, is_education=False):
-    """섹션 텍스트에서 항목들 추출 - 스마트 파싱으로 분할 오류 방지"""
+   
     items = []
     
-    # 섹션 헤더 제거 (모든 발견된 패턴 포함)
     headers_to_remove = [
-        # ■ 계열
+        
         '■ 학력', '■학력', '■ 학력:', '■학력:', '■ 주요경력', '■주요경력', '■ 경력', '■경력', '■ 경력:', '■경력:', '■ 약력', '■약력',
-        # □ 계열  
+          
         '□ 학력', '□학력', '□ 주요 약력', '□ 약력', '□ 경력', '□ 주요경력', '□주요 약력', '□약력', '□경력', '□주요경력',
-        # [대괄호] 계열
+        
         '[학력사항]', '[학력]', '[ 학력 ]', '[경력사항]', '[경력]', '[ 경력 ]', '[약력사항]', '[약력]', '[ 약력 ]',
-        # ○ 계열
+        
         '○ 학력', '○학력', '○ 약력', '○ 경력', '○약력', '○경력', '○ 주요 경력', '○주요 경력',
-        # * 계열
+        
         '*학력', '* 학력', '*주요학력', '* 주요학력', '*주요경력', '* 주요경력', '*경력', '* 경력', '*약력', '* 약력',
-        # < > 계열
+      
         '<학력사항>', '<학력>', '<주요학력>', '<경력사항>', '<경력>', '<약력사항>', '<약력>', '<주요경력>',
-        # ▶ 계열
+       
         '▶학력', '▶ 학력', '▶주요학력', '▶ 주요학력', '▶경력', '▶ 경력', '▶약력', '▶ 약력', '▶주요경력', '▶ 주요경력',
-        # · 점 계열
+       
         '· 학력', '·학력', '• 학력', '•학력', '· 경력', '·경력', '• 경력', '•경력', '· 약력', '·약력', '• 약력', '•약력',
-        # 숫자 계열
+     
         '1. 학력', '1) 학력', '가. 학력', '① 학력', '㉠ 학력', '2. 경력', '2) 경력', '나. 경력', '② 경력', '㉡ 경력',
-        # ** 마크다운
+        
         '**학력', '** 학력', '**주요학력', '** 주요학력', '**경력', '** 경력', '**약력', '** 약력', '**주요경력', '** 주요경력',
-        # 기타 특수 기호
+       
         '◆ 학력', '◇ 학력', '▲ 학력', '▽ 학력', '※ 학력', '☞ 학력', '◆ 경력', '◇ 경력', '▲ 경력', '▽ 경력', '※ 경력', '☞ 경력',
-        # 일반사항
+       
         '■ 일반사항'
     ]
     
@@ -844,7 +816,7 @@ def extract_items_from_section(section_text, is_education=False):
             section_text = section_text[len(header):].strip()
             break
     
-    # 🔥 스마트 파싱: 줄바꿈 기반이지만 의미 단위 보존
+    
     items = smart_parse_career_items(section_text)
     
     # 후처리: 유효한 항목만 필터링
@@ -902,17 +874,17 @@ def has_date_range(text):
     
     # 연도 패턴들
     year_patterns = [
-        r'\d{4}년',  # 2020년
-        r'\d{4}\.\d{1,2}',  # 2020.05
-        r'\d{4}-\d{1,2}',  # 2020-05
-        r'\d{4}~\d{4}',  # 2020~2024
-        r'\d{4}\.\d{1,2}~\d{4}\.\d{1,2}',  # 2020.05~2024.05
-        r'\d{4}-\d{1,2}-\d{1,2}',  # 2020-05-30
-        r'\(\d{4}\)',  # (2020)
-        r'\d{4}\s*-\s*\d{4}',  # 2020 - 2024
-        r'제\d+대',  # 제21대
-        r'\d+기',  # 28기
-        r'\d+회',  # 31회
+        r'\d{4}년',  
+        r'\d{4}\.\d{1,2}',  
+        r'\d{4}-\d{1,2}',  
+        r'\d{4}~\d{4}', 
+        r'\d{4}\.\d{1,2}~\d{4}\.\d{1,2}',
+        r'\d{4}-\d{1,2}-\d{1,2}', 
+        r'\(\d{4}\)',  
+        r'\d{4}\s*-\s*\d{4}', 
+        r'제\d+대',  
+        r'\d+기',  
+        r'\d+회',  
     ]
     
     for pattern in year_patterns:
@@ -921,7 +893,7 @@ def has_date_range(text):
     return False
 
 def has_compound_words(text):
-    """복합어나 연결어가 포함되어 있는지 확인"""
+    
     compound_patterns = [
         '석박사', '석사박사', '석사 박사', '석·박사','석사·박사', '전후반기', '상하반기', '좌우', '동서남북',
         '전반기', '후반기', '상반기', '하반기',
@@ -941,7 +913,7 @@ def has_compound_words(text):
     return False
 
 def has_institution_name(text):
-    """기관명이나 학교명이 포함되어 있는지 확인"""
+    
     institution_keywords = [
         '대학교', '대학원', '고등학교', '중학교', '초등학교',
         '청와대', '국회', '정부', '부처', '청', '원', '위원회',
@@ -957,7 +929,7 @@ def has_institution_name(text):
     return False
 
 def split_if_needed(text):
-    """필요한 경우에만 추가 분할"""
+  
     # 매우 긴 텍스트(200자 이상)인 경우에만 분할 시도
     if len(text) < 200:
         return [text]
@@ -969,7 +941,7 @@ def split_if_needed(text):
     result = []
     for sentence in sentences:
         sentence = sentence.strip()
-        if len(sentence) > 10:  # 너무 짧은 조각은 제외
+        if len(sentence) > 10: 
             result.append(sentence)
     
     return result if result else [text]
@@ -998,7 +970,7 @@ def is_valid_career_item(item):
     return True
 
 def clean_career_item(item):
-    """경력 항목 정리"""
+   
     if not item:
         return None
     
@@ -1073,7 +1045,7 @@ def classify_by_keywords(text):
     return education_items, career_items
 
 def remove_duplicates_preserve_order(items):
-    """순서를 유지하면서 중복 제거"""
+    
     seen = set()
     result = []
     for item in items:
@@ -1083,21 +1055,20 @@ def remove_duplicates_preserve_order(items):
     return result
 
 def parse_brf_hst_fallback(brf_hst_text, member_name):
-    """BRF_HST를 무조건 분할 방식으로 처리"""
+   
     if not brf_hst_text:
         print(f"   ❌ BRF_HST 데이터 없음: {member_name}")
         return None, None
     
     print(f"   📋 BRF_HST 무조건 분할 방식 적용: {member_name}")
     
-    # HTML 엔티티 변환
+   
     text = brf_hst_text.replace('&middot;', '·').replace('&nbsp;', ' ').replace('&amp;', '&')
     
     if len(text.strip()) < 10:
         print(f"   ❌ 텍스트 너무 짧음: {len(text)}자")
         return None, None
     
-    # 🔥 무조건 분할 방식 적용
     return parse_assembly_profile_text(text, member_name)
     
 def sync_members_from_api():
@@ -1105,12 +1076,12 @@ def sync_members_from_api():
     with app.app_context():
         print("\n=== 국회 OpenAPI에서 국회의원 정보 가져오기 (학력/경력 포함) ===")
         
-        # API 연결 테스트 먼저
+       
         if not test_api_connection():
             print("API 연결 실패! 종료합니다.")
             return
         
-        # CSV 데이터 로드 (기존 코드와 동일)
+       
         csv_data = {}
         csv_file = '국회의원_당선자_통합명부_20_21_22대.csv'
         
@@ -1203,7 +1174,7 @@ def sync_members_from_api():
                     if not name:
                         continue
 
-                    # 🔥 API 대수 정보로 먼저 필터링
+                    
                     api_sessions = row.findtext('GTELT_ERACO', '').strip()
                     if api_sessions:
                         print(f"   🔍 API 대수 정보: {name} - {api_sessions}")
@@ -1220,7 +1191,7 @@ def sync_members_from_api():
                     else:
                         print(f"   ⚠️ API 대수 정보 없음: {name} - 일단 통과")
                     
-                    # 🔥 CSV 필터링을 Member 생성 전에 먼저 실행
+                  
                     matched_terms = [term for (csv_name, term) in csv_data.keys() 
                                      if csv_name == name and term in [20, 21, 22]]
                     if not matched_terms:
@@ -1236,7 +1207,7 @@ def sync_members_from_api():
                     processed_members.add(member_key)
                     print(f"   ✅ API+CSV 일치: {name}")
 
-                    # 이제 Member 생성/조회
+                    # Member 생성/조회
                     member = Member.query.filter_by(name=name, birth_date=birth_str).first()
                     if not member:
                         member = Member(
@@ -1253,14 +1224,11 @@ def sync_members_from_api():
                     if english_name and not member.english_name:
                         member.english_name = english_name
                                     
-                    # 🔥 학력/경력 정보 수집 🔥
-                    # API에서 제공되는 다양한 필드들 확인
-                    # 🔥 학력/경력 정보 수집 🔥
                     education_data = []
                     career_data = []
                     info_collected = False
                     
-                    # 🔥 0단계: 22대 API 데이터 직접 처리 (새로 추가)
+                   
                     if 22 in matched_terms:
                         raw_education = row.findtext('EDUCATION', '').strip()
                         raw_career = row.findtext('CAREER', '').strip()
@@ -1277,7 +1245,7 @@ def sync_members_from_api():
                                     combined_text += "\n"
                                 combined_text += raw_career
                             
-                            # 🔥 분류 함수 적용
+                            
                             if combined_text.strip():
                                 edu_items, career_items = parse_assembly_profile_text(combined_text, name)
                                 
@@ -1319,7 +1287,7 @@ def sync_members_from_api():
                                 career_data.extend(career_items or [])
                                 info_collected = True
                                 
-                                # 🔥 성공한 URL을 홈페이지로 저장
+                                # 성공한 URL을 홈페이지로 저장
                                 if working_url:
                                     member.homepage = working_url
                                     print(f"   🌐 실제 동작하는 홈페이지 URL 저장: {working_url}")
@@ -1353,7 +1321,7 @@ def sync_members_from_api():
                     if not info_collected:
                         print(f"   ❌ 학력/경력 정보 없음: {name}")
     
-                    # 🔥 학력/경력 정보 업데이트 🔥
+
                     if education_data:
                         member.education = ','.join(education_data)
                         print(f"   📚 학력 업데이트: {len(education_data)}개 항목")
@@ -1464,7 +1432,7 @@ def update_missing_education_career():
     with app.app_context():
         print("\n=== 학력/경력 정보 보완 ===")
         
-        # 🔥 수정: 학력 AND 경력이 모두 없는 의원들만 찾기
+        #  수정: 학력 AND 경력이 모두 없는 의원들만 찾기
         members_without_info = Member.query.filter(
             and_(
                 or_(Member.education.is_(None), Member.education == ''),
@@ -1474,7 +1442,7 @@ def update_missing_education_career():
         
         print(f"학력/경력 정보가 모두 부족한 의원: {len(members_without_info)}명")
         
-        # 🔥 추가: 통계 정보
+        #  추가: 통계 정보
         total_members = Member.query.count()
         members_with_education = Member.query.filter(
             and_(Member.education.isnot(None), Member.education != '')
@@ -1598,7 +1566,7 @@ def sync_bills_from_api():
             
             term_count = 0
             page = 1
-            page_size = 1000  # 최대 1000건
+            page_size = 1000
             
             while True:
                 print(f"\n--- {term}대 법률안 {page}페이지 처리 중 ---")
