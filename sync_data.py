@@ -369,7 +369,7 @@ def is_education_item(item):
         # 🔥 교수직 추가 - 학교 관련 경력
         '교수', '전임교수', '부교수', '조교수', '겸임교수', '객원교수', 
         '초빙교수', '명예교수', '연구교수', '임상교수', '시간강사',
-        '강사', '교육과정', '교육연구', '연구원', '연구소'
+        '강사', '교육과정', '교육연구'
     ]
     
     return any(keyword in item for keyword in education_keywords)
@@ -999,25 +999,58 @@ def sync_members_from_api():
                                     
                     # 🔥 학력/경력 정보 수집 🔥
                     # API에서 제공되는 다양한 필드들 확인
+                    # 🔥 학력/경력 정보 수집 🔥
                     education_data = []
                     career_data = []
                     info_collected = False
                     
-                    # 1단계: 20, 21대는 헌정회 API 우선 시도
-                    for term in matched_terms:
-                        if term in [20, 21] and not info_collected:
-                            print(f"   📚 {term}대 헌정회 API 시도: {name}")
-                            edu_items, career_items = get_hunjunghoi_education_career(name, term)
-                            if edu_items or career_items:
-                                education_data.extend(edu_items or [])
-                                career_data.extend(career_items or [])
+                    # 🔥 0단계: 22대 API 데이터 직접 처리 (새로 추가)
+                    if 22 in matched_terms:
+                        raw_education = row.findtext('EDUCATION', '').strip()
+                        raw_career = row.findtext('CAREER', '').strip()
+                        
+                        if raw_education or raw_career:
+                            print(f"   📋 22대 API 데이터 분류 처리: {name}")
+                            
+                            # 전체 텍스트 결합
+                            combined_text = ""
+                            if raw_education:
+                                combined_text += raw_education
+                            if raw_career:
+                                if combined_text:
+                                    combined_text += "\n"
+                                combined_text += raw_career
+                            
+                            # 🔥 분류 함수 적용
+                            if combined_text.strip():
+                                edu_items, career_items = parse_assembly_profile_text(combined_text, name)
+                                
+                                if edu_items:
+                                    education_data.extend(edu_items)
+                                    print(f"   📚 22대 학력 분류: {len(edu_items)}개 항목")
+                                
+                                if career_items:
+                                    career_data.extend(career_items)
+                                    print(f"   💼 22대 경력 분류: {len(career_items)}개 항목")
+                                
                                 info_collected = True
-                                print(f"   ✅ {term}대 헌정회 성공: 학력 {len(edu_items or [])}개, 경력 {len(career_items or [])}개")
-                                break
-                            else:
-                                print(f"   ❌ {term}대 헌정회에서 정보 없음")
                     
-                    # 2단계: 22대 또는 헌정회 실패시 홈페이지 크롤링 시도 (메뉴 텍스트 감지 포함)
+                    # 1단계: 20, 21대는 헌정회 API 우선 시도
+                    if not info_collected:
+                        for term in matched_terms:
+                            if term in [20, 21]:
+                                print(f"   📚 {term}대 헌정회 API 시도: {name}")
+                                edu_items, career_items = get_hunjunghoi_education_career(name, term)
+                                if edu_items or career_items:
+                                    education_data.extend(edu_items or [])
+                                    career_data.extend(career_items or [])
+                                    info_collected = True
+                                    print(f"   ✅ {term}대 헌정회 성공: 학력 {len(edu_items or [])}개, 경력 {len(career_items or [])}개")
+                                    break
+                                else:
+                                    print(f"   ❌ {term}대 헌정회에서 정보 없음")
+                    
+                    # 2단계: 22대 또는 헌정회 실패시 홈페이지 크롤링 시도
                     if not info_collected and english_name:
                         session_to_crawl = max(matched_terms) if matched_terms else 22
                         print(f"   🌐 {session_to_crawl}대 홈페이지 크롤링 시도: {name}")
@@ -1032,7 +1065,6 @@ def sync_members_from_api():
                                 print(f"   ✅ {session_to_crawl}대 홈페이지 성공: 학력 {len(edu_items or [])}개, 경력 {len(career_items or [])}개")
                             elif need_fallback:
                                 print(f"   ⚠️ 홈페이지에서 메뉴 텍스트만 감지 - API fallback 진행")
-                                # 즉시 3단계로 이동
                             else:
                                 print(f"   ❌ {session_to_crawl}대 홈페이지에서 정보 없음")
                         except Exception as e:
@@ -1056,7 +1088,7 @@ def sync_members_from_api():
                     # 정보 없는 경우 로그
                     if not info_collected:
                         print(f"   ❌ 학력/경력 정보 없음: {name}")
-
+    
                     # 🔥 학력/경력 정보 업데이트 🔥
                     if education_data:
                         member.education = ','.join(education_data)
