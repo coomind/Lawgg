@@ -19,7 +19,7 @@
             line-height: 1.4;
         }
 
-        /* 헤더 - 메인 페이지와 동일한 스타일로 업데이트 */
+        /* 헤더 */
         .header {
             background: white;
             border-bottom: 1px solid #e9ecef;
@@ -583,7 +583,7 @@
     </main>
 
     <script>
-       // API 베이스 URL 설정 (배포 시 변경)
+       // API 베이스 URL 설정 
         const API_BASE_URL = 'https://lawgg-backend.onrender.com';
 
         function goToHome() {
@@ -624,7 +624,7 @@
         let currentSearchTerm = PAGE_CONFIG.currentSearchTerm;
         let isLoading = false;
 
-        // 위원회 매핑 객체 (원래 HTML에서 가져온 코드)
+        // 위원회 매핑 객체 
         const COMMITTEE_MAPPING = {
             'all': '',
             'legislation': '법제사법위원회',
