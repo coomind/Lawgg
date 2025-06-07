@@ -225,55 +225,40 @@ def crawl_member_profile_with_detection(member_name, english_name, session_num=2
         return None, None, None, True
 
 def parse_structured_html(soup, member_name):
-    """HTML 구조를 기반으로 한 정확한 파싱"""
     education_items = []
     career_items = []
     
     try:
-        # 🔥 방법 1: <pre> 태그에서 주요약력 추출 (김위상, 김윤 케이스)
+        # 🔥 방법 1: <pre> 태그 파싱 (기존 방식)
         pre_tags = soup.find_all('pre')
         for pre in pre_tags:
             text = pre.get_text(strip=True)
-            if text and len(text) > 50:  # 의미있는 내용이 있는 경우
-                print(f"   📋 <pre> 태그에서 약력 발견: {len(text)}자")
-                
-                # 🔥 메뉴 텍스트 체크 먼저
+            if text and len(text) > 50:
                 if is_menu_text_content(text):
-                    print(f"   ⚠️ 메뉴 텍스트 감지됨: {member_name} - fallback 필요")
-                    return None, None  # fallback으로 이동
+                    return None, None
                 
-                # 🔥 핵심: 스마트 분할로 "전)" 구분자 활용
-                items = parse_pre_tag_career(text)
+                # 🔥 기존 방식 대신 무조건 분할 적용
+                print(f"   📋 <pre> 태그 데이터에 무조건 분할 방식 적용: {member_name}")
+                education_items, career_items = parse_assembly_profile_text(text, member_name)
                 
-                # 학력/경력 분류
-                for item in items:
-                    if is_education_item(item):
-                        education_items.append(item)
-                    else:
-                        career_items.append(item)
-                
-                if items:
-                    print(f"   ✅ <pre> 파싱 완료: 총 {len(items)}개 항목")
+                if education_items or career_items:
                     break
         
-        # 🔥 방법 2: 일반적인 구조화된 HTML 파싱 (다른 의원들)
+        # 🔥 방법 2: <pre> 태그 없는 경우
         if not education_items and not career_items:
-            # 전체 텍스트에서 메뉴 텍스트 체크
             page_text = soup.get_text()
             if is_menu_text_only(page_text, member_name):
-                print(f"   ⚠️ 메뉴 텍스트만 감지됨: {member_name} - API fallback 필요")
                 return None, None
             
-            # 🔥 새로운 무조건 분할 방식 적용
-            print(f"   🌐 크롤링 데이터에 무조건 분할 방식 적용: {member_name}")
+            print(f"   🌐 페이지 전체에 무조건 분할 방식 적용: {member_name}")
             education_items, career_items = parse_assembly_profile_text(page_text, member_name)
         
         return education_items, career_items
         
     except Exception as e:
-        print(f"   ❌ 구조적 파싱 오류: {str(e)}")
-        return None, None, None
-
+        print(f"   ❌ 파싱 오류: {str(e)}")
+        return None, None
+        
 def is_menu_text_only(page_text, member_name):
     """메뉴 텍스트만 크롤링된 경우인지 감지 - 포괄적 개선 버전"""
     
