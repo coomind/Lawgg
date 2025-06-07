@@ -240,7 +240,7 @@ def parse_structured_html(soup, member_name):
                 # 🔥 메뉴 텍스트 체크 먼저
                 if is_menu_text_content(text):
                     print(f"   ⚠️ 메뉴 텍스트 감지됨: {member_name} - fallback 필요")
-                    return None, None, None  # fallback으로 이동
+                    return None, None  # fallback으로 이동
                 
                 # 🔥 핵심: 스마트 분할로 "전)" 구분자 활용
                 items = parse_pre_tag_career(text)
@@ -267,7 +267,7 @@ def parse_structured_html(soup, member_name):
             # 기존 파싱 방법 실행
             education_items, career_items = parse_assembly_profile_text(page_text, member_name)
         
-        return education_items, career_items, None
+        return education_items, career_items
         
     except Exception as e:
         print(f"   ❌ 구조적 파싱 오류: {str(e)}")
@@ -596,94 +596,132 @@ def is_menu_text_only(page_text, member_name):
     return False
 
 def parse_assembly_profile_text(text, member_name):
-    """국회 홈페이지 텍스트에서 학력/경력 파싱 - 모든 패턴 지원 (개선된 버전)"""
+    """무조건 분할 후 스마트 분류 방식"""
     education_items = []
     career_items = []
     
     try:
-        # 전처리: 줄바꿈 정리
-        text = text.replace('\r\n', '\n').replace('\r', '\n')
+        print(f"   📋 무조건 분할 방식: {member_name}")
         
-        # 🔥 패턴별 섹션 찾기
-        patterns = [
-            # 패턴 1: ■ 학력, ■ 경력
-            {
-                'education_markers': ['■ 학력', '■학력', '■ 학력:', '■학력:', '■ 주요학력', '■주요학력'],
-                'career_markers': ['■ 경력', '■경력', '■ 경력:', '■경력:', '■ 주요경력', '■주요경력', '■ 약력', '■약력']
-            },
-            # 패턴 2: □ 학력, □ 경력  
-            {
-                'education_markers': ['□ 학력', '□학력', '□ 주요학력', '□주요학력'],
-                'career_markers': ['□ 경력', '□경력', '□ 주요경력', '□주요경력', '□ 약력', '□약력', '□ 주요 약력', '□주요 약력']
-            },
-            # 패턴 3: [학력], [경력]
-            {
-                'education_markers': ['[학력사항]', '[학력]', '[ 학력 ]', '[주요학력]', '[주요 학력]'],
-                'career_markers': ['[경력사항]', '[경력]', '[ 경력 ]', '[약력사항]', '[약력]', '[ 약력 ]', '[주요경력]', '[주요 경력]']
-            },
-            # 패턴 4: ○ 학력, ○ 경력
-            {
-                'education_markers': ['○ 학력', '○학력', '○ 주요학력', '○주요학력'],
-                'career_markers': ['○ 경력', '○경력', '○ 약력', '○약력', '○ 주요경력', '○주요경력', '○ 주요 경력', '○주요 경력']
-            },
-            # 패턴 5: < > 마크
-            {
-                'education_markers': ['<학력사항>', '<학력>', '<주요학력>', '<주요 학력>'],
-                'career_markers': ['<경력사항>', '<경력>', '<약력사항>', '<약력>', '<주요경력>', '<주요 경력>']
-            },
-            # 패턴 6: ▶ 화살표
-            {
-                'education_markers': ['▶학력', '▶ 학력', '▶주요학력', '▶ 주요학력'],
-                'career_markers': ['▶경력', '▶ 경력', '▶약력', '▶ 약력', '▶주요경력', '▶ 주요경력']
-            },
-            # 패턴 7: ** 마크다운
-            {
-                'education_markers': ['**학력', '** 학력', '**주요학력', '** 주요학력'],
-                'career_markers': ['**경력', '** 경력', '**약력', '** 약력', '**주요경력', '** 주요경력']
-            },
-            # 패턴 8: * 학력, * 경력
-            {
-                'education_markers': ['* 학력', '*학력'],
-                'career_markers': ['* 경력', '*경력', '* 약력', '*약력']
-            }
-        ]
+        # 🔥 1단계: 무조건 분할
+        all_items = force_split_text_completely(text)
+        print(f"   📊 분할 결과: {len(all_items)}개 항목")
         
-        # 각 패턴 시도
-        for pattern in patterns:
-            education_sections = find_sections(text, pattern['education_markers'])
-            career_sections = find_sections(text, pattern['career_markers'])
-            
-            if education_sections or career_sections:
-                print(f"   📋 패턴 매치: {pattern['education_markers'][0]} / {pattern['career_markers'][0]}")
+        # 🔥 2단계: 학력/경력 분류
+        for item in all_items:
+            cleaned = clean_item_thoroughly(item)
+            if not cleaned:
+                continue
                 
-                # 학력 섹션 파싱
-                for section in education_sections:
-                    items = extract_items_from_section(section, is_education=True)
-                    education_items.extend(items)
-                
-                # 경력 섹션 파싱
-                for section in career_sections:
-                    items = extract_items_from_section(section, is_education=False)
-                    career_items.extend(items)
-                
-                break
+            if is_education_strict(cleaned):
+                education_items.append(cleaned)
+                print(f"   📚 학력: {cleaned[:30]}...")
+            else:
+                career_items.append(cleaned)
+                print(f"   💼 경력: {cleaned[:30]}...")
         
-        # 패턴이 없는 경우: 전체 텍스트에서 키워드로 분류
-        if not education_items and not career_items:
-            print(f"   🔍 패턴 없음, 키워드 분류 시도: {member_name}")
-            education_items, career_items = classify_by_keywords(text)
+        # 🔥 3단계: 중복 제거
+        education_items = remove_duplicates_final(education_items)
+        career_items = remove_duplicates_final(career_items)
         
-        # 중복 제거
-        education_items = remove_duplicates_preserve_order(education_items)
-        career_items = remove_duplicates_preserve_order(career_items)
-        
-        print(f"   📚 파싱 결과: {member_name} - 학력:{len(education_items)}개, 경력:{len(career_items)}개")
+        print(f"   ✅ 최종: {member_name} - 학력:{len(education_items)}개, 경력:{len(career_items)}개")
         return education_items, career_items
         
     except Exception as e:
-        print(f"   ❌ 텍스트 파싱 오류: {str(e)}")
-        return None, None
+        print(f"   ❌ 분할 오류: {str(e)}")
+        return [], []
 
+def force_split_text_completely(text):
+    """텍스트를 최대한 세분화"""
+    import re
+    
+    # 모든 가능한 구분자로 분할
+    separators = [
+        r'•\s*',           # • 
+        r'·\s*',           # ·
+        r'(?<=졸업)\s+',    # 졸업 뒤
+        r'(?<=수료)\s+',    # 수료 뒤  
+        r'(?<=위원)\s+',    # 위원 뒤
+        r'(?<=의원)\s+',    # 의원 뒤
+        r'(?<=장관)\s+',    # 장관 뒤
+        r'(?<=청장)\s+',    # 청장 뒤
+        r'(?<=교수)\s+',    # 교수 뒤
+        r'(?<=대표)\s+',    # 대표 뒤
+        r'(?<=회장)\s+',    # 회장 뒤
+        r'(?<=\))\s+',     # 괄호 뒤
+        r'\n+',            # 줄바꿈
+        r'\s{3,}',         # 3칸 이상 공백
+    ]
+    
+    items = [text]
+    for separator in separators:
+        new_items = []
+        for item in items:
+            parts = re.split(separator, item)
+            new_items.extend([p.strip() for p in parts if p.strip()])
+        items = new_items
+    
+    return [item for item in items if len(item.strip()) > 3]
+
+def clean_item_thoroughly(item):
+    """아이템 철저히 정리"""
+    if not item:
+        return None
+    
+    # 기본 정리
+    item = item.strip().strip('"').strip("'")
+    
+    # 불필요한 접두사 제거
+    prefixes = ['(현)', '(전)', '現)', '前)', '現', '前', '-', '•', '·', '※', '▶']
+    for prefix in prefixes:
+        if item.startswith(prefix):
+            item = item[len(prefix):].strip()
+    
+    # 너무 짧거나 의미없는 것 제외
+    if len(item) < 4:
+        return None
+    
+    # 연락처나 UI 요소 제외
+    exclude_patterns = ['T:', 'F:', '@', 'http', '전화', '팩스', '이메일', '더보기', '감추기']
+    if any(pattern in item for pattern in exclude_patterns):
+        return None
+    
+    return item
+
+def is_education_strict(item):
+    """엄격한 학력 판별"""
+    education_keywords = [
+        # 학교 관련
+        '초등학교', '중학교', '고등학교', '대학교', '대학원', '사관학교',
+        # 학위/과정 관련  
+        '졸업', '수료', '입학', '학사', '석사', '박사', '학과', '학부', '전공',
+        # 교육 직책 (학력으로 분류)
+        '교수', '부교수', '조교수', '겸임교수', '객원교수', '석좌교수', 
+        '강사', '연구원', '연구교수'
+    ]
+    
+    return any(keyword in item for keyword in education_keywords)
+
+def remove_duplicates_final(items):
+    """최종 중복 제거"""
+    if not items:
+        return []
+    
+    result = []
+    seen_keywords = set()
+    
+    for item in items:
+        # 주요 키워드로 중복 판별
+        import re
+        keywords = re.findall(r'[가-힣]+(?:대학교?|고등학교|중학교|교수|위원장|장관|청장)', item)
+        keyword_signature = tuple(sorted(set(keywords)))
+        
+        if keyword_signature not in seen_keywords or not keyword_signature:
+            seen_keywords.add(keyword_signature)
+            result.append(item)
+    
+    return result
+    
 def find_sections(text, markers):
     """텍스트에서 특정 마커들로 시작하는 섹션들 찾기"""
     sections = []
@@ -1282,13 +1320,14 @@ def sync_members_from_api():
                         print(f"   🌐 {session_to_crawl}대 홈페이지 크롤링 시도: {name}")
                         
                         try:
-                            edu_items, career_items, need_fallback = crawl_member_profile_with_detection(name, english_name, session_to_crawl)
+                            edu_items, career_items, working_url, need_fallback = crawl_member_profile_with_detection(name, english_name, session_to_crawl)
                             
                             if edu_items or career_items:
                                 education_data.extend(edu_items or [])
                                 career_data.extend(career_items or [])
                                 info_collected = True
                                 
+                                # 🔥 성공한 URL을 홈페이지로 저장
                                 if working_url:
                                     member.homepage = working_url
                                     print(f"   🌐 실제 동작하는 홈페이지 URL 저장: {working_url}")
@@ -1298,8 +1337,10 @@ def sync_members_from_api():
                                 print(f"   ⚠️ 홈페이지에서 메뉴 텍스트만 감지 - API fallback 진행")
                             else:
                                 print(f"   ❌ {session_to_crawl}대 홈페이지에서 정보 없음")
+                                
                         except Exception as e:
                             print(f"   ⚠️ 홈페이지 크롤링 실패: {str(e)} - API fallback 진행")
+                            working_url = None
                             need_fallback = True
                     
                     # 3단계: BRF_HST 필드 사용 (API 데이터) - 크롤링 실패시 또는 메뉴 텍스트만 감지시
