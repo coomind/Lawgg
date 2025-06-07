@@ -2181,10 +2181,10 @@ def sync_all_route():
 # 메인 실행
 if __name__ == '__main__':
             
-        print(f"\n🛠️ 관리 도구:")
-        print(f"• 관리자 대시보드: lawgg.me/admin/lawgg2025")
-        print(f"• 전체 동기화: lawgg.me/sync/start") 
-        print(f"• API 테스트: lawgg.me/sync/test")
-        print(f"• DB 초기화: lawgg.me/admin/reset-db")
+    print(f"\n🛠️ 관리 도구:")
+    print(f"• 관리자 대시보드: lawgg.me/admin/lawgg2025")
+    print(f"• 전체 동기화: lawgg.me/sync/start") 
+    print(f"• API 테스트: lawgg.me/sync/test")
+    print(f"• DB 초기화: lawgg.me/admin/reset-db")
 
     app.run(debug=True, host='0.0.0.0', port=5000)
