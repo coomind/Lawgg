@@ -52,10 +52,16 @@ class Member(db.Model):
     view_count = db.Column(db.Integer, default=0)
     birth_date = db.Column(db.String(10))
     def get_assembly_homepage_url(self):
-        """국회 홈페이지 URL 생성"""
+        """국회 홈페이지 URL - 실제 동작하는 URL 우선"""
+        # 🔥 1순위: 크롤링 시 저장한 실제 동작하는 URL
+        if self.homepage and 'assembly.go.kr/members' in self.homepage:
+            return self.homepage
+        
+        # 🔥 2순위: 기존 방식으로 생성 (fallback)
         if self.current_session and self.english_name:
             clean_english_name = self.english_name.replace(' ', '')
             return f"https://www.assembly.go.kr/members/{self.current_session}nd/{clean_english_name}"
+        
         return None
     
     # 새로운 필드들
