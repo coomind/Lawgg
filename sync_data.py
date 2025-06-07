@@ -991,237 +991,85 @@ def remove_duplicates_preserve_order(items):
     return result
 
 def parse_brf_hst_fallback(brf_hst_text, member_name):
-    """BRF_HST 필드에서 학력/경력 파싱 - 포괄적 비구조화 텍스트 처리"""
+    """BRF_HST 전용 단순화 파싱 - 무조건 분할 우선"""
     if not brf_hst_text:
         print(f"   ❌ BRF_HST 데이터 없음: {member_name}")
         return None, None
     
-    print(f"   📋 BRF_HST 포괄적 파싱: {member_name}")
-    
-    # HTML 엔티티 변환
-    text = brf_hst_text.replace('&middot;', '·')
-    text = text.replace('&nbsp;', ' ')
-    text = text.replace('&amp;', '&')
-    text = text.replace('&lt;', '<')
-    text = text.replace('&gt;', '>')
-    text = text.replace('&quot;', '"')
-    text = text.replace('&apos;', "'")
-    
-    # 길이 체크
-    if len(text.strip()) < 5:
-        print(f"   ❌ 텍스트 너무 짧음: {len(text.strip())}자")
-        return None, None
-    
-    print(f"   📊 텍스트 길이: {len(text)}자")
+    print(f"   📋 BRF_HST 단순화 파싱: {member_name}")
     
     import re
     
-    # 🔥 1단계: 다층 분할 시스템
+    # 기본 정리
+    text = brf_hst_text.replace('&middot;', '·').replace('&nbsp;', ' ').replace('&amp;', '&')
+    text = re.sub(r'\s+', ' ', text).strip()  # 공백 정리
+    
+    if len(text) < 10:
+        print(f"   ❌ 텍스트 너무 짧음: {len(text)}자")
+        return None, None
+    
+    print(f"   📊 텍스트: {text[:100]}...")
+    
+    # 🔥 1단계: 무조건 분할 우선 (패턴 관계없이)
     segments = []
     
-    # 레벨 1: 강한 구분자로 분할
-    strong_separators = [
-        r'(?:\r?\n){2,}',      # 두 줄 이상 공백
-        r'■[^■\n]*',          # ■로 시작하는 섹션
-        r'□[^□\n]*',          # □로 시작하는 섹션
-        r'○[^○\n]*',          # ○로 시작하는 섹션
-        r'▶[^▶\n]*',          # ▶로 시작하는 섹션
-        r'[0-9]+\.[^0-9\n]*', # 숫자. 로 시작
-        r'[가-힣]\.[^가-힣\n]*', # 가. 나. 다. 패턴
-        r'\s*-\s*(?=제?\d*대)',    # 🔥 추가: "- 제22대" 패턴
-        r'\s*-\s*(?=국회)',        # 🔥 추가: "- 국회" 패턴  
-        r'\s*-\s*(?=[가-힣]{2,})', # 🔥 추가: "- 한글단어" 패턴
+    # 모든 가능한 구분자로 시도 (우선순위 순)
+    separators = [
+        r'■\s*(?=\S)',      # ■ 뒤에 내용
+        r'□\s*(?=\S)',      # □ 뒤에 내용
+        r'○\s*(?=\S)',      # ○ 뒤에 내용
+        r'▶\s*(?=\S)',      # ▶ 뒤에 내용
+        r'\s*-\s*(?=\S)',   # - 뒤에 내용
+        r'\d+\.\s*(?=\S)',  # 1. 2. 3.
+        r'[가-힣]\.\s*(?=\S)', # 가. 나. 다.
+        r'[①-⑳]\s*(?=\S)', # ① ② ③
+        r'(?<=\S)\s{3,}(?=\S)', # 3칸 이상 공백
+        r'(?<=\))\s+(?=[가-힣])', # 괄호 뒤 공백
     ]
     
-    for separator in strong_separators:
+    for separator in separators:
         parts = re.split(separator, text)
+        parts = [p.strip() for p in parts if p.strip() and len(p.strip()) > 5]
+        
         if len(parts) > 1:
-            segments = [p.strip() for p in parts if p.strip()]
+            segments = parts
+            print(f"   ✅ 분할 성공: {len(segments)}개 (패턴: {separator[:10]})")
             break
     
-    # 레벨 2: 중간 구분자로 분할 (레벨 1 실패시)
-    if len(segments) <= 1:
-        medium_separators = [
-            r'(?<=\d{4})\s+(?=[가-힣])',  # 연도 뒤 공백
-            r'(?<=\))\s+(?=[가-힣])',     # 괄호 뒤 공백
-            r'(?<=전)\s+(?=[가-힣])',     # "전" 뒤 공백
-            r'(?<=현)\s+(?=[가-힣])',     # "현" 뒤 공백
-            r'[.·]\s+(?=[가-힣])',       # 마침표/중점 뒤 한글
-            r'\s{3,}',                    # 3칸 이상 공백
-        ]
-        
-        for separator in medium_separators:
-            parts = re.split(separator, text)
-            if len(parts) > len(segments):
-                segments = [p.strip() for p in parts if p.strip()]
-    
-    # 레벨 3: 약한 구분자로 분할 (레벨 2 실패시)
-    if len(segments) <= 1:
-        weak_separators = [
-            r'\n',                        # 단순 줄바꿈
-            r'[,，]\s*',                  # 쉼표
-            r'[;；]\s*',                  # 세미콜론
-        ]
-        
-        for separator in weak_separators:
-            parts = re.split(separator, text)
-            if len(parts) > len(segments):
-                segments = [p.strip() for p in parts if p.strip() and len(p.strip()) > 3]
-    
-    # 분할 실패시 전체를 하나로
+    # 분할 실패시 강제 분할
     if not segments:
-        segments = [text.strip()]
+        # 문장 부호나 쉼표로라도 분할
+        parts = re.split(r'[.!?]\s*|,\s*', text)
+        parts = [p.strip() for p in parts if len(p.strip()) > 10]
+        
+        if len(parts) > 1:
+            segments = parts[:5]  # 최대 5개만
+            print(f"   🔧 강제 분할: {len(segments)}개")
+        else:
+            segments = [text]  # 분할 포기, 전체를 하나로
+            print(f"   ⚠️ 분할 포기: 전체를 1개 항목으로")
     
-    print(f"   📊 분할 결과: {len(segments)}개 세그먼트")
-    
-    # 🔥 2단계: 포괄적 키워드 기반 분류
+    # 🔥 2단계: 학력/경력 분류 (단순화)
     education_items = []
     career_items = []
     
-    # 학력 키워드 (가중치별)
-    education_keywords = {
-        # 가중치 5 (매우 강한 학력 지표)
-        5: ['졸업', '수료', '학위취득', '박사학위', '석사학위', '학사학위'],
-        
-        # 가중치 4 (강한 학력 지표)
-        4: ['학사', '석사', '박사', '학위', '전공', '학과졸업'],
-        
-        # 가중치 3 (중간 학력 지표)
-        3: ['대학교', '대학원', '학과', '학부', '전공과정', '교육대학'],
-        
-        # 가중치 2 (약한 학력 지표)
-        2: ['고등학교', '중학교', '초등학교', '사관학교', '기술대학', '전문대학'],
-        
-        # 가중치 1 (교육 관련)
-        1: ['학교', '교육', '연수', '과정', '수습', '인턴', '연수원'],
-    }
-    
-    # 경력 키워드 (가중치별)
-    career_keywords = {
-        # 가중치 5 (매우 강한 경력 지표)
-        5: ['장관', '차관', '청장', '국회의원', '의원', '대통령', '총리'],
-        
-        # 가중치 4 (강한 경력 지표)
-        4: ['위원장', '부위원장', '실장', '국장', '대표이사', '사장', '부사장'],
-        
-        # 가중치 3 (중간 경력 지표)
-        3: ['과장', '팀장', '이사', '부장', '차장', '교수', '부교수', '조교수'],
-        
-        # 가중치 2 (약한 경력 지표)
-        2: ['대표', '회장', '부회장', '원장', '소장', '센터장', '변호사', '판사', '검사'],
-        
-        # 가중치 1 (일반 직책)
-        1: ['기자', '위원', '간사', '주임', '사원', '연구원', '의사', '약사'],
-    }
-    
     for i, segment in enumerate(segments):
-        if len(segment) < 5:
-            continue
+        print(f"   📝 세그먼트 {i+1}: {segment[:50]}...")
         
-        # 헤더 제거
-        for header in ['■ 학력', '■ 경력', '■ 약력', '□ 학력', '□ 경력', '□ 약력']:
-            if segment.startswith(header):
-                segment = segment[len(header):].strip()
-                break
+        # 간단한 학력 키워드만 체크
+        education_keywords = ['졸업', '수료', '학위', '학사', '석사', '박사', '대학교', '대학원', '고등학교', '중학교', '학과', '전공']
         
-        if not segment:
-            continue
-        
-        # 점수 계산
-        edu_score = 0
-        career_score = 0
-        
-        # 학력 점수 계산
-        for weight, keywords in education_keywords.items():
-            for keyword in keywords:
-                if keyword in segment:
-                    edu_score += weight
-        
-        # 경력 점수 계산
-        for weight, keywords in career_keywords.items():
-            for keyword in keywords:
-                if keyword in segment:
-                    career_score += weight
-        
-        # 🔥 패턴 기반 추가 점수
-        # 연도 패턴
-        year_patterns = re.findall(r'\d{4}년|\d{4}\.\d{1,2}|\d{4}-\d{1,2}', segment)
-        if year_patterns:
-            edu_score += len(year_patterns)
-            career_score += len(year_patterns)
-        
-        # 현/전 패턴 (경력 가산점)
-        if re.search(r'전\)|현\)|前\)|現\)|前|現', segment):
-            career_score += 3
-        
-        # 기간 표시 패턴
-        if re.search(r'~|부터|까지|동안', segment):
-            career_score += 2
-            edu_score += 1
-        
-        print(f"   📊 세그먼트 {i+1}: 학력점수={edu_score}, 경력점수={career_score}")
-        print(f"   📝 {segment[:50]}...")
-        
-        # 🔥 분류 로직
-        if edu_score > career_score and edu_score >= 3:
+        if any(edu in segment for edu in education_keywords):
             education_items.append(segment)
-            print(f"   📚 학력 분류")
-        elif career_score > edu_score and career_score >= 2:
-            career_items.append(segment)
-            print(f"   💼 경력 분류")
-        elif edu_score == career_score and edu_score >= 2:
-            # 동점시 세부 판단
-            if any(strong in segment for strong in ['졸업', '학위', '학사', '석사', '박사']):
-                education_items.append(segment)
-                print(f"   📚 학력 분류 (동점-강한지표)")
-            else:
-                career_items.append(segment)
-                print(f"   💼 경력 분류 (동점-기본)")
-        elif len(segment) > 20:
-            # 점수가 낮아도 의미있는 길이면 경력으로
-            career_items.append(segment)
-            print(f"   💼 경력 분류 (길이)")
+            print(f"   📚 학력으로 분류")
         else:
-            print(f"   ⚠️ 분류 제외 (점수부족)")
-    
-    # 🔥 3단계: 결과 없으면 강제 분할
-    if not education_items and not career_items and len(text) > 30:
-        print(f"   🔧 분류 실패 - 강제 분할 진행")
-        
-        # 문장 단위로 강제 분할
-        sentences = re.split(r'[.!?]\s*', text)
-        sentences = [s.strip() for s in sentences if len(s.strip()) > 15]
-        
-        if sentences:
-            # 첫 번째 절반은 학력, 나머지는 경력으로 (휴리스틱)
-            mid = len(sentences) // 2
-            education_items = sentences[:mid] if mid > 0 else []
-            career_items = sentences[mid:mid+10]  # 최대 10개
-            print(f"   🔧 강제분할: 학력 {len(education_items)}개, 경력 {len(career_items)}개")
-    
-    # 최종 정리
-    education_items = list(dict.fromkeys(education_items))  # 중복제거
-    career_items = list(dict.fromkeys(career_items))
-    
-    # 길이 제한
-    education_items = [item for item in education_items if 5 <= len(item) <= 200]
-    career_items = [item for item in career_items if 5 <= len(item) <= 300]
+            # 나머지는 모두 경력으로
+            career_items.append(segment)
+            print(f"   💼 경력으로 분류")
     
     print(f"   ✅ BRF_HST 파싱 완료: {member_name} - 학력:{len(education_items)}개, 경력:{len(career_items)}개")
-    
-    return education_items, career_items    
-    print(f"   📋 BRF_HST 파싱 시도: {member_name}")
-    
-    # 기본 텍스트 정리
-    text = brf_hst_text.replace('&middot;', '·')
-    text = text.replace('&nbsp;', ' ')
-    text = text.replace('&amp;', '&')
-    
-    # 기존 파싱 함수 재사용
-    education_items, career_items = parse_assembly_profile_text(text, member_name)
-    
     return education_items, career_items
-
+    
 def sync_members_from_api():
     """국회 OpenAPI에서 국회의원 정보 동기화 (학력/경력 포함)"""
     with app.app_context():
