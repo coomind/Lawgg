@@ -34,14 +34,17 @@ ASSEMBLY_API_KEY = 'a3fada8210244129907d945abe2beada'
 db = SQLAlchemy(app)
 CORS(app)
 
-@app.before_first_request
-def create_tables():
-    """첫 번째 요청 시에만 테이블 생성"""
-    try:
-        db.create_all()
-        print("📋 데이터베이스 테이블 확인/생성 완료")
-    except Exception as e:
-        print(f"❌ 테이블 생성 오류: {e}")
+@app.before_request
+def ensure_tables():
+    """첫 요청 시에만 테이블 생성 (Flask 2.2+ 호환)"""
+    if not hasattr(app, '_tables_created'):
+        try:
+            db.create_all()
+            app._tables_created = True
+            print("📋 데이터베이스 테이블 확인/생성 완료")
+        except Exception as e:
+            print(f"❌ 테이블 생성 오류: {e}")
+            app._tables_created = True
         
 # 데이터베이스 모델들
 class Member(db.Model):
