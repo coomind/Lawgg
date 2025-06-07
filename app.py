@@ -2190,4 +2190,4 @@ if __name__ == '__main__':
     print(f"• API 테스트: lawgg.me/sync/test")
     print(f"• DB 초기화: lawgg.me/admin/reset-db")
 
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=False, host='0.0.0.0', port=5000)
