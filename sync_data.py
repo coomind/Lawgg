@@ -262,9 +262,10 @@ def parse_structured_html(soup, member_name):
             page_text = soup.get_text()
             if is_menu_text_only(page_text, member_name):
                 print(f"   ⚠️ 메뉴 텍스트만 감지됨: {member_name} - API fallback 필요")
-                return None, None, None
+                return None, None
             
-            # 기존 파싱 방법 실행
+            # 🔥 새로운 무조건 분할 방식 적용
+            print(f"   🌐 크롤링 데이터에 무조건 분할 방식 적용: {member_name}")
             education_items, career_items = parse_assembly_profile_text(page_text, member_name)
         
         return education_items, career_items
@@ -601,7 +602,7 @@ def parse_assembly_profile_text(text, member_name):
     career_items = []
     
     try:
-        print(f"   📋 무조건 분할 방식: {member_name}")
+        print(f"   📋 무조건 분할 방식 적용: {member_name}")
         
         # 🔥 1단계: 무조건 분할
         all_items = force_split_text_completely(text)
@@ -615,22 +616,22 @@ def parse_assembly_profile_text(text, member_name):
                 
             if is_education_strict(cleaned):
                 education_items.append(cleaned)
-                print(f"   📚 학력: {cleaned[:30]}...")
+                print(f"   📚 학력: {cleaned[:50]}...")
             else:
                 career_items.append(cleaned)
-                print(f"   💼 경력: {cleaned[:30]}...")
+                print(f"   💼 경력: {cleaned[:50]}...")
         
         # 🔥 3단계: 중복 제거
         education_items = remove_duplicates_final(education_items)
         career_items = remove_duplicates_final(career_items)
         
-        print(f"   ✅ 최종: {member_name} - 학력:{len(education_items)}개, 경력:{len(career_items)}개")
+        print(f"   ✅ 최종 결과: {member_name} - 학력:{len(education_items)}개, 경력:{len(career_items)}개")
         return education_items, career_items
         
     except Exception as e:
         print(f"   ❌ 분할 오류: {str(e)}")
         return [], []
-
+        
 def force_split_text_completely(text):
     """텍스트를 최대한 세분화"""
     import re
@@ -1029,84 +1030,22 @@ def remove_duplicates_preserve_order(items):
     return result
 
 def parse_brf_hst_fallback(brf_hst_text, member_name):
-    """BRF_HST 전용 단순화 파싱 - 무조건 분할 우선"""
+    """BRF_HST를 무조건 분할 방식으로 처리"""
     if not brf_hst_text:
         print(f"   ❌ BRF_HST 데이터 없음: {member_name}")
         return None, None
     
-    print(f"   📋 BRF_HST 단순화 파싱: {member_name}")
+    print(f"   📋 BRF_HST 무조건 분할 방식 적용: {member_name}")
     
-    import re
-    
-    # 기본 정리
+    # HTML 엔티티 변환
     text = brf_hst_text.replace('&middot;', '·').replace('&nbsp;', ' ').replace('&amp;', '&')
-    text = re.sub(r'\s+', ' ', text).strip()  # 공백 정리
     
-    if len(text) < 10:
+    if len(text.strip()) < 10:
         print(f"   ❌ 텍스트 너무 짧음: {len(text)}자")
         return None, None
     
-    print(f"   📊 텍스트: {text[:100]}...")
-    
-    # 🔥 1단계: 무조건 분할 우선 (패턴 관계없이)
-    segments = []
-    
-    # 모든 가능한 구분자로 시도 (우선순위 순)
-    separators = [
-        r'■\s*(?=\S)',      # ■ 뒤에 내용
-        r'□\s*(?=\S)',      # □ 뒤에 내용
-        r'○\s*(?=\S)',      # ○ 뒤에 내용
-        r'▶\s*(?=\S)',      # ▶ 뒤에 내용
-        r'\s*-\s*(?=\S)',   # - 뒤에 내용
-        r'\d+\.\s*(?=\S)',  # 1. 2. 3.
-        r'[가-힣]\.\s*(?=\S)', # 가. 나. 다.
-        r'[①-⑳]\s*(?=\S)', # ① ② ③
-        r'(?<=\S)\s{3,}(?=\S)', # 3칸 이상 공백
-        r'(?<=\))\s+(?=[가-힣])', # 괄호 뒤 공백
-    ]
-    
-    for separator in separators:
-        parts = re.split(separator, text)
-        parts = [p.strip() for p in parts if p.strip() and len(p.strip()) > 5]
-        
-        if len(parts) > 1:
-            segments = parts
-            print(f"   ✅ 분할 성공: {len(segments)}개 (패턴: {separator[:10]})")
-            break
-    
-    # 분할 실패시 강제 분할
-    if not segments:
-        # 문장 부호나 쉼표로라도 분할
-        parts = re.split(r'[.!?]\s*|,\s*', text)
-        parts = [p.strip() for p in parts if len(p.strip()) > 10]
-        
-        if len(parts) > 1:
-            segments = parts[:5]  # 최대 5개만
-            print(f"   🔧 강제 분할: {len(segments)}개")
-        else:
-            segments = [text]  # 분할 포기, 전체를 하나로
-            print(f"   ⚠️ 분할 포기: 전체를 1개 항목으로")
-    
-    # 🔥 2단계: 학력/경력 분류 (단순화)
-    education_items = []
-    career_items = []
-    
-    for i, segment in enumerate(segments):
-        print(f"   📝 세그먼트 {i+1}: {segment[:50]}...")
-        
-        # 간단한 학력 키워드만 체크
-        education_keywords = ['졸업', '수료', '학위', '학사', '석사', '박사', '대학교', '대학원', '고등학교', '중학교', '학과', '전공']
-        
-        if any(edu in segment for edu in education_keywords):
-            education_items.append(segment)
-            print(f"   📚 학력으로 분류")
-        else:
-            # 나머지는 모두 경력으로
-            career_items.append(segment)
-            print(f"   💼 경력으로 분류")
-    
-    print(f"   ✅ BRF_HST 파싱 완료: {member_name} - 학력:{len(education_items)}개, 경력:{len(career_items)}개")
-    return education_items, career_items
+    # 🔥 무조건 분할 방식 적용
+    return parse_assembly_profile_text(text, member_name)
     
 def sync_members_from_api():
     """국회 OpenAPI에서 국회의원 정보 동기화 (학력/경력 포함)"""
