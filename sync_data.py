@@ -136,7 +136,7 @@ def crawl_member_profile_with_detection(member_name, english_name, session_num=2
     try:
         if not english_name:
             print(f"   ❌ 영문명 없음: {member_name}")
-            return None, None, True
+            return None, None, None, True
             
         # 🔥 다양한 영문명 변형 생성
         clean_name = english_name.replace(' ', '').strip()
@@ -204,10 +204,10 @@ def crawl_member_profile_with_detection(member_name, english_name, session_num=2
                         
                         if education_items or career_items:
                             print(f"   ✅ 파싱 성공: 학력 {len(education_items or [])}개, 경력 {len(career_items or [])}개")
-                            return education_items, career_items, False
+                            return education_items, career_items, url, False
                         else:
                             print(f"   ⚠️ 파싱 결과 없음 - API fallback 필요")
-                            return None, None, True
+                            return None, None, None, True
                             
             except Exception as e:
                 # 조용히 다음 변형 시도
@@ -218,11 +218,11 @@ def crawl_member_profile_with_detection(member_name, english_name, session_num=2
                 break
         
         print(f"   ❌ 모든 영문명 변형 실패: {member_name}")
-        return None, None, True
+        return None, None, None, True
         
     except Exception as e:
         print(f"   ❌ 크롤링 오류 ({member_name}): {str(e)}")
-        return None, None, True
+        return None, None, None, True
 
 def parse_structured_html(soup, member_name):
     """HTML 구조를 기반으로 한 정확한 파싱"""
@@ -240,7 +240,7 @@ def parse_structured_html(soup, member_name):
                 # 🔥 메뉴 텍스트 체크 먼저
                 if is_menu_text_content(text):
                     print(f"   ⚠️ 메뉴 텍스트 감지됨: {member_name} - fallback 필요")
-                    return None, None  # fallback으로 이동
+                    return None, None, None  # fallback으로 이동
                 
                 # 🔥 핵심: 스마트 분할로 "전)" 구분자 활용
                 items = parse_pre_tag_career(text)
@@ -262,16 +262,16 @@ def parse_structured_html(soup, member_name):
             page_text = soup.get_text()
             if is_menu_text_only(page_text, member_name):
                 print(f"   ⚠️ 메뉴 텍스트만 감지됨: {member_name} - API fallback 필요")
-                return None, None
+                return None, None, None
             
             # 기존 파싱 방법 실행
             education_items, career_items = parse_assembly_profile_text(page_text, member_name)
         
-        return education_items, career_items
+        return education_items, career_items, None
         
     except Exception as e:
         print(f"   ❌ 구조적 파싱 오류: {str(e)}")
-        return None, None
+        return None, None, None
 
 def is_menu_text_only(page_text, member_name):
     """메뉴 텍스트만 크롤링된 경우인지 감지 - 포괄적 개선 버전"""
@@ -1288,6 +1288,11 @@ def sync_members_from_api():
                                 education_data.extend(edu_items or [])
                                 career_data.extend(career_items or [])
                                 info_collected = True
+                                
+                                if working_url:
+                                    member.homepage = working_url
+                                    print(f"   🌐 실제 동작하는 홈페이지 URL 저장: {working_url}")
+                                
                                 print(f"   ✅ {session_to_crawl}대 홈페이지 성공: 학력 {len(edu_items or [])}개, 경력 {len(career_items or [])}개")
                             elif need_fallback:
                                 print(f"   ⚠️ 홈페이지에서 메뉴 텍스트만 감지 - API fallback 진행")
