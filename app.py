@@ -2199,29 +2199,30 @@ def sync_all_route():
         }), 500
         
 # 메인 실행
+# 메인 실행 부분을 다음으로 교체하세요 (app.py 맨 아래)
+
+# 메인 실행
 if __name__ == '__main__':
     with app.app_context():
-        # 데이터베이스 테이블 생성
         db.create_all()
-
         
-        # 데이터가 없으면 동기화 실행
-        if Member.query.count() == 0:
-            print("데이터베이스가 비어있습니다. 초기 데이터를 로드합니다...")
-            from sync_data import sync_members_from_api, sync_bills_from_api
-            
-            # API에서 데이터 가져오기
-            sync_members_from_api()
-            sync_bills_from_api()
-            
-            print("초기 데이터 로드 완료!")
-
         member_count = Member.query.count()
         bill_count = Bill.query.count()
         
-        print(f"\n=== 최종 결과 ===")
-        print(f"총 국회의원 수: {member_count}명")
-        print(f"총 법률안 수: {bill_count}개")
-
+        print(f"\n=== 🗂️ 현재 데이터베이스 상태 ===")
+        print(f"국회의원: {member_count}명")
+        print(f"법률안: {bill_count}건")
         
+        if member_count == 0 and bill_count == 0:
+            print(f"\n💡 데이터베이스가 비어있습니다.")
+            
+        else:
+            print(f"\n✅ 데이터가 존재합니다.")
+            
+        print(f"\n🛠️ 관리 도구:")
+        print(f"• 관리자 대시보드: lawgg.me/admin/lawgg2025")
+        print(f"• 전체 동기화: lawgg.me/sync/start") 
+        print(f"• API 테스트: lawgg.me/sync/test")
+        print(f"• DB 초기화: lawgg.me/admin/reset-db")
+
     app.run(debug=True, host='0.0.0.0', port=5000)
