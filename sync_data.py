@@ -273,18 +273,116 @@ def parse_structured_html(soup, member_name):
         print(f"   ❌ 구조적 파싱 오류: {str(e)}")
         return None, None
 
-def is_menu_text_content(text):
-    """메뉴 텍스트만 있는 내용인지 판단"""
-    menu_patterns = [
-        '국회의원 -', '의원실알림', '역대국회의원', '국회의원통계',
-        '국회의원 이력', '위원회 경력', '대표발의법률안', '위원회 의사일정'
+def is_menu_text_only(page_text, member_name):
+    """메뉴 텍스트만 크롤링된 경우인지 감지 - 포괄적 개선 버전"""
+    
+    # 🔥 실제 프로필 컨텐츠 지표들 (모든 의원 공통)
+    real_content_indicators = [
+        # 학력/경력 섹션 마커
+        '■ 학력', '□ 학력', '[학력]', '○ 학력', '▶학력', '▶ 학력',
+        '■ 경력', '□ 경력', '[경력]', '○ 경력', '▶경력', '▶ 경력',
+        '■ 약력', '□ 약력', '[약력]', '○ 약력', '▶약력', '▶ 약력',
+        '주요학력', '주요경력', '주요약력',
+        
+        # 구체적 학력 정보
+        '졸업', '수료', '입학', '편입', '학사', '석사', '박사', '학위',
+        '대학교', '대학원', '고등학교', '중학교', '사관학교',
+        
+        # 구체적 경력 정보  
+        '장관', '차관', '청장', '실장', '국장', '과장', '팀장',
+        '위원장', '부위원장', '간사', '위원', '의장', '부의장',
+        '대표이사', '사장', '부사장', '전무', '상무', '이사', '부장',
+        '회장', '부회장', '원장', '부원장', '소장', '센터장',
+        '교수', '부교수', '조교수', '겸임교수', '객원교수',
+        '변호사', '판사', '검사', '기자', '논설위원', '편집위원',
+        '의사', '약사', '회계사', '세무사', '건축사',
+        
+        # 시간 정보 (실제 약력에 포함)
+        '1960년', '1961년', '1962년', '1963년', '1964년', '1965년', '1966년', '1967년', '1968년', '1969년',
+        '1970년', '1971년', '1972년', '1973년', '1974년', '1975년', '1976년', '1977년', '1978년', '1979년',
+        '1980년', '1981년', '1982년', '1983년', '1984년', '1985년',
+        '2020년', '2021년', '2022년', '2023년', '2024년', '2025년',
+        
+        # 정치 관련 (실제 약력)
+        '제19대', '제20대', '제21대', '제22대', '19대', '20대', '21대', '22대',
+        '더불어민주당', '국민의힘', '정의당', '국민의당', '조국혁신당', '개혁신당',
+        '민주당', '한나라당', '새누리당',
+        
+        # 연대/기간 표시
+        '~', '-', '부터', '까지', '동안', '간',
+        '전)', '현)', '前)', '現)', '前', '現',
+        
+        # 기관/조직명
+        '청와대', '국회', '정부', '부처', '법원', '검찰', '경찰',
+        '대학', '연구소', '재단', '협회', '학회', '위원회',
     ]
     
-    menu_count = sum(1 for pattern in menu_patterns if pattern in text)
+    # 🔥 메뉴 텍스트 지표들
+    menu_indicators = [
+        f'국회의원 - {member_name}',
+        f'국회의원-{member_name}',
+        '의원실알림', '역대국회의원', '국회의원통계',
+        '22대국회의원', '21대국회의원', '20대국회의원',
+        '국회의원 이력', '위원회 경력', '대표발의법률안',
+        '위원회 의사일정', '의정활동', '정책자료', '보도자료',
+        '의정보고서', '정책세미나', '토론회', '간담회',
+        '외 XX개', '외 \d+개',  # 강경숙 의원 케이스
+    ]
     
-    # 메뉴 텍스트가 3개 이상이고 전체 길이가 짧으면 메뉴만 있는 것
-    return menu_count >= 3 and len(text) < 500
-
+    # 실제 컨텐츠 개수 세기
+    content_count = sum(1 for indicator in real_content_indicators if indicator in page_text)
+    menu_count = sum(1 for indicator in menu_indicators if indicator in page_text)
+    
+    # 정규식 패턴도 체크
+    import re
+    if re.search(r'외\s*\d+개', page_text):
+        menu_count += 1
+    
+    # 연도 패턴이 있으면 실제 컨텐츠 가산점
+    if re.search(r'\d{4}년|\d{4}\.\d{1,2}|\d{4}-\d{1,2}', page_text):
+        content_count += 2
+    
+    print(f"   📊 컨텐츠 분석: {member_name} - 실제컨텐츠: {content_count}개, 메뉴지표: {menu_count}개")
+    
+    # 🔥 포괄적 판단 로직
+    # 1. 실제 컨텐츠가 5개 이상이면 확실히 정상 페이지
+    if content_count >= 5:
+        print(f"   ✅ 실제 컨텐츠 풍부: {member_name} - 정상 페이지")
+        return False
+    
+    # 2. 실제 컨텐츠가 2-4개이고 텍스트가 충분하면 정상 페이지
+    if content_count >= 2 and len(page_text.strip()) > 600:
+        print(f"   ✅ 컨텐츠 + 충분한 길이: {member_name} - 정상 페이지")
+        return False
+    
+    # 3. 메뉴 지표가 많고 실제 컨텐츠가 부족하면 메뉴 페이지
+    if menu_count >= 3 and content_count <= 1:
+        print(f"   ❌ 메뉴 텍스트 감지: {member_name}")
+        return True
+    
+    # 4. 텍스트가 매우 짧고 컨텐츠가 없으면 메뉴 페이지
+    if len(page_text.strip()) < 400 and content_count == 0:
+        print(f"   ❌ 텍스트 부족: {member_name} ({len(page_text.strip())}자)")
+        return True
+    
+    # 5. 의심스러운 패턴들 체크
+    suspicious_patterns = [
+        '게시물 저장 중입니다',
+        '외 \d+개',
+        '더보기',
+        '접기',
+        '펼치기'
+    ]
+    
+    suspicious_count = sum(1 for pattern in suspicious_patterns if re.search(pattern, page_text))
+    if suspicious_count >= 2 and content_count <= 1:
+        print(f"   ❌ 의심스러운 패턴 감지: {member_name}")
+        return True
+    
+    # 6. 기본적으로는 정상 페이지로 판단 (보수적)
+    print(f"   ✅ 정상 페이지로 판단: {member_name}")
+    return False
+    
 def parse_pre_tag_career(text):
     """<pre> 태그 내용을 스마트하게 파싱 - 22대 의원 개선 버전"""
     items = []
@@ -373,6 +471,19 @@ def parse_pre_tag_career(text):
             items.append(cleaned)
     
     return items
+
+def is_menu_text_content(text):
+    """메뉴 텍스트만 있는 내용인지 판단"""
+    menu_patterns = [
+        '국회의원 -', '의원실알림', '역대국회의원', '국회의원통계',
+        '국회의원 이력', '위원회 경력', '대표발의법률안', '위원회 의사일정',
+        '의정활동', '정책자료', '보도자료', '더보기', '접기', '펼치기'
+    ]
+    
+    menu_count = sum(1 for pattern in menu_patterns if pattern in text)
+    
+    # 메뉴 텍스트가 3개 이상이고 전체 길이가 짧으면 메뉴만 있는 것
+    return menu_count >= 3 and len(text) < 500
 
 def clean_career_item_advanced(item):
     """고급 경력 항목 정리"""
@@ -880,10 +991,222 @@ def remove_duplicates_preserve_order(items):
     return result
 
 def parse_brf_hst_fallback(brf_hst_text, member_name):
-    """BRF_HST 필드에서 학력/경력 파싱 (fallback용)"""
+    """BRF_HST 필드에서 학력/경력 파싱 - 포괄적 비구조화 텍스트 처리"""
     if not brf_hst_text:
+        print(f"   ❌ BRF_HST 데이터 없음: {member_name}")
         return None, None
     
+    print(f"   📋 BRF_HST 포괄적 파싱: {member_name}")
+    
+    # HTML 엔티티 변환
+    text = brf_hst_text.replace('&middot;', '·')
+    text = text.replace('&nbsp;', ' ')
+    text = text.replace('&amp;', '&')
+    text = text.replace('&lt;', '<')
+    text = text.replace('&gt;', '>')
+    text = text.replace('&quot;', '"')
+    text = text.replace('&apos;', "'")
+    
+    # 길이 체크
+    if len(text.strip()) < 5:
+        print(f"   ❌ 텍스트 너무 짧음: {len(text.strip())}자")
+        return None, None
+    
+    print(f"   📊 텍스트 길이: {len(text)}자")
+    
+    import re
+    
+    # 🔥 1단계: 다층 분할 시스템
+    segments = []
+    
+    # 레벨 1: 강한 구분자로 분할
+    strong_separators = [
+        r'(?:\r?\n){2,}',      # 두 줄 이상 공백
+        r'■[^■\n]*',          # ■로 시작하는 섹션
+        r'□[^□\n]*',          # □로 시작하는 섹션
+        r'○[^○\n]*',          # ○로 시작하는 섹션
+        r'▶[^▶\n]*',          # ▶로 시작하는 섹션
+        r'[0-9]+\.[^0-9\n]*', # 숫자. 로 시작
+        r'[가-힣]\.[^가-힣\n]*', # 가. 나. 다. 패턴
+    ]
+    
+    for separator in strong_separators:
+        parts = re.split(separator, text)
+        if len(parts) > 1:
+            segments = [p.strip() for p in parts if p.strip()]
+            break
+    
+    # 레벨 2: 중간 구분자로 분할 (레벨 1 실패시)
+    if len(segments) <= 1:
+        medium_separators = [
+            r'(?<=\d{4})\s+(?=[가-힣])',  # 연도 뒤 공백
+            r'(?<=\))\s+(?=[가-힣])',     # 괄호 뒤 공백
+            r'(?<=전)\s+(?=[가-힣])',     # "전" 뒤 공백
+            r'(?<=현)\s+(?=[가-힣])',     # "현" 뒤 공백
+            r'[.·]\s+(?=[가-힣])',       # 마침표/중점 뒤 한글
+            r'\s{3,}',                    # 3칸 이상 공백
+        ]
+        
+        for separator in medium_separators:
+            parts = re.split(separator, text)
+            if len(parts) > len(segments):
+                segments = [p.strip() for p in parts if p.strip()]
+    
+    # 레벨 3: 약한 구분자로 분할 (레벨 2 실패시)
+    if len(segments) <= 1:
+        weak_separators = [
+            r'\n',                        # 단순 줄바꿈
+            r'[,，]\s*',                  # 쉼표
+            r'[;；]\s*',                  # 세미콜론
+        ]
+        
+        for separator in weak_separators:
+            parts = re.split(separator, text)
+            if len(parts) > len(segments):
+                segments = [p.strip() for p in parts if p.strip() and len(p.strip()) > 3]
+    
+    # 분할 실패시 전체를 하나로
+    if not segments:
+        segments = [text.strip()]
+    
+    print(f"   📊 분할 결과: {len(segments)}개 세그먼트")
+    
+    # 🔥 2단계: 포괄적 키워드 기반 분류
+    education_items = []
+    career_items = []
+    
+    # 학력 키워드 (가중치별)
+    education_keywords = {
+        # 가중치 5 (매우 강한 학력 지표)
+        5: ['졸업', '수료', '학위취득', '박사학위', '석사학위', '학사학위'],
+        
+        # 가중치 4 (강한 학력 지표)
+        4: ['학사', '석사', '박사', '학위', '전공', '학과졸업'],
+        
+        # 가중치 3 (중간 학력 지표)
+        3: ['대학교', '대학원', '학과', '학부', '전공과정', '교육대학'],
+        
+        # 가중치 2 (약한 학력 지표)
+        2: ['고등학교', '중학교', '초등학교', '사관학교', '기술대학', '전문대학'],
+        
+        # 가중치 1 (교육 관련)
+        1: ['학교', '교육', '연수', '과정', '수습', '인턴', '연수원'],
+    }
+    
+    # 경력 키워드 (가중치별)
+    career_keywords = {
+        # 가중치 5 (매우 강한 경력 지표)
+        5: ['장관', '차관', '청장', '국회의원', '의원', '대통령', '총리'],
+        
+        # 가중치 4 (강한 경력 지표)
+        4: ['위원장', '부위원장', '실장', '국장', '대표이사', '사장', '부사장'],
+        
+        # 가중치 3 (중간 경력 지표)
+        3: ['과장', '팀장', '이사', '부장', '차장', '교수', '부교수', '조교수'],
+        
+        # 가중치 2 (약한 경력 지표)
+        2: ['대표', '회장', '부회장', '원장', '소장', '센터장', '변호사', '판사', '검사'],
+        
+        # 가중치 1 (일반 직책)
+        1: ['기자', '위원', '간사', '주임', '사원', '연구원', '의사', '약사'],
+    }
+    
+    for i, segment in enumerate(segments):
+        if len(segment) < 5:
+            continue
+        
+        # 헤더 제거
+        for header in ['■ 학력', '■ 경력', '■ 약력', '□ 학력', '□ 경력', '□ 약력']:
+            if segment.startswith(header):
+                segment = segment[len(header):].strip()
+                break
+        
+        if not segment:
+            continue
+        
+        # 점수 계산
+        edu_score = 0
+        career_score = 0
+        
+        # 학력 점수 계산
+        for weight, keywords in education_keywords.items():
+            for keyword in keywords:
+                if keyword in segment:
+                    edu_score += weight
+        
+        # 경력 점수 계산
+        for weight, keywords in career_keywords.items():
+            for keyword in keywords:
+                if keyword in segment:
+                    career_score += weight
+        
+        # 🔥 패턴 기반 추가 점수
+        # 연도 패턴
+        year_patterns = re.findall(r'\d{4}년|\d{4}\.\d{1,2}|\d{4}-\d{1,2}', segment)
+        if year_patterns:
+            edu_score += len(year_patterns)
+            career_score += len(year_patterns)
+        
+        # 현/전 패턴 (경력 가산점)
+        if re.search(r'전\)|현\)|前\)|現\)|前|現', segment):
+            career_score += 3
+        
+        # 기간 표시 패턴
+        if re.search(r'~|부터|까지|동안', segment):
+            career_score += 2
+            edu_score += 1
+        
+        print(f"   📊 세그먼트 {i+1}: 학력점수={edu_score}, 경력점수={career_score}")
+        print(f"   📝 {segment[:50]}...")
+        
+        # 🔥 분류 로직
+        if edu_score > career_score and edu_score >= 3:
+            education_items.append(segment)
+            print(f"   📚 학력 분류")
+        elif career_score > edu_score and career_score >= 2:
+            career_items.append(segment)
+            print(f"   💼 경력 분류")
+        elif edu_score == career_score and edu_score >= 2:
+            # 동점시 세부 판단
+            if any(strong in segment for strong in ['졸업', '학위', '학사', '석사', '박사']):
+                education_items.append(segment)
+                print(f"   📚 학력 분류 (동점-강한지표)")
+            else:
+                career_items.append(segment)
+                print(f"   💼 경력 분류 (동점-기본)")
+        elif len(segment) > 20:
+            # 점수가 낮아도 의미있는 길이면 경력으로
+            career_items.append(segment)
+            print(f"   💼 경력 분류 (길이)")
+        else:
+            print(f"   ⚠️ 분류 제외 (점수부족)")
+    
+    # 🔥 3단계: 결과 없으면 강제 분할
+    if not education_items and not career_items and len(text) > 30:
+        print(f"   🔧 분류 실패 - 강제 분할 진행")
+        
+        # 문장 단위로 강제 분할
+        sentences = re.split(r'[.!?]\s*', text)
+        sentences = [s.strip() for s in sentences if len(s.strip()) > 15]
+        
+        if sentences:
+            # 첫 번째 절반은 학력, 나머지는 경력으로 (휴리스틱)
+            mid = len(sentences) // 2
+            education_items = sentences[:mid] if mid > 0 else []
+            career_items = sentences[mid:mid+10]  # 최대 10개
+            print(f"   🔧 강제분할: 학력 {len(education_items)}개, 경력 {len(career_items)}개")
+    
+    # 최종 정리
+    education_items = list(dict.fromkeys(education_items))  # 중복제거
+    career_items = list(dict.fromkeys(career_items))
+    
+    # 길이 제한
+    education_items = [item for item in education_items if 5 <= len(item) <= 200]
+    career_items = [item for item in career_items if 5 <= len(item) <= 300]
+    
+    print(f"   ✅ BRF_HST 파싱 완료: {member_name} - 학력:{len(education_items)}개, 경력:{len(career_items)}개")
+    
+    return education_items, career_items    
     print(f"   📋 BRF_HST 파싱 시도: {member_name}")
     
     # 기본 텍스트 정리
