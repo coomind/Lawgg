@@ -129,18 +129,46 @@ def get_hunjunghoi_education_career(name, session_num):
         print(f"   ❌ 헌정회 API 오류: {str(e)}")
         return None, None
 
+# sync_data.py의 crawl_member_profile_with_detection() 함수를 이것으로 교체
+
 def crawl_member_profile_with_detection(member_name, english_name, session_num=22):
-    """개선된 홈페이지 크롤링 - HTML 구조 기반 파싱"""
+    """개선된 홈페이지 크롤링 - 다양한 영문명 변형 지원"""
     try:
         if not english_name:
             print(f"   ❌ 영문명 없음: {member_name}")
             return None, None, True
             
-        # 띄어쓰기 제거하고 대문자로
-        clean_english_name = english_name.replace(' ', '').upper()
-        url = f"https://www.assembly.go.kr/members/{session_num}nd/{clean_english_name}"
+        # 🔥 다양한 영문명 변형 생성
+        clean_name = english_name.replace(' ', '').strip()
         
-        print(f"   🌐 크롤링 시도: {url}")
+        name_variations = [
+            clean_name.upper(),           # KIMHYUN (기존 방식)
+            clean_name.title(),           # Kimhyun
+            clean_name.lower(),           # kimhyun
+        ]
+        
+        # 한국식 성명 패턴 추가 (성 대문자 + 이름 첫글자 대문자)
+        if len(clean_name) >= 4:
+            surname_2 = clean_name[:2].upper()
+            given_name_2 = clean_name[2:]
+            name_variations.extend([
+                f"{surname_2}{given_name_2.title()}",      # KIMHyun ← 김현 의원!
+                f"{surname_2}{given_name_2.lower()}",      # KIMhyun
+            ])
+        
+        if len(clean_name) >= 5:
+            surname_3 = clean_name[:3].upper()
+            given_name_3 = clean_name[3:]
+            name_variations.extend([
+                f"{surname_3}{given_name_3.title()}",      # LEEJongSuk
+                f"{surname_3}{given_name_3.lower()}",      # LEEjongsuk
+            ])
+        
+        # 중복 제거
+        unique_variations = list(dict.fromkeys(name_variations))
+        
+        print(f"   🔍 영문명 변형 시도: {member_name} (원본: {english_name})")
+        print(f"   📝 시도할 변형들: {unique_variations[:5]}...")
         
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -150,23 +178,47 @@ def crawl_member_profile_with_detection(member_name, english_name, session_num=2
             'Connection': 'keep-alive'
         }
         
-        response = requests.get(url, timeout=45, headers=headers)
+        # 각 변형에 대해 시도
+        for i, name_var in enumerate(unique_variations):
+            url = f"https://www.assembly.go.kr/members/{session_num}nd/{name_var}"
+            
+            try:
+                print(f"   🌐 시도 {i+1}: {name_var}")
+                response = requests.get(url, timeout=30, headers=headers)
+                
+                if response.status_code == 200:
+                    soup = BeautifulSoup(response.content, 'html.parser')
+                    
+                    # 실제 의원 페이지인지 확인
+                    page_text = soup.get_text()
+                    if member_name in page_text or "국회의원" in page_text:
+                        print(f"   ✅ URL 성공: {url}")
+                        
+                        # 메뉴 텍스트만 있는지 확인
+                        if is_menu_text_only(page_text, member_name):
+                            print(f"   ⚠️ 메뉴 텍스트만 감지됨 - 다음 변형 시도")
+                            continue
+                        
+                        # 구조적 파싱 시도
+                        education_items, career_items = parse_structured_html(soup, member_name)
+                        
+                        if education_items or career_items:
+                            print(f"   ✅ 파싱 성공: 학력 {len(education_items or [])}개, 경력 {len(career_items or [])}개")
+                            return education_items, career_items, False
+                        else:
+                            print(f"   ⚠️ 파싱 결과 없음 - API fallback 필요")
+                            return None, None, True
+                            
+            except Exception as e:
+                # 조용히 다음 변형 시도
+                continue
+            
+            # 최대 6-7개까지만 시도 (성능 최적화)
+            if i >= 6:
+                break
         
-        if response.status_code == 200:
-            soup = BeautifulSoup(response.content, 'html.parser')
-            
-            # 🔥 핵심 개선: 구조적 HTML 파싱
-            education_items, career_items = parse_structured_html(soup, member_name)
-            
-            if education_items or career_items:
-                print(f"   ✅ 구조적 파싱 성공: {member_name} - 학력:{len(education_items or [])}개, 경력:{len(career_items or [])}개")
-                return education_items, career_items, False
-            else:
-                print(f"   ⚠️ 구조적 파싱 실패 - API fallback 필요")
-                return None, None, True
-        else:
-            print(f"   ❌ HTTP {response.status_code}: {url}")
-            return None, None, True
+        print(f"   ❌ 모든 영문명 변형 실패: {member_name}")
+        return None, None, True
         
     except Exception as e:
         print(f"   ❌ 크롤링 오류 ({member_name}): {str(e)}")
