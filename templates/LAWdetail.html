@@ -724,7 +724,7 @@
               </div>
           </div>
 
-          <!-- 제안이유 및 주요내용을 전체 너비로 (새로 추가) -->
+          <!-- 제안이유 및 주요내용 -->
           <div class="full-width-proposal">
               <div class="bill-summary">
                   <div class="summary-title">제안이유 및 주요내용</div>
@@ -741,7 +741,7 @@
               </div>
           </div>
    </div>
-            <!-- 찬성/반대 투표 (중앙 배치) -->
+            <!-- 찬성/반대 투표 -->
             <div class="vote-section-centered">
                 <div class="vote-buttons">
                     <button class="vote-btn agree {% if user_vote == 'agree' %}active{% endif %}" data-vote="agree">찬성</button>
@@ -760,7 +760,7 @@
                 </div>
             </div>
 
-            <!-- 댓글 섹션 (전체 너비) -->
+            <!-- 댓글 섹션 -->
             <div class="full-width-section">
                 <div class="comments-section">
                     <h2 class="comments-title">법안 토론</h2>
@@ -1149,7 +1149,7 @@
                         enableComments();
                     }
                     
-                    // 서버에서 받은 정확한 카운트로 업데이트 - 안전한 방식으로
+                    // 서버에서 받은 정확한 카운트로 업데이트
                     console.log('서버 응답 데이터:', data); // 디버깅용
 
                     if (data.vote_counts) {
@@ -1623,7 +1623,6 @@
         }
 
         
-        // handleReplySubmit 함수 수정 (답글 저장 개선)
         async function handleReplySubmit() {
             if (!userVote) {
                 showMessage('먼저 찬성 또는 반대를 선택해주세요.', 'warning');
