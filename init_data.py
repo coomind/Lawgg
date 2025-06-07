@@ -11,7 +11,7 @@ def init_basic_data():
         # 데이터베이스 테이블 생성
         db.create_all()
         
-        # 기본 샘플 데이터가 없으면 추가
+        
         if Member.query.count() == 0:
             print("샘플 국회의원 데이터 추가 중...")
             
@@ -46,7 +46,7 @@ def init_basic_data():
                             except:
                                 pass
                         
-                        # 정당 추측 (실제로는 API에서 가져와야 함)
+                        # 정당 추측
                         party = '더불어민주당' if count % 3 == 0 else '국민의힘' if count % 3 == 1 else '무소속'
                         
                         member = Member(
@@ -60,7 +60,7 @@ def init_basic_data():
                         db.session.add(member)
                         count += 1
                         
-                        if count >= 50:  # 처음 50명만 추가
+                        if count >= 50: 
                             break
                     
                     db.session.commit()
