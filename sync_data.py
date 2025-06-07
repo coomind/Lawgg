@@ -637,6 +637,14 @@ def force_split_text_completely(text):
         r'(?<=\))\s+',     # 괄호 뒤
         r'\n+',            # 줄바꿈
         r'\s{3,}',         # 3칸 이상 공백
+        # 🔥 추가: 섹션 헤더 구분자 (김건 사례)
+        r'학력\s*:?\s*',    # 학력: 또는 학력
+        r'경력\s*:?\s*',    # 경력: 또는 경력  
+        r'약력\s*:?\s*',    # 약력: 또는 약력
+        r'■\s*학력\s*',     # ■ 학력
+        r'■\s*경력\s*',     # ■ 경력
+        r'□\s*학력\s*',     # □ 학력  
+        r'□\s*경력\s*',     # □ 경력
     ]
     
     items = [text]
@@ -648,7 +656,7 @@ def force_split_text_completely(text):
         items = new_items
     
     return [item for item in items if len(item.strip()) > 3]
-
+    
 def clean_item_thoroughly(item):
     """아이템 철저히 정리"""
     if not item:
@@ -657,14 +665,34 @@ def clean_item_thoroughly(item):
     # 기본 정리
     item = item.strip().strip('"').strip("'")
     
+    # 🔥 괄호 안의 연도 정보 제거
+    import re
+    item = re.sub(r'\((\d{4})\)', '', item)  # (2020) 제거
+    item = re.sub(r'\((\d{4}년)\)', '', item)  # (2020년) 제거
+    
     # 불필요한 접두사 제거
     prefixes = ['(현)', '(전)', '現)', '前)', '現', '前', '-', '•', '·', '※', '▶']
     for prefix in prefixes:
         if item.startswith(prefix):
             item = item[len(prefix):].strip()
     
+    # 🔥 섹션 헤더 제거 (김건 사례)
+    section_headers = [
+        '학력:', '경력:', '약력:', '주요학력:', '주요경력:', '주요약력:',
+        '■ 학력', '■ 경력', '■ 약력', '□ 학력', '□ 경력', '□ 약력',
+        '[학력]', '[경력]', '[약력]', '○ 학력', '○ 경력', '○ 약력'
+    ]
+    
+    for header in section_headers:
+        if item.startswith(header):
+            item = item[len(header):].strip()
+    
     # 너무 짧거나 의미없는 것 제외
     if len(item) < 4:
+        return None
+    
+    # 🔥 섹션 헤더만 남은 경우 제외
+    if item.lower() in ['학력', '경력', '약력', '주요학력', '주요경력', '주요약력']:
         return None
     
     # 연락처나 UI 요소 제외
@@ -673,7 +701,6 @@ def clean_item_thoroughly(item):
         return None
     
     return item
-
 def is_education_strict(item):
     """엄격한 학력 판별"""
     education_keywords = [
@@ -684,6 +711,7 @@ def is_education_strict(item):
         # 교육 직책 (학력으로 분류)
         '교수', '부교수', '조교수', '겸임교수', '객원교수', '석좌교수', 
         '강사', '연구원', '연구교수'
+        '교사', '교원', '선생님'
     ]
     
     return any(keyword in item for keyword in education_keywords)
