@@ -1260,6 +1260,11 @@
 
         // 답글 작성 처리
         async function handleReplySubmit(e) {
+            if (!userVote) {
+                showMessage('먼저 찬성 또는 반대를 선택해주세요.', 'warning');
+                return;
+            }
+        
             const parentId = e.target.dataset.parentId;
             const replyForm = e.target.closest('.reply-form');
             const content = replyForm.querySelector('.reply-input').value.trim();
@@ -1268,20 +1273,19 @@
                 showMessage('답글 내용을 입력해주세요.', 'warning');
                 return;
             }
-
+        
             try {
-                const response = await fetch(`${API_BASE_URL}/api/proposals/${proposalId}/comments`, {
+                const response = await fetch(`${API_BASE_URL}/api/comments/${parentId}/reply`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
                         content: content,
-                        stance: userVote,
-                        parent_id: parseInt(parentId)
+                        stance: userVote
                     })
                 });
-
+        
                 if (response.ok) {
                     const reply = await response.json();
                     
