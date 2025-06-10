@@ -707,14 +707,7 @@
                         <ol>
                             {% for reason in proposal.proposal_reasons %}
                             <li>
-                                {% if reason.title %}
-                                    {{ reason.title }}
-                                    {% if reason.description %}
-                                        <br>- {{ reason.description }}
-                                    {% endif %}
-                                {% else %}
-                                    {{ reason }}
-                                {% endif %}
+                                {{ reason }}
                             </li>
                             {% endfor %}
                         </ol>
