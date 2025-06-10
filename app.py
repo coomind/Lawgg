@@ -1060,6 +1060,25 @@ def proposal_detail(proposal_id):
         }
         comments_data.append(comment_data)
         comment_reports[str(comment.id)] = comment.report_count
+
+    for reply in comment.replies:
+        reply_like_count = CommentLike.query.filter_by(comment_id=reply.id).count()
+        
+        reply_data = {
+            'id': reply.id,
+            'parent_id': reply.parent_id,
+            'author': reply.author or f'익명{reply.id}',
+            'content': reply.content,
+            'stance': reply.stance,
+            'time_ago': time_ago(reply.created_at),
+            'report_count': reply.report_count,
+            'is_under_review': reply.is_under_review or reply.report_count >= 3,
+            'is_reported_by_user': reply.id in user_reported_comments,
+            'like_count': reply_like_count,
+            'is_liked_by_user': reply.id in liked_comment_ids
+        }
+        comments_data.append(reply_data)
+        comment_reports[str(reply.id)] = reply.report_count
     
     # 제안사유 파싱 (리스트 형태로 변환)
     proposal_reasons = proposal.proposal_reasons
@@ -1888,6 +1907,8 @@ def report_comment(comment_id):
         'message': 'Report submitted successfully',
         'new_report_text': f'신고됨 ({comment.report_count})' if comment.report_count > 1 else '신고됨'
     })
+
+
 
 
 # 미들웨어로 차단된 IP 확인
