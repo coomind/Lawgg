@@ -569,8 +569,11 @@ def members_list():
 @app.route('/members/<int:member_id>')
 def member_detail(member_id):
     member = Member.query.get_or_404(member_id)
-    member.view_count += 1
-    db.session.commit()
+    session_key = f'viewed_member_{member_id}'
+    if session_key not in session:
+        member.view_count += 1
+        session[session_key] = True
+        db.session.commit()
     
     bills = Bill.query.filter(Bill.proposer.contains(member.name)).limit(10).all()
     
@@ -731,8 +734,11 @@ def bills_list():
 @app.route('/bills/<int:bill_id>')
 def bill_detail(bill_id):
     bill = Bill.query.get_or_404(bill_id)
-    bill.view_count += 1
-    db.session.commit()
+    session_key = f'viewed_bill_{bill_id}'
+    if session_key not in session:
+        bill.view_count += 1
+        session[session_key] = True
+        db.session.commit()
     
     ip_address = get_client_ip()
     
@@ -1000,8 +1006,11 @@ def proposal_write():
 @app.route('/proposals/<int:proposal_id>')
 def proposal_detail(proposal_id):
     proposal = Proposal.query.get_or_404(proposal_id)
-    proposal.view_count += 1
-    db.session.commit()
+    session_key = f'viewed_proposal_{proposal_id}'
+    if session_key not in session:
+        proposal.view_count += 1
+        session[session_key] = True
+        db.session.commit()
     
     ip_address = get_client_ip()
     
