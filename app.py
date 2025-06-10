@@ -318,7 +318,7 @@ def admin_delete_proposal(proposal_id):
         db.session.rollback()
         return jsonify({'error': f'삭제 중 오류 발생: {str(e)}'}), 500
 
-# 댓글 삭제 함수 수정
+# 댓글 삭제 함수
 @app.route('/admin/comments/<int:comment_id>/delete', methods=['POST'])
 def admin_delete_comment(comment_id):
     if not is_admin():
@@ -327,7 +327,7 @@ def admin_delete_comment(comment_id):
     try:
         comment = Comment.query.get_or_404(comment_id)
         
-        # 1. 답글들의 좋아요 먼저 삭제
+        # 1. 답글들의 좋아요 및 신고 삭제
         reply_ids = [r.id for r in Comment.query.filter_by(parent_id=comment_id).all()]
         if reply_ids:
             CommentLike.query.filter(CommentLike.comment_id.in_(reply_ids)).delete(synchronize_session=False)
@@ -336,13 +336,11 @@ def admin_delete_comment(comment_id):
         # 2. 답글들 삭제
         Comment.query.filter_by(parent_id=comment_id).delete()
         
-        # 3. 댓글의 좋아요들 삭제
+        # 3. 부모 댓글의 좋아요/신고 삭제
         CommentLike.query.filter_by(comment_id=comment_id).delete()
-        
-        # 4. 댓글의 신고들 삭제
         Report.query.filter_by(comment_id=comment_id).delete()
         
-        # 5. 댓글 삭제
+        # 4. 부모 댓글 삭제
         db.session.delete(comment)
         db.session.commit()
         
@@ -350,6 +348,7 @@ def admin_delete_comment(comment_id):
         
     except Exception as e:
         db.session.rollback()
+        print(f"댓글 삭제 오류: {e}")  # 디버깅용
         return jsonify({'error': f'삭제 중 오류 발생: {str(e)}'}), 500
 
 # IP 차단
@@ -1042,43 +1041,60 @@ def proposal_detail(proposal_id):
     comment_reports = {}
     
     for comment in parent_comments:
-        # 좋아요 수 계산
-        like_count = CommentLike.query.filter_by(comment_id=comment.id).count()
-        
-        comment_data = {
-            'id': comment.id,
-            'parent_id': comment.parent_id,  
-            'author': comment.author or f'익명{comment.id}',
-            'content': comment.content,
-            'stance': comment.stance,
-            'time_ago': time_ago(comment.created_at),
-            'report_count': comment.report_count,
-            'is_under_review': comment.is_under_review or comment.report_count >= 3,
-            'is_reported_by_user': comment.id in user_reported_comments,
-            'like_count': like_count, 
-            'is_liked_by_user': comment.id in liked_comment_ids  
-        }
-        comments_data.append(comment_data)
-        comment_reports[str(comment.id)] = comment.report_count
-
-    for reply in comment.replies:
-        reply_like_count = CommentLike.query.filter_by(comment_id=reply.id).count()
-        
-        reply_data = {
-            'id': reply.id,
-            'parent_id': reply.parent_id,
-            'author': reply.author or f'익명{reply.id}',
-            'content': reply.content,
-            'stance': reply.stance,
-            'time_ago': time_ago(reply.created_at),
-            'report_count': reply.report_count,
-            'is_under_review': reply.is_under_review or reply.report_count >= 3,
-            'is_reported_by_user': reply.id in user_reported_comments,
-            'like_count': reply_like_count,
-            'is_liked_by_user': reply.id in liked_comment_ids
-        }
-        comments_data.append(reply_data)
-        comment_reports[str(reply.id)] = reply.report_count
+        try:
+            # 좋아요 수 계산
+            like_count = CommentLike.query.filter_by(comment_id=comment.id).count()
+            
+            comment_data = {
+                'id': comment.id,
+                'parent_id': comment.parent_id,  
+                'author': comment.author or f'익명{comment.id}',
+                'content': comment.content,
+                'stance': comment.stance,
+                'time_ago': time_ago(comment.created_at),
+                'report_count': comment.report_count,
+                'is_under_review': comment.is_under_review or comment.report_count >= 3,
+                'is_reported_by_user': comment.id in user_reported_comments,
+                'like_count': like_count, 
+                'is_liked_by_user': comment.id in liked_comment_ids  
+            }
+            comments_data.append(comment_data)
+            comment_reports[str(comment.id)] = comment.report_count
+            
+            # ✅ 안전하게 답글들 가져오기
+            try:
+                # 직접 데이터베이스에서 답글 조회 (관계를 사용하지 않음)
+                replies = Comment.query.filter_by(
+                    proposal_id=proposal_id,
+                    parent_id=comment.id
+                ).order_by(Comment.created_at.asc()).all()
+                
+                for reply in replies:
+                    reply_like_count = CommentLike.query.filter_by(comment_id=reply.id).count()
+                    
+                    reply_data = {
+                        'id': reply.id,
+                        'parent_id': reply.parent_id,
+                        'author': reply.author or f'익명{reply.id}',
+                        'content': reply.content,
+                        'stance': reply.stance,
+                        'time_ago': time_ago(reply.created_at),
+                        'report_count': reply.report_count,
+                        'is_under_review': reply.is_under_review or reply.report_count >= 3,
+                        'is_reported_by_user': reply.id in user_reported_comments,
+                        'like_count': reply_like_count,
+                        'is_liked_by_user': reply.id in liked_comment_ids
+                    }
+                    comments_data.append(reply_data)
+                    comment_reports[str(reply.id)] = reply.report_count
+                    
+            except Exception as reply_error:
+                print(f"답글 로드 오류: {reply_error}")
+                continue
+                
+        except Exception as comment_error:
+            print(f"댓글 로드 오류: {comment_error}")
+            continue
     
     # 제안사유 파싱 (리스트 형태로 변환)
     proposal_reasons = proposal.proposal_reasons
